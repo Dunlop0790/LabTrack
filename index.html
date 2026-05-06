@@ -23,12 +23,17 @@
     .board-sel{background:var(--navy2);border:1px solid rgba(255,255,255,.18);color:#fff;padding:5px 10px;border-radius:6px;font-size:13px;cursor:pointer;min-width:150px;max-width:200px}
     .btn-nb{background:transparent;border:1px dashed rgba(255,255,255,.35);color:rgba(255,255,255,.75);padding:5px 11px;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap}
     .btn-nb:hover{background:rgba(255,255,255,.1)}
+    .btn-del-board{background:transparent;border:1px solid rgba(255,255,255,.18);color:rgba(255,180,180,.7);padding:3px 10px;border-radius:6px;font-size:18px;cursor:pointer;line-height:1;font-weight:400}
+    .btn-del-board:hover{background:rgba(220,38,38,.25);border-color:rgba(220,38,38,.5);color:#fff}
     .hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px}
     .user-badge{display:flex;align-items:center;gap:7px;font-size:13px;color:rgba(255,255,255,.85);cursor:pointer}
     .user-badge:hover{color:#fff}
     .avatar{width:28px;height:28px;border-radius:50%;background:#3b82f6;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
     .btn-new{background:#3b82f6;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
     .btn-new:hover{background:#2563eb}
+    .btn-sound{background:transparent;border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.75);padding:5px 10px;border-radius:6px;font-size:14px;cursor:pointer;line-height:1}
+    .btn-sound:hover{background:rgba(255,255,255,.1);color:#fff}
+    .btn-sound.muted{color:rgba(255,160,160,.7)}
 
     /* ── FILTER BAR ── */
     .fbar{display:flex;align-items:center;gap:6px;padding:8px 18px;background:#fff;border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0}
@@ -44,6 +49,19 @@
     .chip.c-monitor{border-color:var(--monitor-c);background:var(--monitor-c);color:#fff}
     .chip.c-low{border-color:var(--low);background:var(--low);color:#fff}
     .fdivider{width:1px;height:18px;background:var(--border);margin:0 3px}
+    .search-wrap{position:relative;margin-left:auto}
+    .search-input{font-size:12px;padding:5px 10px 5px 28px;border:1.5px solid var(--border);border-radius:20px;background:#fff;outline:none;width:200px;transition:all .15s}
+    .search-input:focus{border-color:#3b82f6;width:250px}
+    .search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--muted);pointer-events:none}
+    .card-time{font-size:10px;color:var(--muted);margin-top:5px;font-style:italic}
+    .card-time.warn{color:#dc2626;font-weight:600;font-style:normal}
+    .history-toggle{font-size:12px;color:#3b82f6;cursor:pointer;padding:6px 0;user-select:none;font-weight:500;display:flex;align-items:center;gap:4px}
+    .history-toggle:hover{text-decoration:underline}
+    .history-list{margin-top:8px;border-top:1px solid var(--border);padding-top:10px;display:none;max-height:160px;overflow-y:auto}
+    .history-list.open{display:block}
+    .h-entry{font-size:11px;color:var(--muted);padding:3px 0;line-height:1.5}
+    .h-entry b{color:var(--text);font-weight:600}
+    .h-time{color:#94a3b8;font-size:10px}
     .dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin-right:5px;flex-shrink:0}
     .dot-op{background:var(--op)}
     .dot-bb{background:var(--bb)}
@@ -291,7 +309,9 @@
   <div class="logo">Lab<span>Track</span></div>
   <select class="board-sel" id="boardSel" onchange="switchBoard(this.value)"></select>
   <button class="btn-nb" onclick="openNewBoard()">+ New Board</button>
+  <button class="btn-del-board" onclick="deleteBoard()" title="Delete current board">×</button>
   <div class="hdr-right">
+    <button class="btn-sound" id="soundBtn" onclick="toggleSound()" title="Toggle alert sounds">🔊</button>
     <div class="user-badge" onclick="resetUser()" title="Click to change name">
       <div class="avatar" id="userAvatar"></div>
       <span id="userName"></span>
@@ -314,6 +334,10 @@
   <span class="chip" id="pUrg" onclick="setPF('urgent')">Urgent</span>
   <span class="chip" id="pMon" onclick="setPF('monitor')">Monitor</span>
   <span class="chip" id="pLow" onclick="setPF('low')">Low</span>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="searchInput" placeholder="Search issues, instruments..." oninput="onSearch(this.value)" />
+  </div>
 </div>
 
 <!-- ── BOARD ── -->
@@ -340,17 +364,103 @@ const db = firebase.firestore();
 let user = null, selectedRole = null;
 let boardId = null, boards = [];
 let issues = [], issueSub = null;
-let detailSub = null;
-let tFilter = 'all', pFilter = 'all';
+let detailSub = null, historySub = null;
+let tFilter = 'all', pFilter = 'all', searchTerm = '';
+let soundEnabled = localStorage.getItem('lt_sound')!=='off';
+let isFirstLoad = true;
 const COLS = ['open','inprogress','monitoring','resolved'];
 const COL_LABELS = {open:'Open',inprogress:'In Progress',monitoring:'Monitoring',resolved:'Resolved'};
 const PRIORITY_ORDER = {critical:0,urgent:1,monitor:2,low:3};
+const PRIORITY_LABELS = {critical:'Critical',urgent:'Urgent',monitor:'Monitor',low:'Low'};
+// Aging thresholds in milliseconds — if Critical sits Open >1hr, show warning
+const AGE_WARN_MS = {critical:60*60*1000, urgent:2*60*60*1000, monitor:24*60*60*1000, low:7*24*60*60*1000};
 
 // ── HELPERS ───────────────────────────────────────────────────
 const esc = s => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
 function initials(name){return name?name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase():'?'}
 function fmtTime(ts){if(!ts?.toDate) return 'just now';const d=ts.toDate();return d.toLocaleDateString()+" "+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
+
+// Format duration from a timestamp until now (e.g. "2h 14m", "3d 4h")
+function fmtAge(ts){
+  if(!ts?.toDate) return '';
+  const ms = Date.now() - ts.toDate().getTime();
+  if(ms < 60000) return 'just now';
+  const mins = Math.floor(ms/60000);
+  if(mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24) return `${hrs}h ${mins%60}m`;
+  const days = Math.floor(hrs/24);
+  return `${days}d ${hrs%24}h`;
+}
+
+// Check if an issue is "aging" (sat too long without progress)
+function isAging(issue){
+  if(issue.status==='resolved') return false;
+  if(!issue.createdAt?.toDate) return false;
+  const age = Date.now() - issue.createdAt.toDate().getTime();
+  return age > (AGE_WARN_MS[issue.priority]||AGE_WARN_MS.low);
+}
+
+// ── SOUND ─────────────────────────────────────────────────────
+function playAlert(){
+  if(!soundEnabled) return;
+  try {
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    // Two-tone "ding-dong" alert
+    [880, 660].forEach((freq,i)=>{
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      const start = ctx.currentTime + i*0.18;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.25, start+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, start+0.25);
+      osc.start(start);
+      osc.stop(start+0.25);
+    });
+  } catch(e){console.warn('Sound failed:',e)}
+}
+
+function toggleSound(){
+  soundEnabled = !soundEnabled;
+  localStorage.setItem('lt_sound', soundEnabled?'on':'off');
+  updateSoundBtn();
+  showToast(soundEnabled?'Alert sounds on':'Alert sounds muted');
+}
+
+function updateSoundBtn(){
+  const btn = document.getElementById('soundBtn');
+  if(!btn) return;
+  btn.textContent = soundEnabled ? '🔊' : '🔇';
+  btn.classList.toggle('muted', !soundEnabled);
+}
+
+// ── ACTIVITY LOG ──────────────────────────────────────────────
+async function logActivity(issueId, type, details){
+  await db.collection('issues').doc(issueId).collection('history').add({
+    type, details,
+    author: user.name,
+    role: user.role,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+function describeActivity(h){
+  const a = `<b>${esc(h.author)}</b>`;
+  switch(h.type){
+    case 'created': return `${a} created the issue`;
+    case 'status': return `${a} changed status: <b>${COL_LABELS[h.details.from]||h.details.from}</b> → <b>${COL_LABELS[h.details.to]||h.details.to}</b>`;
+    case 'priority': return `${a} changed priority: <b>${PRIORITY_LABELS[h.details.from]||h.details.from}</b> → <b>${PRIORITY_LABELS[h.details.to]||h.details.to}</b>`;
+    case 'assignee': return h.details.to
+      ? `${a} assigned to <b>${esc(h.details.to)}</b>`
+      : `${a} unassigned the issue`;
+    case 'claimed': return `${a} claimed the issue`;
+    default: return `${a} made an update`;
+  }
+}
 
 // ── USER SETUP ────────────────────────────────────────────────
 function selectRole(role){
@@ -380,8 +490,11 @@ function resetUser(){
 async function initApp(){
   document.getElementById('userName').textContent=user.name;
   document.getElementById('userAvatar').textContent=initials(user.name);
+  updateSoundBtn();
   await loadBoards();
   if('Notification' in window && Notification.permission==='default') Notification.requestPermission();
+  // Re-render every minute so card ages update and aging warnings appear
+  setInterval(()=>{ if(issues.length) renderBoard(); }, 60000);
 }
 
 // ── BOARDS ────────────────────────────────────────────────────
@@ -404,6 +517,7 @@ function renderBoardSel(){
 function switchBoard(id){
   boardId=id;
   if(issueSub) issueSub();
+  isFirstLoad = true;
   subscribeIssues(id);
 }
 
@@ -422,28 +536,81 @@ async function submitNewBoard(){
   document.getElementById('newBoardName').value='';
 }
 
+async function deleteBoard(){
+  if(boards.length<=1){
+    alert('Cannot delete the only remaining board. Create another board first.');
+    return;
+  }
+  const board=boards.find(b=>b.id===boardId);
+  if(!board) return;
+  const issueCount=issues.length;
+  const msg=`Delete board "${board.title}"?\n\nThis will permanently delete the board and all ${issueCount} issue${issueCount===1?'':'s'} on it. This cannot be undone.`;
+  if(!confirm(msg)) return;
+
+  // Delete all issues on this board
+  if(issues.length){
+    const deletes=issues.map(i=>db.collection('issues').doc(i.id).delete());
+    await Promise.all(deletes);
+  }
+  // Delete the board itself
+  await db.collection('boards').doc(boardId).delete();
+
+  // Stop listening, reload boards, switch to first remaining
+  if(issueSub){issueSub();issueSub=null}
+  await loadBoards();
+  showToast('Board deleted.');
+}
+
 // ── ISSUES REALTIME ───────────────────────────────────────────
 function subscribeIssues(bid){
   document.getElementById('boardArea').innerHTML='<div class="loading">Loading…</div>';
-  const prevIds = issues.map(i=>i.id);
+  let prevIssueMap = {};
+  issues.forEach(i=>{ prevIssueMap[i.id]=i });
+
   issueSub = db.collection('issues').where('boardId','==',bid)
     .onSnapshot(snap=>{
-      issues = snap.docs.map(d=>({id:d.id,...d.data()}));
-      // notify on new critical/urgent from others
-      issues.forEach(issue=>{
-        if(!prevIds.includes(issue.id) && ['critical','urgent'].includes(issue.priority) && issue.createdBy!==user.name){
-          if(Notification.permission==='granted') new Notification(`⚠️ ${issue.priority.toUpperCase()} — ${issue.title}`,{body:`Logged by ${issue.createdBy}`});
-        }
-      });
+      const newIssues = snap.docs.map(d=>({id:d.id,...d.data()}));
+
+      if(!isFirstLoad){
+        newIssues.forEach(issue=>{
+          const prev = prevIssueMap[issue.id];
+          // New issue from someone else — alert if Critical/Urgent
+          if(!prev && ['critical','urgent'].includes(issue.priority) && issue.createdBy!==user.name){
+            playAlert();
+            if(Notification.permission==='granted'){
+              new Notification(`⚠️ ${issue.priority.toUpperCase()} — ${issue.title}`,{body:`Logged by ${issue.createdBy}`});
+            }
+          }
+          // Existing issue escalated to Critical/Urgent
+          else if(prev && prev.priority!==issue.priority &&
+                  ['critical','urgent'].includes(issue.priority) &&
+                  !['critical','urgent'].includes(prev.priority)){
+            playAlert();
+            if(Notification.permission==='granted'){
+              new Notification(`⚠️ Escalated to ${issue.priority.toUpperCase()}`,{body:issue.title});
+            }
+          }
+        });
+      }
+
+      issues = newIssues;
+      prevIssueMap = {};
+      issues.forEach(i=>{ prevIssueMap[i.id]=i });
+      isFirstLoad = false;
       renderBoard();
     });
 }
 
 // ── RENDER BOARD ──────────────────────────────────────────────
 function renderBoard(){
+  const term = searchTerm.toLowerCase().trim();
   const filtered = issues.filter(i=>{
     if(tFilter!=='all' && i.track!==tFilter) return false;
     if(pFilter!=='all' && i.priority!==pFilter) return false;
+    if(term){
+      const hay = `${i.title||''} ${i.description||''} ${i.instrumentType||''} ${i.unitNumber||''} ${i.assignee||''} ${i.createdBy||''}`.toLowerCase();
+      if(!hay.includes(term)) return false;
+    }
     return true;
   });
   // sort: priority first, then newest
@@ -476,6 +643,8 @@ function renderCard(issue){
   const tl = tc==='op'?'OP':tc==='bb'?'BB':'GEN';
   const cc = issue.commentCount||0;
   const ai = initials(issue.assignee||'');
+  const aging = isAging(issue);
+  const age = fmtAge(issue.createdAt);
   return `<div class="card ${tc}" onclick="openDetail('${issue.id}')">
     <div class="card-top">
       <span class="pbadge ${issue.priority}">${issue.priority}</span>
@@ -489,6 +658,7 @@ function renderCard(issue){
         : '<span style="font-size:11px;color:#94a3b8">Unassigned</span>'}
       ${cc>0?`<div class="cc">💬 ${cc}</div>`:''}
     </div>
+    ${age && issue.status!=='resolved' ? `<div class="card-time ${aging?'warn':''}">${aging?'⚠ ':''}Open ${age}</div>` : ''}
   </div>`;
 }
 
@@ -508,7 +678,7 @@ function closeNewIssue(){
 async function submitNewIssue(){
   const title=document.getElementById('issueTitle').value.trim();
   if(!title){alert('Title is required.');return}
-  await db.collection('issues').add({
+  const ref = await db.collection('issues').add({
     boardId,title,
     description:document.getElementById('issueDesc').value.trim(),
     priority:document.getElementById('issuePriority').value,
@@ -522,6 +692,7 @@ async function submitNewIssue(){
     updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
     commentCount:0
   });
+  await logActivity(ref.id, 'created', {});
   closeNewIssue();
   showToast('Issue logged.');
 }
@@ -564,7 +735,10 @@ function buildDetailHTML(i){
         ${inst?`<span style="font-size:11px;background:#f0fdf4;color:#15803d;padding:2px 8px;border-radius:4px;font-weight:700;font-family:monospace">${esc(inst)}</span>`:''}
       </div>
       <div class="mtitle">${esc(i.title)}</div>
-      <div style="font-size:11px;color:#94a3b8;margin-top:4px">Logged by ${esc(i.createdBy)} · ${fmtTime(i.createdAt)}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px">
+        Logged by ${esc(i.createdBy)} · ${fmtTime(i.createdAt)}
+        ${i.status!=='resolved' && fmtAge(i.createdAt) ? ` · <span style="${isAging(i)?'color:#dc2626;font-weight:600':''}">Open ${fmtAge(i.createdAt)}</span>` : ''}
+      </div>
     </div>
     <button class="mclose" onclick="closeDetail()">×</button>
   </div>
@@ -583,6 +757,11 @@ function buildDetailHTML(i){
         <div class="ccount"><span id="ccnt">0</span>/280</div>
         <button class="btn btn-p" style="padding:6px 13px;font-size:12px" onclick="postComment('${i.id}')">Post Update</button>
       </div>
+
+      <div class="history-toggle" onclick="toggleHistory('${i.id}')" id="histToggle">
+        <span id="histArrow">▸</span> <span id="histLbl">Show History</span>
+      </div>
+      <div class="history-list" id="histList"></div>
     </div>
 
     <div class="sidebar">
@@ -624,10 +803,47 @@ function buildDetailHTML(i){
 function closeDetail(){
   document.getElementById('detailOverlay').classList.add('hidden');
   if(detailSub){detailSub();detailSub=null}
+  if(historySub){historySub();historySub=null}
 }
 
 async function updateField(id, field, val){
+  // Get the previous value so we can log the change
+  const issue = issues.find(i=>i.id===id);
+  const prev = issue ? issue[field] : null;
   await db.collection('issues').doc(id).update({[field]:val, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  // Log significant field changes to history
+  if(['status','priority'].includes(field) && prev !== val){
+    await logActivity(id, field, {from:prev, to:val});
+  }
+}
+
+function toggleHistory(issueId){
+  const list = document.getElementById('histList');
+  const arrow = document.getElementById('histArrow');
+  const lbl = document.getElementById('histLbl');
+  if(!list) return;
+
+  if(list.classList.contains('open')){
+    // Close
+    list.classList.remove('open');
+    arrow.textContent = '▸';
+    lbl.textContent = 'Show History';
+    if(historySub){historySub();historySub=null}
+  } else {
+    // Open
+    list.classList.add('open');
+    arrow.textContent = '▾';
+    lbl.textContent = 'Hide History';
+    list.innerHTML = '<div style="color:#94a3b8;font-size:12px">Loading…</div>';
+    historySub = db.collection('issues').doc(issueId).collection('history')
+      .orderBy('createdAt','desc')
+      .onSnapshot(snap=>{
+        const items = snap.docs.map(d=>d.data());
+        list.innerHTML = items.length
+          ? items.map(h=>`<div class="h-entry">${describeActivity(h)} <span class="h-time">· ${fmtTime(h.createdAt)}</span></div>`).join('')
+          : '<div style="color:#94a3b8;font-size:12px">No history yet.</div>';
+      });
+  }
 }
 
 async function postComment(issueId){
@@ -647,14 +863,25 @@ async function postComment(issueId){
 
 async function saveAssign(id){
   const val=document.getElementById('dAssign')?.value.trim()||'';
-  await updateField(id,'assignee',val);
+  const issue = issues.find(i=>i.id===id);
+  const prev = issue ? (issue.assignee||'') : '';
+  await db.collection('issues').doc(id).update({assignee:val, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  if(prev !== val){
+    await logActivity(id, 'assignee', {from:prev, to:val});
+  }
   showToast('Assignee saved.');
 }
 
-function claimIssue(id){
+async function claimIssue(id){
   const el=document.getElementById('dAssign');
   if(el) el.value=user.name;
-  saveAssign(id);
+  const issue = issues.find(i=>i.id===id);
+  const prev = issue ? (issue.assignee||'') : '';
+  await db.collection('issues').doc(id).update({assignee:user.name, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  if(prev !== user.name){
+    await logActivity(id, 'claimed', {});
+  }
+  showToast('Assigned to you.');
 }
 
 async function deleteIssue(id){
@@ -662,6 +889,12 @@ async function deleteIssue(id){
   await db.collection('issues').doc(id).delete();
   closeDetail();
   showToast('Issue deleted.');
+}
+
+// ── SEARCH ────────────────────────────────────────────────────
+function onSearch(val){
+  searchTerm = val;
+  renderBoard();
 }
 
 // ── FILTERS ───────────────────────────────────────────────────
