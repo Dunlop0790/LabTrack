@@ -403,18 +403,38 @@ function isAging(issue){
 }
 
 // ── SOUND ─────────────────────────────────────────────────────
+let audioCtx = null;
+let audioUnlocked = false;
+
+function unlockAudio(){
+  if(audioUnlocked) return;
+  try {
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    // Play a silent buffer to fully unlock on iOS/Safari
+    const buf = audioCtx.createBuffer(1,1,22050);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioCtx.destination);
+    src.start(0);
+    audioUnlocked = true;
+  } catch(e){ console.warn('Audio unlock failed:',e) }
+}
+
 function playAlert(){
   if(!soundEnabled) return;
+  if(!audioCtx) unlockAudio();
+  if(!audioCtx) return;
   try {
-    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
     // Two-tone "ding-dong" alert
     [880, 660].forEach((freq,i)=>{
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
       osc.frequency.value = freq;
       osc.type = 'sine';
-      const start = ctx.currentTime + i*0.18;
+      const start = audioCtx.currentTime + i*0.18;
       gain.gain.setValueAtTime(0, start);
       gain.gain.linearRampToValueAtTime(0.25, start+0.02);
       gain.gain.exponentialRampToValueAtTime(0.001, start+0.25);
@@ -429,6 +449,11 @@ function toggleSound(){
   localStorage.setItem('lt_sound', soundEnabled?'on':'off');
   updateSoundBtn();
   showToast(soundEnabled?'Alert sounds on':'Alert sounds muted');
+  // Play a test ding when turning ON, so user knows it works
+  if(soundEnabled){
+    unlockAudio();
+    playAlert();
+  }
 }
 
 function updateSoundBtn(){
@@ -491,6 +516,9 @@ async function initApp(){
   document.getElementById('userName').textContent=user.name;
   document.getElementById('userAvatar').textContent=initials(user.name);
   updateSoundBtn();
+  // Unlock audio on first user interaction (browsers block audio without it)
+  document.addEventListener('click', unlockAudio, {once:false, capture:true});
+  document.addEventListener('keydown', unlockAudio, {once:false, capture:true});
   await loadBoards();
   if('Notification' in window && Notification.permission==='default') Notification.requestPermission();
   // Re-render every minute so card ages update and aging warnings appear
