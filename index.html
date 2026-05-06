@@ -53,6 +53,13 @@
     .dot-monitor{background:var(--monitor-c)}
     .dot-low{background:var(--low)}
     .chip.c-op .dot,.chip.c-bb .dot,.chip.c-gen .dot,.chip.c-critical .dot,.chip.c-urgent .dot,.chip.c-monitor .dot,.chip.c-low .dot{background:rgba(255,255,255,.95)}
+    select.fc option[value="critical"]{color:var(--critical)}
+    select.fc option[value="urgent"]{color:var(--urgent)}
+    select.fc option[value="monitor"]{color:var(--monitor-c)}
+    select.fc option[value="low"]{color:var(--low)}
+    select.fc option[value="op"]{color:var(--op)}
+    select.fc option[value="bb"]{color:var(--bb)}
+    select.fc option[value="general"]{color:#64748b}
 
     /* ── BOARD ── */
     .board{flex:1;display:flex;padding:16px 18px;gap:14px;overflow-x:auto;align-items:flex-start}
@@ -194,18 +201,18 @@
       <div class="fg">
         <label class="flbl">Priority *</label>
         <select class="fc" id="issuePriority">
-          <option value="critical">Critical</option>
-          <option value="urgent">Urgent</option>
-          <option value="monitor" selected>Monitor</option>
-          <option value="low">Low</option>
+          <option value="critical">● Critical</option>
+          <option value="urgent">● Urgent</option>
+          <option value="monitor" selected>● Monitor</option>
+          <option value="low">● Low</option>
         </select>
       </div>
       <div class="fg">
         <label class="flbl">Track *</label>
         <select class="fc" id="issueTrack">
-          <option value="op">Optimus Prime (OP)</option>
-          <option value="bb">Bumblebee (BB)</option>
-          <option value="general">General / Both</option>
+          <option value="op">● Optimus Prime (OP)</option>
+          <option value="bb">● Bumblebee (BB)</option>
+          <option value="general">● General / Both</option>
         </select>
       </div>
     </div>
@@ -588,10 +595,10 @@ function buildDetailHTML(i){
       <div class="sb-sec">
         <div class="sb-lbl">Priority</div>
         <select class="fc" onchange="updateField('${i.id}','priority',this.value)">
-          <option value="critical" ${i.priority==='critical'?'selected':''}>Critical</option>
-          <option value="urgent" ${i.priority==='urgent'?'selected':''}>Urgent</option>
-          <option value="monitor" ${i.priority==='monitor'?'selected':''}>Monitor</option>
-          <option value="low" ${i.priority==='low'?'selected':''}>Low</option>
+          <option value="critical" ${i.priority==='critical'?'selected':''}>● Critical</option>
+          <option value="urgent" ${i.priority==='urgent'?'selected':''}>● Urgent</option>
+          <option value="monitor" ${i.priority==='monitor'?'selected':''}>● Monitor</option>
+          <option value="low" ${i.priority==='low'?'selected':''}>● Low</option>
         </select>
       </div>
       <div class="sb-sec">
