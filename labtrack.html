@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LabTrack — Issue Board</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --navy:#1a2942;--navy2:#243752;--bg:#eef1f5;--white:#fff;
+      --border:#dde3ec;--text:#1e293b;--muted:#64748b;
+      --critical:#dc2626;--urgent:#ea580c;--monitor-c:#b45309;--low:#6b7280;
+      --op:#dc2626;--bb:#d97706;
+      --col-open:#3b82f6;--col-inprog:#8b5cf6;--col-watch:#f59e0b;--col-done:#10b981;
+      --r:8px;
+    }
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;font-size:14px}
+
+    /* ── HEADER ── */
+    header{background:var(--navy);color:#fff;height:54px;display:flex;align-items:center;gap:14px;padding:0 18px;flex-shrink:0;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+    .logo{font-size:17px;font-weight:800;letter-spacing:-.5px;white-space:nowrap}
+    .logo span{color:#60a5fa}
+    .board-sel{background:var(--navy2);border:1px solid rgba(255,255,255,.18);color:#fff;padding:5px 10px;border-radius:6px;font-size:13px;cursor:pointer;min-width:150px;max-width:200px}
+    .btn-nb{background:transparent;border:1px dashed rgba(255,255,255,.35);color:rgba(255,255,255,.75);padding:5px 11px;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap}
+    .btn-nb:hover{background:rgba(255,255,255,.1)}
+    .hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+    .user-badge{display:flex;align-items:center;gap:7px;font-size:13px;color:rgba(255,255,255,.85);cursor:pointer}
+    .user-badge:hover{color:#fff}
+    .avatar{width:28px;height:28px;border-radius:50%;background:#3b82f6;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+    .btn-new{background:#3b82f6;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+    .btn-new:hover{background:#2563eb}
+
+    /* ── FILTER BAR ── */
+    .fbar{display:flex;align-items:center;gap:6px;padding:8px 18px;background:#fff;border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0}
+    .flabel{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-right:2px}
+    .chip{font-size:12px;padding:3px 10px;border-radius:20px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-weight:500;transition:all .12s;user-select:none}
+    .chip:hover{border-color:#93c5fd;background:#eff6ff}
+    .chip.c-all{border-color:#3b82f6;background:#3b82f6;color:#fff}
+    .chip.c-op{border-color:var(--op);background:var(--op);color:#fff}
+    .chip.c-bb{border-color:var(--bb);background:var(--bb);color:#fff}
+    .chip.c-gen{border-color:#64748b;background:#64748b;color:#fff}
+    .chip.c-critical{border-color:var(--critical);background:var(--critical);color:#fff}
+    .chip.c-urgent{border-color:var(--urgent);background:var(--urgent);color:#fff}
+    .chip.c-monitor{border-color:var(--monitor-c);background:var(--monitor-c);color:#fff}
+    .chip.c-low{border-color:var(--low);background:var(--low);color:#fff}
+    .fdivider{width:1px;height:18px;background:var(--border);margin:0 3px}
+
+    /* ── BOARD ── */
+    .board{flex:1;display:flex;padding:16px 18px;gap:14px;overflow-x:auto;align-items:flex-start}
+    .col{background:#e2e7ef;border-radius:10px;width:270px;flex-shrink:0;display:flex;flex-direction:column;max-height:calc(100vh - 110px)}
+    .col-hdr{padding:11px 13px;display:flex;align-items:center;gap:7px;border-top:3px solid transparent;border-radius:10px 10px 0 0}
+    .col-hdr.open{border-color:var(--col-open)}.col-hdr.inprogress{border-color:var(--col-inprog)}.col-hdr.monitoring{border-color:var(--col-watch)}.col-hdr.resolved{border-color:var(--col-done)}
+    .col-dot{width:9px;height:9px;border-radius:50%}
+    .col-dot.open{background:var(--col-open)}.col-dot.inprogress{background:var(--col-inprog)}.col-dot.monitoring{background:var(--col-watch)}.col-dot.resolved{background:var(--col-done)}
+    .col-name{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+    .col-cnt{margin-left:auto;background:rgba(0,0,0,.1);color:var(--muted);font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px}
+    .col-cards{padding:8px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:7px}
+    .col-empty{text-align:center;padding:18px 8px;color:#94a3b8;font-size:12px;font-style:italic}
+
+    /* ── CARD ── */
+    .card{background:#fff;border-radius:7px;padding:11px 12px;cursor:pointer;border-left:4px solid #94a3b8;box-shadow:0 1px 3px rgba(0,0,0,.07);transition:box-shadow .15s,transform .1s}
+    .card:hover{box-shadow:0 4px 14px rgba(0,0,0,.12);transform:translateY(-1px)}
+    .card.op{border-left-color:var(--op)}.card.bb{border-left-color:var(--bb)}.card.general{border-left-color:#94a3b8}
+    .card-top{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+    .pbadge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.3px}
+    .pbadge.critical{background:#fee2e2;color:var(--critical)}.pbadge.urgent{background:#ffedd5;color:var(--urgent)}.pbadge.monitor{background:#fef3c7;color:var(--monitor-c)}.pbadge.low{background:#f1f5f9;color:var(--low)}
+    .tbadge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:auto}
+    .tbadge.op{background:#fee2e2;color:var(--op)}.tbadge.bb{background:#fef3c7;color:#92400e}.tbadge.general{background:#f1f5f9;color:#64748b}
+    .card-title{font-size:13px;font-weight:600;line-height:1.4;margin-bottom:5px}
+    .card-inst{font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:7px;letter-spacing:.3px}
+    .card-bot{display:flex;align-items:center;gap:5px}
+    .a-chip{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px}
+    .a-dot{width:18px;height:18px;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .cc{margin-left:auto;font-size:11px;color:var(--muted)}
+
+    /* ── OVERLAYS ── */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
+    .overlay.hidden{display:none}
+    .modal{background:#fff;border-radius:12px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;padding:22px}
+    .modal-lg{max-width:740px}
+    .mhdr{display:flex;align-items:flex-start;gap:10px;margin-bottom:18px}
+    .mtitle{font-size:17px;font-weight:700;line-height:1.3;flex:1}
+    .mclose{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);padding:0 5px;line-height:1;border-radius:4px}
+    .mclose:hover{background:#f1f5f9}
+
+    /* ── FORM ── */
+    .fg{margin-bottom:14px}
+    .flbl{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:5px}
+    .fc{width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:6px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s;font-family:inherit;background:#fff}
+    .fc:focus{border-color:#3b82f6}
+    select.fc{cursor:pointer}
+    textarea.fc{resize:vertical;min-height:76px}
+    .frow{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+    .btn{padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .12s}
+    .btn:hover{opacity:.85}
+    .btn-p{background:#3b82f6;color:#fff}.btn-d{background:#dc2626;color:#fff}.btn-g{background:#f1f5f9;color:var(--text)}
+    .brow{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+
+    /* ── DETAIL ── */
+    .dbody{display:grid;grid-template-columns:1fr 260px;gap:22px}
+    .desc-box{font-size:14px;line-height:1.6;background:#f8fafc;padding:11px;border-radius:6px;margin-bottom:18px;min-height:56px;color:var(--text);white-space:pre-wrap}
+    .sec-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:9px}
+    .clist{display:flex;flex-direction:column;gap:8px;margin-bottom:11px;max-height:210px;overflow-y:auto}
+    .ci{background:#f8fafc;border-radius:6px;padding:9px 11px}
+    .ci-author{font-size:12px;font-weight:700;margin-bottom:1px}
+    .ci-text{font-size:13px;line-height:1.5}
+    .ci-time{font-size:11px;color:var(--muted);margin-top:3px}
+    .cinput-row{display:flex;gap:7px;align-items:flex-start}
+    .cinput-row textarea{flex:1;min-height:58px;font-size:13px}
+    .cinput-meta{display:flex;justify-content:space-between;align-items:center;margin-top:5px}
+    .ccount{font-size:11px;color:var(--muted)}
+    .sidebar{display:flex;flex-direction:column;gap:16px}
+    .sb-sec{}
+    .sb-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:5px}
+    .sb-val{font-size:14px;font-weight:500}
+    .assign-row{display:flex;gap:6px}
+    .assign-row input{flex:1}
+    .btn-me{background:#eff6ff;color:#1d4ed8;border:none;padding:8px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+    .btn-me:hover{background:#dbeafe}
+    .sb-del{margin-top:8px;padding-top:14px;border-top:1px solid var(--border)}
+
+    /* ── SETUP ── */
+    .setup-modal{max-width:400px;text-align:center}
+    .setup-icon{font-size:46px;margin-bottom:14px}
+    .setup-title{font-size:21px;font-weight:800;margin-bottom:6px}
+    .setup-sub{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.6}
+    .roles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:14px}
+    .role-opt{border:2px solid var(--border);border-radius:8px;padding:12px;cursor:pointer;transition:all .12s}
+    .role-opt:hover,.role-opt.sel{border-color:#3b82f6;background:#eff6ff}
+    .role-name{font-size:13px;font-weight:700}
+    .role-sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+    /* ── TOAST ── */
+    .toast{position:fixed;bottom:18px;right:18px;background:#1e293b;color:#fff;padding:11px 15px;border-radius:8px;font-size:13px;z-index:999;max-width:280px;box-shadow:0 4px 14px rgba(0,0,0,.2);transform:translateY(70px);opacity:0;transition:all .28s;pointer-events:none}
+    .toast.show{transform:translateY(0);opacity:1}
+    .loading{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+  </style>
+</head>
+<body>
+
+<!-- ── SETUP OVERLAY ── -->
+<div class="overlay" id="setupOverlay">
+  <div class="modal setup-modal">
+    <div class="setup-icon">🔬</div>
+    <div class="setup-title">Welcome to LabTrack</div>
+    <div class="setup-sub">Enter your name once — it'll be saved to this device so you never have to type it again.</div>
+    <div class="fg" style="text-align:left">
+      <label class="flbl">Your Name</label>
+      <input class="fc" id="setupName" placeholder="e.g. John D." />
+    </div>
+    <div class="fg" style="text-align:left">
+      <label class="flbl">Your Role</label>
+      <div class="roles">
+        <div class="role-opt" id="roleALO" onclick="selectRole('ALO')">
+          <div class="role-name">ALO</div>
+          <div class="role-sub">Line Operator</div>
+        </div>
+        <div class="role-opt" id="roleLead" onclick="selectRole('Lead')">
+          <div class="role-name">Lead</div>
+          <div class="role-sub">On-site Leader</div>
+        </div>
+        <div class="role-opt" id="roleSiemens" onclick="selectRole('Siemens')">
+          <div class="role-name">Siemens</div>
+          <div class="role-sub">Healthineers</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-p" style="width:100%;padding:11px" onclick="saveUser()">Get Started</button>
+  </div>
+</div>
+
+<!-- ── NEW ISSUE OVERLAY ── -->
+<div class="overlay hidden" id="newIssueOverlay">
+  <div class="modal">
+    <div class="mhdr">
+      <div class="mtitle">Log New Issue</div>
+      <button class="mclose" onclick="closeNewIssue()">×</button>
+    </div>
+    <div class="fg">
+      <label class="flbl">Issue Title *</label>
+      <input class="fc" id="issueTitle" placeholder="Brief description of the issue" />
+    </div>
+    <div class="frow">
+      <div class="fg">
+        <label class="flbl">Priority *</label>
+        <select class="fc" id="issuePriority">
+          <option value="critical">🔴 Critical</option>
+          <option value="urgent">🟠 Urgent</option>
+          <option value="monitor" selected>🟡 Monitor</option>
+          <option value="low">⚪ Low</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="flbl">Track *</label>
+        <select class="fc" id="issueTrack">
+          <option value="op">🔴 Optimus Prime (OP)</option>
+          <option value="bb">🟡 Bumblebee (BB)</option>
+          <option value="general">⚪ General / Both</option>
+        </select>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg">
+        <label class="flbl">Instrument Type</label>
+        <select class="fc" id="issueInstrument">
+          <option value="">— Select —</option>
+          <option value="HVS">HVS</option>
+          <option value="ROM400">ROM400</option>
+          <option value="TBM">TBM</option>
+          <option value="BIM">BIM</option>
+          <option value="IOM">IOM</option>
+          <option value="BOM">BOM</option>
+          <option value="CM">CM</option>
+          <option value="DSM">DSM</option>
+          <option value="DCM">DCM</option>
+          <option value="SM">SM</option>
+          <option value="WBB">WBB</option>
+          <option value="ADV">ADV (Advia)</option>
+          <option value="ASH">ASH (Atellica A1C)</option>
+          <option value="BASH">BASH (Atellica)</option>
+          <option value="USH">USH</option>
+          <option value="Track">Track (general)</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="flbl">Unit Number</label>
+        <input class="fc" id="issueUnit" placeholder="e.g. 3, 7, 22..." />
+      </div>
+    </div>
+    <div class="fg">
+      <label class="flbl">Assign To</label>
+      <input class="fc" id="issueAssignee" placeholder="Name (leave blank if unassigned)" />
+    </div>
+    <div class="fg">
+      <label class="flbl">Description / Notes</label>
+      <textarea class="fc" id="issueDesc" placeholder="Error codes, symptoms, steps already taken..."></textarea>
+    </div>
+    <div class="brow">
+      <button class="btn btn-g" onclick="closeNewIssue()">Cancel</button>
+      <button class="btn btn-p" onclick="submitNewIssue()">Log Issue</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ISSUE DETAIL OVERLAY ── -->
+<div class="overlay hidden" id="detailOverlay" onclick="maybeCloseDetail(event)">
+  <div class="modal modal-lg" id="detailModal"></div>
+</div>
+
+<!-- ── NEW BOARD OVERLAY ── -->
+<div class="overlay hidden" id="newBoardOverlay">
+  <div class="modal" style="max-width:360px">
+    <div class="mhdr">
+      <div class="mtitle">New Board</div>
+      <button class="mclose" onclick="closeNewBoard()">×</button>
+    </div>
+    <div class="fg">
+      <label class="flbl">Board Name</label>
+      <input class="fc" id="newBoardName" placeholder="e.g. Siemens Internal, Night Shift..." />
+    </div>
+    <div class="brow">
+      <button class="btn btn-g" onclick="closeNewBoard()">Cancel</button>
+      <button class="btn btn-p" onclick="submitNewBoard()">Create Board</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="logo">Lab<span>Track</span></div>
+  <select class="board-sel" id="boardSel" onchange="switchBoard(this.value)"></select>
+  <button class="btn-nb" onclick="openNewBoard()">+ New Board</button>
+  <div class="hdr-right">
+    <div class="user-badge" onclick="resetUser()" title="Click to change name">
+      <div class="avatar" id="userAvatar"></div>
+      <span id="userName"></span>
+    </div>
+    <button class="btn-new" onclick="openNewIssue()">+ New Issue</button>
+  </div>
+</header>
+
+<!-- ── FILTER BAR ── -->
+<div class="fbar">
+  <span class="flabel">Track</span>
+  <span class="chip c-all" id="fAll" onclick="setTF('all')">All</span>
+  <span class="chip" id="fOP" onclick="setTF('op')">🔴 OP</span>
+  <span class="chip" id="fBB" onclick="setTF('bb')">🟡 BB</span>
+  <span class="chip" id="fGen" onclick="setTF('general')">General</span>
+  <div class="fdivider"></div>
+  <span class="flabel">Priority</span>
+  <span class="chip c-all" id="pAll" onclick="setPF('all')">All</span>
+  <span class="chip" id="pCrit" onclick="setPF('critical')">Critical</span>
+  <span class="chip" id="pUrg" onclick="setPF('urgent')">Urgent</span>
+  <span class="chip" id="pMon" onclick="setPF('monitor')">Monitor</span>
+  <span class="chip" id="pLow" onclick="setPF('low')">Low</span>
+</div>
+
+<!-- ── BOARD ── -->
+<div class="board" id="boardArea"><div class="loading">Connecting…</div></div>
+
+<!-- ── FIREBASE ── -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+// ── CONFIG ────────────────────────────────────────────────────
+firebase.initializeApp({
+  apiKey:"AIzaSyCP9k-mZZGiRW94ZH9JopuURbVuw0MZro8",
+  authDomain:"lab-tracking-928ec.firebaseapp.com",
+  projectId:"lab-tracking-928ec",
+  storageBucket:"lab-tracking-928ec.firebasestorage.app",
+  messagingSenderId:"1076816645332",
+  appId:"1:1076816645332:web:43ed9d11de3f0e3c94ff41"
+});
+const db = firebase.firestore();
+
+// ── STATE ─────────────────────────────────────────────────────
+let user = null, selectedRole = null;
+let boardId = null, boards = [];
+let issues = [], issueSub = null;
+let detailSub = null;
+let tFilter = 'all', pFilter = 'all';
+const COLS = ['open','inprogress','monitoring','resolved'];
+const COL_LABELS = {open:'Open',inprogress:'In Progress',monitoring:'Monitoring',resolved:'Resolved'};
+const PRIORITY_ORDER = {critical:0,urgent:1,monitor:2,low:3};
+
+// ── HELPERS ───────────────────────────────────────────────────
+const esc = s => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
+function initials(name){return name?name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase():'?'}
+function fmtTime(ts){if(!ts?.toDate) return 'just now';const d=ts.toDate();return d.toLocaleDateString()+" "+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
+
+// ── USER SETUP ────────────────────────────────────────────────
+function selectRole(role){
+  selectedRole=role;
+  document.getElementById('roleALO').classList.toggle('sel',role==='ALO');
+  document.getElementById('roleLead').classList.toggle('sel',role==='Lead');
+  document.getElementById('roleSiemens').classList.toggle('sel',role==='Siemens');
+}
+
+function saveUser(){
+  const name=document.getElementById('setupName').value.trim();
+  if(!name){alert('Please enter your name.');return}
+  if(!selectedRole){alert('Please select your role.');return}
+  user={name,role:selectedRole};
+  localStorage.setItem('lt_user',JSON.stringify(user));
+  document.getElementById('setupOverlay').classList.add('hidden');
+  initApp();
+}
+
+function resetUser(){
+  if(!confirm('Change your name/role?')) return;
+  localStorage.removeItem('lt_user');
+  location.reload();
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+async function initApp(){
+  document.getElementById('userName').textContent=user.name;
+  document.getElementById('userAvatar').textContent=initials(user.name);
+  await loadBoards();
+  if('Notification' in window && Notification.permission==='default') Notification.requestPermission();
+}
+
+// ── BOARDS ────────────────────────────────────────────────────
+async function loadBoards(){
+  const snap = await db.collection('boards').get();
+  boards = snap.docs.map(d=>({id:d.id,...d.data()}));
+  if(!boards.length){
+    const ref = await db.collection('boards').add({title:'Main Board',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    boards=[{id:ref.id,title:'Main Board'}];
+  }
+  renderBoardSel();
+  switchBoard(boards[0].id);
+}
+
+function renderBoardSel(){
+  const sel=document.getElementById('boardSel');
+  sel.innerHTML=boards.map(b=>`<option value="${b.id}">${esc(b.title)}</option>`).join('');
+}
+
+function switchBoard(id){
+  boardId=id;
+  if(issueSub) issueSub();
+  subscribeIssues(id);
+}
+
+function openNewBoard(){document.getElementById('newBoardOverlay').classList.remove('hidden')}
+function closeNewBoard(){document.getElementById('newBoardOverlay').classList.add('hidden')}
+
+async function submitNewBoard(){
+  const name=document.getElementById('newBoardName').value.trim();
+  if(!name) return;
+  const ref=await db.collection('boards').add({title:name,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  boards.push({id:ref.id,title:name});
+  renderBoardSel();
+  document.getElementById('boardSel').value=ref.id;
+  switchBoard(ref.id);
+  closeNewBoard();
+  document.getElementById('newBoardName').value='';
+}
+
+// ── ISSUES REALTIME ───────────────────────────────────────────
+function subscribeIssues(bid){
+  document.getElementById('boardArea').innerHTML='<div class="loading">Loading…</div>';
+  const prevIds = issues.map(i=>i.id);
+  issueSub = db.collection('issues').where('boardId','==',bid)
+    .onSnapshot(snap=>{
+      issues = snap.docs.map(d=>({id:d.id,...d.data()}));
+      // notify on new critical/urgent from others
+      issues.forEach(issue=>{
+        if(!prevIds.includes(issue.id) && ['critical','urgent'].includes(issue.priority) && issue.createdBy!==user.name){
+          if(Notification.permission==='granted') new Notification(`⚠️ ${issue.priority.toUpperCase()} — ${issue.title}`,{body:`Logged by ${issue.createdBy}`});
+        }
+      });
+      renderBoard();
+    });
+}
+
+// ── RENDER BOARD ──────────────────────────────────────────────
+function renderBoard(){
+  const filtered = issues.filter(i=>{
+    if(tFilter!=='all' && i.track!==tFilter) return false;
+    if(pFilter!=='all' && i.priority!==pFilter) return false;
+    return true;
+  });
+  // sort: priority first, then newest
+  filtered.sort((a,b)=>{
+    const pd = (PRIORITY_ORDER[a.priority]||3)-(PRIORITY_ORDER[b.priority]||3);
+    if(pd!==0) return pd;
+    const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+    const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+    return tb-ta;
+  });
+
+  document.getElementById('boardArea').innerHTML = COLS.map(col=>{
+    const cards = filtered.filter(i=>i.status===col);
+    return `<div class="col">
+      <div class="col-hdr ${col}">
+        <div class="col-dot ${col}"></div>
+        <div class="col-name">${COL_LABELS[col]}</div>
+        <div class="col-cnt">${cards.length}</div>
+      </div>
+      <div class="col-cards">
+        ${cards.length ? cards.map(renderCard).join('') : '<div class="col-empty">No issues</div>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCard(issue){
+  const inst = [issue.instrumentType, issue.unitNumber].filter(Boolean).join(' ');
+  const tc = issue.track||'general';
+  const tl = tc==='op'?'OP':tc==='bb'?'BB':'GEN';
+  const cc = issue.commentCount||0;
+  const ai = initials(issue.assignee||'');
+  return `<div class="card ${tc}" onclick="openDetail('${issue.id}')">
+    <div class="card-top">
+      <span class="pbadge ${issue.priority}">${issue.priority}</span>
+      <span class="tbadge ${tc}">${tl}</span>
+    </div>
+    <div class="card-title">${esc(issue.title)}</div>
+    ${inst?`<div class="card-inst">${esc(inst)}</div>`:''}
+    <div class="card-bot">
+      ${issue.assignee
+        ? `<div class="a-chip"><div class="a-dot">${ai}</div>${esc(issue.assignee)}</div>`
+        : '<span style="font-size:11px;color:#94a3b8">Unassigned</span>'}
+      ${cc>0?`<div class="cc">💬 ${cc}</div>`:''}
+    </div>
+  </div>`;
+}
+
+// ── NEW ISSUE ─────────────────────────────────────────────────
+function openNewIssue(){
+  document.getElementById('issueAssignee').value='';
+  document.getElementById('newIssueOverlay').classList.remove('hidden');
+  document.getElementById('issueTitle').focus();
+}
+function closeNewIssue(){
+  document.getElementById('newIssueOverlay').classList.add('hidden');
+  ['issueTitle','issueDesc','issueUnit','issueAssignee'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('issuePriority').value='monitor';
+  document.getElementById('issueTrack').value='op';
+  document.getElementById('issueInstrument').value='';
+}
+async function submitNewIssue(){
+  const title=document.getElementById('issueTitle').value.trim();
+  if(!title){alert('Title is required.');return}
+  await db.collection('issues').add({
+    boardId,title,
+    description:document.getElementById('issueDesc').value.trim(),
+    priority:document.getElementById('issuePriority').value,
+    status:'open',
+    track:document.getElementById('issueTrack').value,
+    instrumentType:document.getElementById('issueInstrument').value,
+    unitNumber:document.getElementById('issueUnit').value.trim(),
+    assignee:document.getElementById('issueAssignee').value.trim(),
+    createdBy:user.name,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    commentCount:0
+  });
+  closeNewIssue();
+  showToast('Issue logged.');
+}
+
+// ── ISSUE DETAIL ──────────────────────────────────────────────
+function maybeCloseDetail(e){if(e.target===document.getElementById('detailOverlay')) closeDetail()}
+
+async function openDetail(issueId){
+  const issue = issues.find(i=>i.id===issueId);
+  if(!issue) return;
+  document.getElementById('detailModal').innerHTML = buildDetailHTML(issue);
+  document.getElementById('detailOverlay').classList.remove('hidden');
+  if(detailSub) detailSub();
+  detailSub = db.collection('issues').doc(issueId).collection('comments')
+    .orderBy('createdAt')
+    .onSnapshot(snap=>{
+      const cs=snap.docs.map(d=>({id:d.id,...d.data()}));
+      const el=document.getElementById('clist');
+      if(!el) return;
+      el.innerHTML = cs.length ? cs.map(c=>`<div class="ci">
+        <div class="ci-author">${esc(c.author)} <span style="font-weight:400;color:var(--muted)">(${c.role||''})</span></div>
+        <div class="ci-text">${esc(c.text)}</div>
+        <div class="ci-time">${fmtTime(c.createdAt)}</div>
+      </div>`).join('') : '<div style="color:#94a3b8;font-size:13px">No updates yet.</div>';
+      el.scrollTop=el.scrollHeight;
+    });
+}
+
+function buildDetailHTML(i){
+  const inst=[i.instrumentType,i.unitNumber].filter(Boolean).join(' ');
+  const tl=i.track==='op'?'🔴 Optimus Prime':i.track==='bb'?'🟡 Bumblebee':'⚪ General';
+  return `
+  <div class="mhdr">
+    <div style="flex:1">
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+        <span class="pbadge ${i.priority}">${i.priority}</span>
+        <span style="font-size:11px;background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:4px;font-weight:600">${tl}</span>
+        ${inst?`<span style="font-size:11px;background:#f0fdf4;color:#15803d;padding:2px 8px;border-radius:4px;font-weight:700;font-family:monospace">${esc(inst)}</span>`:''}
+      </div>
+      <div class="mtitle">${esc(i.title)}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px">Logged by ${esc(i.createdBy)} · ${fmtTime(i.createdAt)}</div>
+    </div>
+    <button class="mclose" onclick="closeDetail()">×</button>
+  </div>
+
+  <div class="dbody">
+    <div>
+      <div class="sec-lbl">Description</div>
+      <div class="desc-box">${i.description ? esc(i.description) : '<span style="color:#94a3b8">No description.</span>'}</div>
+
+      <div class="sec-lbl" style="margin-bottom:9px">Updates & Comments</div>
+      <div class="clist" id="clist"><div style="color:#94a3b8;font-size:13px">Loading…</div></div>
+      <div class="cinput-row">
+        <textarea class="fc" id="ctext" maxlength="280" placeholder="Add an update or note…" oninput="document.getElementById('ccnt').textContent=this.value.length"></textarea>
+      </div>
+      <div class="cinput-meta">
+        <div class="ccount"><span id="ccnt">0</span>/280</div>
+        <button class="btn btn-p" style="padding:6px 13px;font-size:12px" onclick="postComment('${i.id}')">Post Update</button>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <div class="sb-sec">
+        <div class="sb-lbl">Status</div>
+        <select class="fc" onchange="updateField('${i.id}','status',this.value)">
+          ${COLS.map(s=>`<option value="${s}" ${i.status===s?'selected':''}>${COL_LABELS[s]}</option>`).join('')}
+        </select>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-lbl">Priority</div>
+        <select class="fc" onchange="updateField('${i.id}','priority',this.value)">
+          <option value="critical" ${i.priority==='critical'?'selected':''}>🔴 Critical</option>
+          <option value="urgent" ${i.priority==='urgent'?'selected':''}>🟠 Urgent</option>
+          <option value="monitor" ${i.priority==='monitor'?'selected':''}>🟡 Monitor</option>
+          <option value="low" ${i.priority==='low'?'selected':''}>⚪ Low</option>
+        </select>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-lbl">Assigned To</div>
+        <div class="assign-row">
+          <input class="fc" id="dAssign" value="${esc(i.assignee||'')}" placeholder="Unassigned" />
+          <button class="btn-me" onclick="claimIssue('${i.id}')">Me</button>
+        </div>
+        <button class="btn btn-g" style="margin-top:6px;width:100%;font-size:12px" onclick="saveAssign('${i.id}')">Save Assignee</button>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-lbl">Track</div>
+        <div class="sb-val">${tl}</div>
+      </div>
+      ${inst?`<div class="sb-sec"><div class="sb-lbl">Instrument</div><div class="sb-val" style="font-family:monospace">${esc(inst)}</div></div>`:''}
+      <div class="sb-del">
+        <button class="btn btn-d" style="width:100%;font-size:12px" onclick="deleteIssue('${i.id}')">Delete Issue</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function closeDetail(){
+  document.getElementById('detailOverlay').classList.add('hidden');
+  if(detailSub){detailSub();detailSub=null}
+}
+
+async function updateField(id, field, val){
+  await db.collection('issues').doc(id).update({[field]:val, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+}
+
+async function postComment(issueId){
+  const text=document.getElementById('ctext')?.value.trim();
+  if(!text) return;
+  await db.collection('issues').doc(issueId).collection('comments').add({
+    text, author:user.name, role:user.role,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+  await db.collection('issues').doc(issueId).update({
+    commentCount:firebase.firestore.FieldValue.increment(1),
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+  const el=document.getElementById('ctext');
+  if(el){el.value='';document.getElementById('ccnt').textContent='0'}
+}
+
+async function saveAssign(id){
+  const val=document.getElementById('dAssign')?.value.trim()||'';
+  await updateField(id,'assignee',val);
+  showToast('Assignee saved.');
+}
+
+function claimIssue(id){
+  const el=document.getElementById('dAssign');
+  if(el) el.value=user.name;
+  saveAssign(id);
+}
+
+async function deleteIssue(id){
+  if(!confirm('Delete this issue? This cannot be undone.')) return;
+  await db.collection('issues').doc(id).delete();
+  closeDetail();
+  showToast('Issue deleted.');
+}
+
+// ── FILTERS ───────────────────────────────────────────────────
+function setTF(v){
+  tFilter=v;
+  const map={all:'fAll',op:'fOP',bb:'fBB',general:'fGen'};
+  const cls={all:'c-all',op:'c-op',bb:'c-bb',general:'c-gen'};
+  Object.values(map).forEach(id=>document.getElementById(id).className='chip');
+  document.getElementById(map[v]).classList.add(cls[v]);
+  renderBoard();
+}
+
+function setPF(v){
+  pFilter=v;
+  const map={all:'pAll',critical:'pCrit',urgent:'pUrg',monitor:'pMon',low:'pLow'};
+  const cls={all:'c-all',critical:'c-critical',urgent:'c-urgent',monitor:'c-monitor',low:'c-low'};
+  Object.values(map).forEach(id=>document.getElementById(id).className='chip');
+  document.getElementById(map[v]).classList.add(cls[v]);
+  renderBoard();
+}
+
+// ── BOOT ──────────────────────────────────────────────────────
+const saved=localStorage.getItem('lt_user');
+if(saved){
+  user=JSON.parse(saved);
+  document.getElementById('setupOverlay').classList.add('hidden');
+  initApp();
+}
+</script>
+</body>
+</html>
