@@ -44,6 +44,15 @@
     .chip.c-monitor{border-color:var(--monitor-c);background:var(--monitor-c);color:#fff}
     .chip.c-low{border-color:var(--low);background:var(--low);color:#fff}
     .fdivider{width:1px;height:18px;background:var(--border);margin:0 3px}
+    .dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin-right:5px;flex-shrink:0}
+    .dot-op{background:var(--op)}
+    .dot-bb{background:var(--bb)}
+    .dot-gen{background:#94a3b8}
+    .dot-critical{background:var(--critical)}
+    .dot-urgent{background:var(--urgent)}
+    .dot-monitor{background:var(--monitor-c)}
+    .dot-low{background:var(--low)}
+    .chip.c-op .dot,.chip.c-bb .dot,.chip.c-gen .dot,.chip.c-critical .dot,.chip.c-urgent .dot,.chip.c-monitor .dot,.chip.c-low .dot{background:rgba(255,255,255,.95)}
 
     /* ── BOARD ── */
     .board{flex:1;display:flex;padding:16px 18px;gap:14px;overflow-x:auto;align-items:flex-start}
@@ -134,6 +143,7 @@
     .toast{position:fixed;bottom:18px;right:18px;background:#1e293b;color:#fff;padding:11px 15px;border-radius:8px;font-size:13px;z-index:999;max-width:280px;box-shadow:0 4px 14px rgba(0,0,0,.2);transform:translateY(70px);opacity:0;transition:all .28s;pointer-events:none}
     .toast.show{transform:translateY(0);opacity:1}
     .loading{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+    .credit{position:fixed;bottom:10px;right:14px;font-size:11px;color:#94a3b8;pointer-events:none;user-select:none;z-index:50}
   </style>
 </head>
 <body>
@@ -184,18 +194,18 @@
       <div class="fg">
         <label class="flbl">Priority *</label>
         <select class="fc" id="issuePriority">
-          <option value="critical">🔴 Critical</option>
-          <option value="urgent">🟠 Urgent</option>
-          <option value="monitor" selected>🟡 Monitor</option>
-          <option value="low">⚪ Low</option>
+          <option value="critical">Critical</option>
+          <option value="urgent">Urgent</option>
+          <option value="monitor" selected>Monitor</option>
+          <option value="low">Low</option>
         </select>
       </div>
       <div class="fg">
         <label class="flbl">Track *</label>
         <select class="fc" id="issueTrack">
-          <option value="op">🔴 Optimus Prime (OP)</option>
-          <option value="bb">🟡 Bumblebee (BB)</option>
-          <option value="general">⚪ General / Both</option>
+          <option value="op">Optimus Prime (OP)</option>
+          <option value="bb">Bumblebee (BB)</option>
+          <option value="general">General / Both</option>
         </select>
       </div>
     </div>
@@ -287,9 +297,9 @@
 <div class="fbar">
   <span class="flabel">Track</span>
   <span class="chip c-all" id="fAll" onclick="setTF('all')">All</span>
-  <span class="chip" id="fOP" onclick="setTF('op')">🔴 OP</span>
-  <span class="chip" id="fBB" onclick="setTF('bb')">🟡 BB</span>
-  <span class="chip" id="fGen" onclick="setTF('general')">General</span>
+  <span class="chip" id="fOP" onclick="setTF('op')"><span class="dot dot-op"></span>OP</span>
+  <span class="chip" id="fBB" onclick="setTF('bb')"><span class="dot dot-bb"></span>BB</span>
+  <span class="chip" id="fGen" onclick="setTF('general')"><span class="dot dot-gen"></span>General</span>
   <div class="fdivider"></div>
   <span class="flabel">Priority</span>
   <span class="chip c-all" id="pAll" onclick="setPF('all')">All</span>
@@ -301,6 +311,8 @@
 
 <!-- ── BOARD ── -->
 <div class="board" id="boardArea"><div class="loading">Connecting…</div></div>
+
+<div class="credit">Made by Corey Hausterman</div>
 
 <!-- ── FIREBASE ── -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -533,7 +545,9 @@ async function openDetail(issueId){
 
 function buildDetailHTML(i){
   const inst=[i.instrumentType,i.unitNumber].filter(Boolean).join(' ');
-  const tl=i.track==='op'?'🔴 Optimus Prime':i.track==='bb'?'🟡 Bumblebee':'⚪ General';
+  const trackDot = i.track==='op'?'dot-op':i.track==='bb'?'dot-bb':'dot-gen';
+  const trackName = i.track==='op'?'Optimus Prime':i.track==='bb'?'Bumblebee':'General';
+  const tl = `<span class="dot ${trackDot}"></span>${trackName}`;
   return `
   <div class="mhdr">
     <div style="flex:1">
@@ -574,10 +588,10 @@ function buildDetailHTML(i){
       <div class="sb-sec">
         <div class="sb-lbl">Priority</div>
         <select class="fc" onchange="updateField('${i.id}','priority',this.value)">
-          <option value="critical" ${i.priority==='critical'?'selected':''}>🔴 Critical</option>
-          <option value="urgent" ${i.priority==='urgent'?'selected':''}>🟠 Urgent</option>
-          <option value="monitor" ${i.priority==='monitor'?'selected':''}>🟡 Monitor</option>
-          <option value="low" ${i.priority==='low'?'selected':''}>⚪ Low</option>
+          <option value="critical" ${i.priority==='critical'?'selected':''}>Critical</option>
+          <option value="urgent" ${i.priority==='urgent'?'selected':''}>Urgent</option>
+          <option value="monitor" ${i.priority==='monitor'?'selected':''}>Monitor</option>
+          <option value="low" ${i.priority==='low'?'selected':''}>Low</option>
         </select>
       </div>
       <div class="sb-sec">
