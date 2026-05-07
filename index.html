@@ -73,6 +73,34 @@
     .assign-item .a-dot{width:20px;height:20px;font-size:10px}
     .assign-item.unassign{color:var(--muted);font-style:italic;border-bottom:1px solid var(--border)}
     .assign-empty{padding:11px;font-size:12px;color:var(--muted);text-align:center}
+
+    /* ── MENTIONS ── */
+    .mention{background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:3px;font-weight:600;font-size:.95em}
+    .mention-list{position:absolute;background:#fff;border:1.5px solid var(--border);border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:180px;overflow-y:auto;z-index:60;min-width:180px;display:none}
+    .mention-list.open{display:block}
+    .mention-item{padding:6px 11px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:7px}
+    .mention-item:hover,.mention-item.active{background:#eff6ff}
+    .mention-item .a-dot{width:18px;height:18px;font-size:9px}
+    .mention-role{font-size:10px;color:var(--muted);margin-left:auto}
+
+    /* ── NEEDS FLAG ── */
+    .needs-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.3px;margin-top:6px}
+    .needs-alo{background:#dbeafe;color:#1e40af}
+    .needs-siemens{background:#fef3c7;color:#92400e}
+    .needs-toggle{display:flex;gap:4px;margin-top:5px}
+    .needs-opt{font-size:11px;padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;flex:1;text-align:center;font-weight:500;transition:all .12s}
+    .needs-opt:hover{border-color:#93c5fd}
+    .needs-opt.sel-alo{border-color:#1e40af;background:#dbeafe;color:#1e40af}
+    .needs-opt.sel-siemens{border-color:#92400e;background:#fef3c7;color:#92400e}
+    .needs-opt.sel-none{border-color:#64748b;background:#f1f5f9;color:#475569}
+
+    /* ── REACTIONS ── */
+    .reactions{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+    .react-btn{font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:all .12s}
+    .react-btn:hover{background:#f1f5f9;border-color:#94a3b8}
+    .react-btn.mine{background:#dbeafe;border-color:#3b82f6;color:#1d4ed8}
+    .react-emoji{font-size:13px;line-height:1}
+    .react-cnt{font-weight:600;font-size:11px}
     .dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin-right:5px;flex-shrink:0}
     .dot-op{background:var(--op)}
     .dot-bb{background:var(--bb)}
@@ -285,6 +313,14 @@
       </div>
     </div>
     <div class="fg">
+      <label class="flbl">Needs Help From</label>
+      <div class="needs-toggle">
+        <div class="needs-opt sel-none" id="needsNone" onclick="setNewNeeds('none')">— None —</div>
+        <div class="needs-opt" id="needsAlo" onclick="setNewNeeds('alo')">Needs ALO</div>
+        <div class="needs-opt" id="needsSiemens" onclick="setNewNeeds('siemens')">Needs Siemens</div>
+      </div>
+    </div>
+    <div class="fg">
       <label class="flbl">Description / Notes</label>
       <textarea class="fc" id="issueDesc" placeholder="Error codes, symptoms, steps already taken..."></textarea>
     </div>
@@ -351,6 +387,11 @@
   <span class="chip" id="pUrg" onclick="setPF('urgent')">Urgent</span>
   <span class="chip" id="pMon" onclick="setPF('monitor')">Monitor</span>
   <span class="chip" id="pLow" onclick="setPF('low')">Low</span>
+  <div class="fdivider"></div>
+  <span class="flabel">Needs</span>
+  <span class="chip c-all" id="nAll" onclick="setNF('all')">All</span>
+  <span class="chip" id="nALO" onclick="setNF('alo')">ALO</span>
+  <span class="chip" id="nSiemens" onclick="setNF('siemens')">Siemens</span>
   <div class="search-wrap">
     <span class="search-icon">🔍</span>
     <input class="search-input" id="searchInput" placeholder="Search issues, instruments..." oninput="onSearch(this.value)" />
@@ -382,9 +423,11 @@ let user = null, selectedRole = null;
 let boardId = null, boards = [];
 let issues = [], issueSub = null;
 let detailSub = null, historySub = null;
-let tFilter = 'all', pFilter = 'all', searchTerm = '';
+let tFilter = 'all', pFilter = 'all', searchTerm = '', nFilter = 'all';
 let soundEnabled = localStorage.getItem('lt_sound')!=='off';
 let isFirstLoad = true;
+let newNeeds = 'none';
+let mentionState = {textareaId:null, listId:null, startPos:0, term:''};
 const COLS = ['open','inprogress','monitoring','resolved'];
 const COL_LABELS = {open:'Open',inprogress:'In Progress',monitoring:'Monitoring',resolved:'Resolved'};
 const PRIORITY_ORDER = {critical:0,urgent:1,monitor:2,low:3};
@@ -401,6 +444,13 @@ const SEED_ROSTER = {
 const ROLE_ORDER = ['Lead','ALO','Siemens'];
 const ROLE_LABELS = {ALO:'ALOs', Siemens:'Siemens', Lead:'Leads'};
 let roster = []; // [{name, role}]
+
+// Reaction options on comments
+const REACTIONS = [
+  {key:'ack', emoji:'👍', label:'Acknowledged'},
+  {key:'looking', emoji:'👀', label:'Looking into it'},
+  {key:'done', emoji:'✅', label:'Done'}
+];
 
 // ── HELPERS ───────────────────────────────────────────────────
 const esc = s => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
@@ -552,6 +602,37 @@ async function initApp(){
   if('Notification' in window && Notification.permission==='default') Notification.requestPermission();
   // Re-render every minute so card ages update and aging warnings appear
   setInterval(()=>{ if(issues.length) renderBoard(); }, 60000);
+  // Watch for @mentions of the current user across all comments
+  watchForMyMentions();
+}
+
+// Track recent comment IDs we've already notified on, to prevent duplicate alerts
+const notifiedComments = new Set();
+let mentionInitTime = null;
+
+function watchForMyMentions(){
+  mentionInitTime = Date.now();
+  // Use a collectionGroup query to listen for ALL comments across all issues
+  db.collectionGroup('comments').where('mentions','array-contains',user.name)
+    .onSnapshot(snap=>{
+      snap.docChanges().forEach(change=>{
+        if(change.type !== 'added') return;
+        const c = change.doc.data();
+        const id = change.doc.id;
+        if(notifiedComments.has(id)) return;
+        notifiedComments.add(id);
+        // Skip ones from before this session OR from yourself
+        const ts = c.createdAt?.toMillis ? c.createdAt.toMillis() : 0;
+        if(ts < mentionInitTime - 5000) return;
+        if(c.author === user.name) return;
+        // Notify
+        playAlert();
+        if(Notification.permission==='granted'){
+          new Notification(`💬 ${c.author} mentioned you`, {body: c.text.slice(0,140)});
+        }
+        showToast(`${c.author} mentioned you in a comment`);
+      });
+    });
 }
 
 // ── ROSTER ────────────────────────────────────────────────────
@@ -712,6 +793,7 @@ function renderBoard(){
   const filtered = issues.filter(i=>{
     if(tFilter!=='all' && i.track!==tFilter) return false;
     if(pFilter!=='all' && i.priority!==pFilter) return false;
+    if(nFilter!=='all' && i.needs!==nFilter) return false;
     if(term){
       const hay = `${i.title||''} ${i.description||''} ${i.instrumentType||''} ${i.unitNumber||''} ${i.assignee||''} ${i.createdBy||''}`.toLowerCase();
       if(!hay.includes(term)) return false;
@@ -750,6 +832,10 @@ function renderCard(issue){
   const ai = initials(issue.assignee||'');
   const aging = isAging(issue);
   const age = fmtAge(issue.createdAt);
+  const needs = issue.needs;
+  const needsHtml = needs==='alo' ? '<span class="needs-badge needs-alo">Needs ALO</span>'
+                  : needs==='siemens' ? '<span class="needs-badge needs-siemens">Needs Siemens</span>'
+                  : '';
   return `<div class="card ${tc}" onclick="openDetail('${issue.id}')">
     <div class="card-top">
       <span class="pbadge ${issue.priority}">${issue.priority}</span>
@@ -757,6 +843,7 @@ function renderCard(issue){
     </div>
     <div class="card-title">${esc(issue.title)}</div>
     ${inst?`<div class="card-inst">${esc(inst)}</div>`:''}
+    ${needsHtml}
     <div class="card-bot">
       ${issue.assignee
         ? `<div class="a-chip"><div class="a-dot">${ai}</div>${esc(issue.assignee)}</div>`
@@ -770,6 +857,8 @@ function renderCard(issue){
 // ── NEW ISSUE ─────────────────────────────────────────────────
 function openNewIssue(){
   document.getElementById('issueAssignee').value='';
+  newNeeds = 'none';
+  setNewNeeds('none');
   document.getElementById('newIssueOverlay').classList.remove('hidden');
   document.getElementById('issueTitle').focus();
 }
@@ -779,7 +868,16 @@ function closeNewIssue(){
   document.getElementById('issuePriority').value='monitor';
   document.getElementById('issueTrack').value='op';
   document.getElementById('issueInstrument').value='';
+  newNeeds = 'none';
 }
+
+function setNewNeeds(val){
+  newNeeds = val;
+  document.getElementById('needsNone').className = 'needs-opt' + (val==='none'?' sel-none':'');
+  document.getElementById('needsAlo').className = 'needs-opt' + (val==='alo'?' sel-alo':'');
+  document.getElementById('needsSiemens').className = 'needs-opt' + (val==='siemens'?' sel-siemens':'');
+}
+
 async function submitNewIssue(){
   const title=document.getElementById('issueTitle').value.trim();
   if(!title){alert('Title is required.');return}
@@ -792,6 +890,7 @@ async function submitNewIssue(){
     instrumentType:document.getElementById('issueInstrument').value,
     unitNumber:document.getElementById('issueUnit').value.trim(),
     assignee:document.getElementById('issueAssignee').value.trim(),
+    needs: newNeeds==='none' ? null : newNeeds,
     createdBy:user.name,
     createdAt:firebase.firestore.FieldValue.serverTimestamp(),
     updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
@@ -817,13 +916,44 @@ async function openDetail(issueId){
       const cs=snap.docs.map(d=>({id:d.id,...d.data()}));
       const el=document.getElementById('clist');
       if(!el) return;
-      el.innerHTML = cs.length ? cs.map(c=>`<div class="ci">
-        <div class="ci-author">${esc(c.author)} <span style="font-weight:400;color:var(--muted)">(${c.role||''})</span></div>
-        <div class="ci-text">${esc(c.text)}</div>
-        <div class="ci-time">${fmtTime(c.createdAt)}</div>
-      </div>`).join('') : '<div style="color:#94a3b8;font-size:13px">No updates yet.</div>';
+      el.innerHTML = cs.length ? cs.map(c=>renderComment(c, issueId)).join('') : '<div style="color:#94a3b8;font-size:13px">No updates yet.</div>';
       el.scrollTop=el.scrollHeight;
     });
+}
+
+// Render a single comment including parsed mentions and reactions
+function renderComment(c, issueId){
+  const text = parseMentions(c.text);
+  const reactions = c.reactions || {};
+  const reactHtml = REACTIONS.map(r=>{
+    const users = reactions[r.key] || [];
+    const mine = users.includes(user.name);
+    const tip = users.length ? users.join(', ') : r.label;
+    return `<button class="react-btn ${mine?'mine':''}" title="${esc(tip)}" onclick="toggleReaction('${issueId}','${c.id}','${r.key}')">
+      <span class="react-emoji">${r.emoji}</span>${users.length?`<span class="react-cnt">${users.length}</span>`:''}
+    </button>`;
+  }).join('');
+  return `<div class="ci">
+    <div class="ci-author">${esc(c.author)} <span style="font-weight:400;color:var(--muted)">(${c.role||''})</span></div>
+    <div class="ci-text">${text}</div>
+    <div class="ci-time">${fmtTime(c.createdAt)}</div>
+    <div class="reactions">${reactHtml}</div>
+  </div>`;
+}
+
+// Parse @mentions in text and wrap them in styled spans
+function parseMentions(text){
+  if(!text) return '';
+  const escaped = esc(text);
+  // Match @Name where Name is in roster (case-insensitive, longest match first)
+  const names = roster.map(r=>r.name).sort((a,b)=>b.length-a.length);
+  let result = escaped;
+  names.forEach(name=>{
+    const escName = name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const regex = new RegExp(`@(${escName})\\b`, 'gi');
+    result = result.replace(regex, '<span class="mention">@$1</span>');
+  });
+  return result;
 }
 
 function buildDetailHTML(i){
@@ -855,8 +985,11 @@ function buildDetailHTML(i){
 
       <div class="sec-lbl" style="margin-bottom:9px">Updates & Comments</div>
       <div class="clist" id="clist"><div style="color:#94a3b8;font-size:13px">Loading…</div></div>
-      <div class="cinput-row">
-        <textarea class="fc" id="ctext" maxlength="280" placeholder="Add an update or note…" oninput="document.getElementById('ccnt').textContent=this.value.length"></textarea>
+      <div class="cinput-row" style="position:relative">
+        <textarea class="fc" id="ctext" maxlength="280" placeholder="Add an update or note… (use @ to mention someone)"
+                  oninput="onCommentInput(event)"
+                  onkeydown="onCommentKeydown(event)"></textarea>
+        <div class="mention-list" id="mentionList"></div>
       </div>
       <div class="cinput-meta">
         <div class="ccount"><span id="ccnt">0</span>/280</div>
@@ -898,6 +1031,14 @@ function buildDetailHTML(i){
           <div class="assign-list" id="dAssignList"></div>
         </div>
         <button class="btn btn-g" style="margin-top:6px;width:100%;font-size:12px" onclick="saveAssign('${i.id}')">Save Assignee</button>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-lbl">Needs Help From</div>
+        <div class="needs-toggle">
+          <div class="needs-opt ${!i.needs?'sel-none':''}" onclick="setIssueNeeds('${i.id}','none')">— None —</div>
+          <div class="needs-opt ${i.needs==='alo'?'sel-alo':''}" onclick="setIssueNeeds('${i.id}','alo')">ALO</div>
+          <div class="needs-opt ${i.needs==='siemens'?'sel-siemens':''}" onclick="setIssueNeeds('${i.id}','siemens')">Siemens</div>
+        </div>
       </div>
       <div class="sb-sec">
         <div class="sb-lbl">Track</div>
@@ -960,8 +1101,11 @@ function toggleHistory(issueId){
 async function postComment(issueId){
   const text=document.getElementById('ctext')?.value.trim();
   if(!text) return;
+  const mentions = extractMentions(text);
   await db.collection('issues').doc(issueId).collection('comments').add({
     text, author:user.name, role:user.role,
+    mentions: mentions,
+    reactions: {},
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   });
   await db.collection('issues').doc(issueId).update({
@@ -970,6 +1114,7 @@ async function postComment(issueId){
   });
   const el=document.getElementById('ctext');
   if(el){el.value='';document.getElementById('ccnt').textContent='0'}
+  hideMentionList();
 }
 
 async function saveAssign(id){
@@ -1061,6 +1206,142 @@ function setPF(v){
   Object.values(map).forEach(id=>document.getElementById(id).className='chip');
   document.getElementById(map[v]).classList.add(cls[v]);
   renderBoard();
+}
+
+function setNF(v){
+  nFilter=v;
+  const map={all:'nAll',alo:'nALO',siemens:'nSiemens'};
+  Object.values(map).forEach(id=>document.getElementById(id).className='chip');
+  document.getElementById(map[v]).classList.add(v==='all'?'c-all':v==='alo'?'c-all':'c-all');
+  // simpler: reuse blue active style for all of them
+  document.getElementById(map[v]).className='chip c-all';
+  renderBoard();
+}
+
+// ── NEEDS (per-issue) ─────────────────────────────────────────
+async function setIssueNeeds(id, val){
+  const newVal = val==='none' ? null : val;
+  await db.collection('issues').doc(id).update({
+    needs: newVal,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  // Refresh the open detail view
+  const issue = issues.find(i=>i.id===id);
+  if(issue){
+    issue.needs = newVal;
+    document.getElementById('detailModal').innerHTML = buildDetailHTML(issue);
+  }
+  showToast('Needs updated.');
+}
+
+// ── MENTIONS IN COMMENTS ──────────────────────────────────────
+function onCommentInput(e){
+  const ta = e.target;
+  document.getElementById('ccnt').textContent = ta.value.length;
+
+  // Detect @ trigger — find the most recent @ before the cursor
+  const cursor = ta.selectionStart;
+  const text = ta.value.slice(0, cursor);
+  const atMatch = text.match(/@([A-Za-z]*)$/);
+  if(atMatch){
+    const term = atMatch[1].toLowerCase();
+    const matches = roster
+      .filter(r=>r.name.toLowerCase().startsWith(term))
+      .sort((a,b)=>a.name.localeCompare(b.name))
+      .slice(0,8);
+    if(matches.length){
+      showMentionList(matches, ta, cursor - atMatch[0].length);
+      return;
+    }
+  }
+  hideMentionList();
+}
+
+function onCommentKeydown(e){
+  const list = document.getElementById('mentionList');
+  if(!list || !list.classList.contains('open')) return;
+  const items = list.querySelectorAll('.mention-item');
+  if(!items.length) return;
+  const active = list.querySelector('.mention-item.active');
+  let idx = active ? Array.from(items).indexOf(active) : -1;
+
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    idx = (idx+1) % items.length;
+    items.forEach(el=>el.classList.remove('active'));
+    items[idx].classList.add('active');
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    idx = (idx-1+items.length) % items.length;
+    items.forEach(el=>el.classList.remove('active'));
+    items[idx].classList.add('active');
+  } else if(e.key==='Enter' || e.key==='Tab'){
+    e.preventDefault();
+    const target = active || items[0];
+    target.click();
+  } else if(e.key==='Escape'){
+    hideMentionList();
+  }
+}
+
+function showMentionList(matches, textarea, atPos){
+  const list = document.getElementById('mentionList');
+  if(!list) return;
+  // Position the dropdown near the textarea
+  list.style.top = (textarea.offsetTop + textarea.offsetHeight + 3) + 'px';
+  list.style.left = textarea.offsetLeft + 'px';
+  list.innerHTML = matches.map((r,i)=>`<div class="mention-item ${i===0?'active':''}" onmousedown="event.preventDefault();insertMention('${esc(r.name).replace(/'/g,"\\'")}',${atPos})">
+    <div class="a-dot">${initials(r.name)}</div>${esc(r.name)}<span class="mention-role">${r.role||''}</span>
+  </div>`).join('');
+  list.classList.add('open');
+}
+
+function hideMentionList(){
+  const list = document.getElementById('mentionList');
+  if(list) list.classList.remove('open');
+}
+
+function insertMention(name, atPos){
+  const ta = document.getElementById('ctext');
+  if(!ta) return;
+  const before = ta.value.slice(0, atPos);
+  const afterCursor = ta.value.slice(ta.selectionStart);
+  ta.value = before + '@' + name + ' ' + afterCursor;
+  const newPos = before.length + name.length + 2;
+  ta.setSelectionRange(newPos, newPos);
+  ta.focus();
+  document.getElementById('ccnt').textContent = ta.value.length;
+  hideMentionList();
+}
+
+// Extract @Name mentions that match real roster members
+function extractMentions(text){
+  if(!text) return [];
+  const found = new Set();
+  const names = roster.map(r=>r.name).sort((a,b)=>b.length-a.length);
+  names.forEach(name=>{
+    const escName = name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const regex = new RegExp(`@(${escName})\\b`, 'i');
+    if(regex.test(text)) found.add(name);
+  });
+  return Array.from(found);
+}
+
+// ── REACTIONS ─────────────────────────────────────────────────
+async function toggleReaction(issueId, commentId, key){
+  const ref = db.collection('issues').doc(issueId).collection('comments').doc(commentId);
+  const snap = await ref.get();
+  const data = snap.data() || {};
+  const reactions = data.reactions || {};
+  const list = reactions[key] || [];
+  const idx = list.indexOf(user.name);
+  if(idx >= 0){
+    list.splice(idx, 1);
+  } else {
+    list.push(user.name);
+  }
+  reactions[key] = list;
+  await ref.update({reactions});
 }
 
 // ── BOOT ──────────────────────────────────────────────────────
