@@ -320,6 +320,113 @@
     }
     .print-hdr{display:none;text-align:center;padding:14px;border-bottom:2px solid #333}
     @media print {.print-hdr{display:block}}
+
+    /* ── BUNCH 5: REPORTS / LINE STATUS ── */
+    .reports-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:14px}
+    .reports-tab{padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .12s}
+    .reports-tab:hover{color:var(--text)}
+    .reports-tab.active{color:#3b82f6;border-bottom-color:#3b82f6}
+    .reports-split{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+    @media (max-width: 900px){.reports-split{grid-template-columns:1fr}}
+    .ls-form{display:flex;flex-direction:column;gap:14px}
+    .ls-preview{position:sticky;top:80px;max-height:calc(100vh - 110px);overflow-y:auto;background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:16px}
+    @media (max-width: 900px){.ls-preview{position:static;max-height:none}}
+    .ls-section{background:var(--panel-bg);border:1px solid var(--border);border-radius:8px;padding:13px 14px}
+    .ls-sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#3b82f6;margin-bottom:9px}
+    .ls-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .ls-row + .ls-row{margin-top:7px}
+    .ls-mini{font-size:12px;padding:5px 9px;border:1.5px solid var(--border);border-radius:5px;background:var(--input-bg);color:var(--text);outline:none;width:auto}
+    .ls-mini:focus{border-color:#3b82f6}
+    .ls-mini.w70{width:70px}
+    .ls-mini.w90{width:90px}
+    .ls-lbl{font-size:12px;font-weight:600;color:var(--muted);min-width:80px}
+    .ls-grid{display:grid;gap:9px}
+    .ls-grid-2{grid-template-columns:1fr 1fr}
+    .ls-grid-2.titled{grid-template-columns:80px 1fr 1fr}
+    .ls-cell{display:flex;flex-direction:column;gap:5px}
+    .ls-cell-hdr{font-size:11px;font-weight:700;color:var(--text)}
+    .ls-cell-hdr.bb{color:var(--bb)}
+    .ls-cell-hdr.op{color:var(--op)}
+    .ls-tag-list{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+    .ls-tag{display:inline-flex;align-items:center;gap:4px;background:var(--accent-soft);color:var(--accent-text);font-size:11px;padding:2px 7px;border-radius:11px;font-weight:600}
+    .ls-tag x{cursor:pointer;font-weight:700;line-height:1}
+    .ls-tag-x{cursor:pointer;font-weight:700;line-height:1;font-size:13px;padding-left:2px}
+    .ls-tag-x:hover{color:var(--critical)}
+    .ls-add-row{display:flex;gap:5px;align-items:center;margin-top:5px}
+    .ls-add-row select{flex:1}
+    .ls-add-btn{font-size:12px;padding:5px 10px;background:#3b82f6;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:600}
+    .ls-add-btn:hover{background:#2563eb}
+    .ls-textarea{width:100%;min-height:60px;font-size:13px;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;background:var(--input-bg);color:var(--text);font-family:inherit;resize:vertical}
+    .ls-textarea:focus{border-color:#3b82f6;outline:none}
+    .ls-bim-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:5px}
+    .ls-bim-col{display:flex;flex-direction:column;gap:4px}
+    .ls-bim-row{display:flex;align-items:center;gap:6px;font-size:12px}
+    .ls-bim-row .lbl{min-width:46px;font-weight:600}
+    .ls-bim-row input{width:60px;font-size:12px;padding:3px 6px;border:1.5px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);text-align:center}
+    .ls-bim-row input:focus{border-color:#3b82f6;outline:none}
+    .ls-x-cell{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:26px;border:1.5px solid var(--border);border-radius:4px;cursor:pointer;font-size:13px;font-weight:700;background:var(--input-bg);user-select:none;transition:all .1s}
+    .ls-x-cell:hover{border-color:#3b82f6}
+    .ls-x-cell.checked{background:#3b82f6;color:#fff;border-color:#3b82f6}
+    .ls-startup-tbl,.ls-unpack-tbl{width:100%;border-collapse:collapse;font-size:12px}
+    .ls-startup-tbl td,.ls-startup-tbl th,.ls-unpack-tbl td,.ls-unpack-tbl th{border:1px solid var(--border);padding:5px 7px;text-align:center;vertical-align:middle}
+    .ls-startup-tbl th,.ls-unpack-tbl th{font-weight:700;font-size:11px;background:var(--soft-bg,var(--col-bg))}
+    body.dark .ls-startup-tbl th,body.dark .ls-unpack-tbl th{background:var(--col-bg)}
+    .ls-startup-tbl input{width:60px;font-size:12px;padding:3px 5px;border:1px solid var(--border);border-radius:3px;background:var(--input-bg);color:var(--text);text-align:center}
+    .ls-startup-tbl input:focus{border-color:#3b82f6;outline:none}
+    .ls-unpack-tbl input{width:90%;font-size:11px;padding:3px 4px;border:1px solid var(--border);border-radius:3px;background:var(--input-bg);color:var(--text);text-align:center}
+    .ls-row-sub{font-size:11px;color:var(--muted);margin-top:2px}
+    .ls-actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end;flex-wrap:wrap}
+    .btn-clear{background:transparent;border:1.5px solid var(--border);color:var(--text);padding:8px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+    .btn-clear:hover{border-color:var(--critical);color:var(--critical)}
+    .btn-snap{background:#10b981;color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+    .btn-snap:hover{background:#059669}
+    .btn-copy{background:#3b82f6;color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+    .btn-copy:hover{background:#2563eb}
+
+    /* CSV upload zone (compact version of the original) */
+    .ls-csv-zone{border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;color:var(--muted);font-size:13px;background:var(--input-bg);transition:all .12s}
+    .ls-csv-zone:hover{border-color:#3b82f6;color:var(--text)}
+    .ls-csv-zone.drag{border-color:#3b82f6;background:var(--accent-soft);color:var(--accent-text)}
+    .ls-csv-files{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+    .ls-csv-file{display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 9px;background:var(--code-bg);border-radius:5px}
+    .ls-csv-file.is-op{color:var(--op);font-weight:600}
+    .ls-csv-file.is-bb{color:var(--bb);font-weight:600}
+    .ls-csv-file button{margin-left:auto;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px;line-height:1}
+    .ls-csv-file button:hover{color:var(--critical)}
+    .ls-process-btn{margin-top:8px;width:100%;padding:9px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+    .ls-process-btn:hover{background:#2563eb}
+    .ls-process-btn:disabled{opacity:.5;cursor:not-allowed}
+
+    /* Live preview rendering (must look like the email body) */
+    .ls-render{font-family:'Calibri','Segoe UI',sans-serif;color:#000;background:#fff;padding:14px;border-radius:6px;font-size:13px;line-height:1.4}
+    body.dark .ls-render{background:#fff}
+    .ls-render h1{font-size:14px;font-weight:700;margin-bottom:10px;color:#000}
+    .ls-render table{border-collapse:collapse;margin-bottom:10px}
+    .ls-render table.final-tbl th,.ls-render table.final-tbl td{border:1px solid #000;padding:4px 6px;font-size:11px;text-align:center}
+    .ls-render table.final-tbl th{font-weight:700}
+    .ls-render .sec-h{font-size:12px;font-weight:700;color:#1F4E79;margin-top:14px;margin-bottom:4px}
+    .ls-render .bb-h{color:#D9A300;font-weight:700;margin-top:8px}
+    .ls-render .op-h{color:#C00000;font-weight:700;margin-top:8px}
+    .ls-render ul{margin:4px 0 8px 22px;padding:0}
+    .ls-render li{margin-bottom:2px;font-size:12px}
+    .ls-render table.sub-tbl th,.ls-render table.sub-tbl td{border:1px solid #000;padding:3px 6px;font-size:11px;text-align:left;vertical-align:top}
+    .ls-render table.sub-tbl th{font-weight:700;background:#fff;text-align:center}
+    .ls-render table.sub-tbl th.bb{color:#D9A300}
+    .ls-render table.sub-tbl th.op{color:#C00000}
+    .ls-render table.bim-tbl th,.ls-render table.bim-tbl td{border:1px solid #000;padding:2px 7px;font-size:11px;text-align:center}
+    .ls-render table.bim-tbl th.bb{color:#D9A300;font-weight:700}
+    .ls-render table.bim-tbl th.op{color:#C00000;font-weight:700}
+    .ls-render .b2l{font-weight:700;font-size:12px;margin-top:8px}
+
+    /* Snapshots list */
+    .snap-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+    .snap-item{padding:10px 13px;background:var(--code-bg);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;gap:10px}
+    .snap-info{flex:1;font-size:13px}
+    .snap-time{font-size:11px;color:var(--muted)}
+    .snap-actions{display:flex;gap:5px}
+    .snap-actions button{font-size:11px;padding:4px 9px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);border-radius:4px;cursor:pointer}
+    .snap-actions button:hover{border-color:#3b82f6;color:#3b82f6}
+    .snap-actions button.del:hover{border-color:var(--critical);color:var(--critical)}
   </style>
 </head>
 <body>
@@ -468,6 +575,7 @@
   <button class="btn-nb" onclick="openNewBoard()">+ New Board</button>
   <button class="btn-del-board" onclick="deleteBoard()" title="Delete current board">×</button>
   <div class="hdr-right">
+    <button class="btn-tool desktop-only" onclick="openReports()" title="Line Status & EOD reports">Reports</button>
     <button class="btn-tool desktop-only" onclick="openArchive()" title="View archived issues">Archive</button>
     <button class="btn-tool desktop-only" onclick="openStats()" title="View statistics">Stats</button>
     <button class="btn-tool desktop-only" onclick="window.print()" title="Print current board">Print</button>
@@ -487,6 +595,7 @@
 <div class="ham-menu" id="hamMenu">
   <div class="ham-item" onclick="closeHam();openNewBoard()"><span class="ham-ico">＋</span>New Board</div>
   <div class="ham-item" onclick="closeHam();deleteBoard()"><span class="ham-ico">×</span>Delete Board</div>
+  <div class="ham-item" onclick="closeHam();openReports()"><span class="ham-ico">📋</span>Reports</div>
   <div class="ham-item" onclick="closeHam();openArchive()"><span class="ham-ico">📦</span>Archive</div>
   <div class="ham-item" onclick="closeHam();openStats()"><span class="ham-ico">📊</span>Stats</div>
   <div class="ham-item" onclick="closeHam();window.print()"><span class="ham-ico">🖨</span>Print</div>
@@ -559,11 +668,28 @@
   </div>
 </div>
 
+<!-- ── REPORTS PANEL (Bunch 5) ── -->
+<div class="panel-overlay" id="reportsPanel">
+  <div class="panel" style="max-width:1400px">
+    <div class="panel-hdr">
+      <div class="panel-title">Reports</div>
+      <div class="reports-tabs" style="border:none;margin:0">
+        <div class="reports-tab active" id="rTabLs" onclick="switchReportTab('ls')">Line Status</div>
+        <div class="reports-tab" id="rTabSnap" onclick="switchReportTab('snap')">Saved Snapshots</div>
+        <div class="reports-tab" id="rTabEod" onclick="switchReportTab('eod')">EOD</div>
+      </div>
+      <button class="mclose" style="margin-left:auto" onclick="closeReports()">×</button>
+    </div>
+    <div class="panel-body" id="reportsBody"></div>
+  </div>
+</div>
+
 <div class="credit">Made by Corey Hausterman</div>
 
 <!-- ── FIREBASE ── -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
 firebase.initializeApp({
@@ -915,6 +1041,8 @@ async function initApp(){
   watchForMyMentions();
   // Run archive maintenance: archives resolved cards from past Sundays, purges old archives
   runArchiveMaintenance();
+  // Purge old Line Status snapshots (daily at 6am EST)
+  purgeSnapshotsDaily();
   // Set print date
   const pd = document.getElementById('printDate');
   if(pd) pd.textContent = new Date().toLocaleString();
@@ -2060,6 +2188,803 @@ function exportCSV(source){
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   showToast(`Exported ${rows.length} row(s).`);
+}
+
+// ── BUNCH 5: REPORTS / LINE STATUS ─────────────────────────────
+// Configuration: instrument lists per cell, ranges, etc.
+const LS_OOS_OPTIONS = {
+  bb_hemo: [...range(201,221), 223].map(n=>'ADV'+n),
+  bb_special: ['ASH201', ...range(26,29).map(n=>'BASH'+n)],
+  bb_auto: range(20,25).map(n=>'BASH'+n),
+  op_hemo: range(101,121).map(n=>'ADV'+n),
+  op_special: range(16,19).map(n=>'BASH'+n),
+  op_auto: range(10,15).map(n=>'BASH'+n)
+};
+function range(a,b){const arr=[];for(let i=a;i<=b;i++)arr.push(i);return arr;}
+
+// 30-min time slots from 00:00 to 23:30
+const LS_TIME_SLOTS = (()=>{
+  const out=[]; for(let h=0;h<24;h++){for(const m of ['00','30']) out.push(`${String(h).padStart(2,'0')}:${m}`);} return out;
+})();
+
+// Bucket count options 0 to 300 in 5-step increments
+const LS_BUCKET_COUNTS = range(0,60).map(n=>n*5);
+// Pending relabel 0 to 15
+const LS_RELABEL_COUNTS = range(0,15);
+// Overload values: N/A or 0 to 725 in steps of 5
+const LS_OVERLOAD_VALS = ['N/A', ...range(0,145).map(n=>n*5+'/725')];
+
+// CSV processing, adapted from the original Automated Line Status script
+const LS_CSV_OP_TAG = '191';
+const LS_CSV_BB_TAG = '192';
+
+let lsState = {
+  date: '',
+  projected: '',
+  csvOp: null,        // {file, rows: [[time, first, second, total]]}
+  csvBb: null,
+  bucketCount: '',
+  bucketTime: '',
+  bucketNotes: '',
+  relabelBb: '',
+  relabelOp: '',
+  oos: {bb_hemo:[], bb_special:[], bb_auto:[], op_hemo:[], op_special:[], op_auto:[]},
+  oosNotes: {bb_hemo:'', bb_special:'', bb_auto:'', op_hemo:'', op_special:'', op_auto:''},
+  overloads: {bb_hemo:'', bb_special:'', bb_auto:'', op_hemo:'', op_special:'', op_auto:''},
+  overloadNotes: '',
+  bim: {bb:Array(10).fill(''), op:Array(10).fill('')},  // 1-8 + IOM 1 + IOM 2
+  startup: [
+    {dept:'Hematology', bb:'', op:'', full:false, partial:false},
+    {dept:'A1Cs Atellica', bb:'', op:'', full:false, partial:false},
+    {dept:'IM Atellicas', bb:'', op:'', full:false, partial:false},
+    {dept:'CHE Atellicas', bb:'', op:'', full:false, partial:false}
+  ],
+  unpacking: {ongoing:false, completed:false, lh_flx:'', lh_fedex:'', lh_ups:'', lh_wc:''},
+  bbNotes: '',
+  opNotes: ''
+};
+
+let currentReportTab = 'ls';
+
+function openReports(){
+  document.getElementById('reportsPanel').classList.add('open');
+  // Restore saved projected if any
+  const savedProj = localStorage.getItem('lt_lsProjected');
+  if(savedProj && !lsState.projected) lsState.projected = savedProj;
+  // Default date if blank
+  if(!lsState.date) lsState.date = formatTodayLong();
+  switchReportTab(currentReportTab);
+}
+
+function closeReports(){
+  document.getElementById('reportsPanel').classList.remove('open');
+}
+
+function switchReportTab(tab){
+  currentReportTab = tab;
+  document.getElementById('rTabLs').classList.toggle('active', tab==='ls');
+  document.getElementById('rTabSnap').classList.toggle('active', tab==='snap');
+  document.getElementById('rTabEod').classList.toggle('active', tab==='eod');
+  if(tab==='ls') renderLineStatus();
+  else if(tab==='snap') renderSnapshots();
+  else if(tab==='eod') renderEOD();
+}
+
+function formatTodayLong(){
+  const d = new Date();
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const day = d.getDate();
+  const suffix = (n=>{ if(n>=11&&n<=13) return 'th'; const s=n%10; return s===1?'st':s===2?'nd':s===3?'rd':'th'; })(day);
+  return `${days[d.getDay()]}, ${months[d.getMonth()]} ${day}${suffix}, ${d.getFullYear()}`;
+}
+
+// Render the full Line Status form + preview
+function renderLineStatus(){
+  const body = document.getElementById('reportsBody');
+  body.innerHTML = `
+    <div class="reports-split">
+      <div class="ls-form">
+        <div class="ls-section">
+          <div class="ls-sec-title">CSV Files</div>
+          <div class="ls-csv-zone" id="lsCsvZone" tabindex="0">
+            Drag &amp; drop CSV files here, or click to select
+          </div>
+          <div class="ls-csv-files" id="lsCsvFiles"></div>
+          <div class="ls-row" style="margin-top:10px">
+            <span class="ls-lbl">Projected:</span>
+            <input class="ls-mini w90" id="lsProjected" type="number" placeholder="e.g. 110890" value="${esc(lsState.projected)}" oninput="lsUpdate('projected',this.value)" />
+            <span class="ls-lbl">Date:</span>
+            <input class="ls-mini" style="flex:1" id="lsDate" value="${esc(lsState.date)}" oninput="lsUpdate('date',this.value)" />
+          </div>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title">Buckets to Load</div>
+          <div class="ls-row">
+            <select class="ls-mini w70" onchange="lsUpdate('bucketCount',this.value)">
+              ${optList(LS_BUCKET_COUNTS, lsState.bucketCount)}
+            </select>
+            <span>@</span>
+            <select class="ls-mini w90" onchange="lsUpdate('bucketTime',this.value)">
+              <option value="">--:--</option>
+              ${optList(LS_TIME_SLOTS, lsState.bucketTime)}
+            </select>
+          </div>
+          <textarea class="ls-textarea" placeholder="Optional notes (e.g. '3 Buckets of sorted HEMO')" oninput="lsUpdate('bucketNotes',this.value)" style="margin-top:8px">${esc(lsState.bucketNotes)}</textarea>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title">Pending Buckets to Relabel</div>
+          <div class="ls-grid ls-grid-2">
+            <div class="ls-cell">
+              <div class="ls-cell-hdr bb">BB</div>
+              <select class="ls-mini" onchange="lsUpdate('relabelBb',this.value)">
+                <option value="">--</option>
+                ${optList(LS_RELABEL_COUNTS, lsState.relabelBb)}
+              </select>
+            </div>
+            <div class="ls-cell">
+              <div class="ls-cell-hdr op">OP</div>
+              <select class="ls-mini" onchange="lsUpdate('relabelOp',this.value)">
+                <option value="">--</option>
+                ${optList(LS_RELABEL_COUNTS, lsState.relabelOp)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title">OOS Analyzers</div>
+          ${['bb','op'].map(t=>`
+            <div class="ls-cell-hdr ${t}" style="margin-top:${t==='op'?'10px':'0'}">${t.toUpperCase()}</div>
+            <div class="ls-grid" style="grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:5px">
+              ${['hemo','special','auto'].map(d=>{
+                const key = `${t}_${d}`;
+                return `<div class="ls-cell">
+                  <div style="font-size:10px;font-weight:700;color:var(--muted)">${d.toUpperCase()}</div>
+                  <div class="ls-tag-list" id="oosTags_${key}">${renderOosTags(key)}</div>
+                  <div class="ls-add-row">
+                    <select class="ls-mini" id="oosSel_${key}">
+                      <option value="">add...</option>
+                      ${LS_OOS_OPTIONS[key].filter(o=>!lsState.oos[key].includes(o)).map(o=>`<option value="${o}">${o}</option>`).join('')}
+                    </select>
+                    <button class="ls-add-btn" onclick="lsAddOos('${key}')">+</button>
+                  </div>
+                  <input class="ls-mini" placeholder="custom..." onkeydown="if(event.key==='Enter'){lsAddOosCustom('${key}',this.value);this.value=''}" style="margin-top:4px;width:100%" />
+                </div>`;
+              }).join('')}
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title">Overloads / Buffer Status</div>
+          ${['bb','op'].map(t=>`
+            <div class="ls-cell-hdr ${t}" style="margin-top:${t==='op'?'10px':'0'}">${t.toUpperCase()}</div>
+            <div class="ls-grid" style="grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:5px">
+              ${['hemo','special','auto'].map(d=>{
+                const key = `${t}_${d}`;
+                return `<div class="ls-cell">
+                  <div style="font-size:10px;font-weight:700;color:var(--muted)">${d.toUpperCase()}</div>
+                  <select class="ls-mini" onchange="lsUpdateNested('overloads','${key}',this.value)">
+                    <option value="">--</option>
+                    ${LS_OVERLOAD_VALS.map(v=>`<option value="${v}" ${lsState.overloads[key]===v?'selected':''}>${v}</option>`).join('')}
+                  </select>
+                </div>`;
+              }).join('')}
+            </div>
+          `).join('')}
+          <textarea class="ls-textarea" placeholder="Additional overload notes (optional)" oninput="lsUpdate('overloadNotes',this.value)" style="margin-top:8px">${esc(lsState.overloadNotes)}</textarea>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title">BIM Read Rates</div>
+          <div class="ls-bim-grid">
+            ${['bb','op'].map(t=>`
+              <div class="ls-bim-col">
+                <div class="ls-cell-hdr ${t}">${t.toUpperCase()} % Success</div>
+                ${['1','2','3','4','5','6','7','8','IOM 1','IOM 2'].map((lbl,i)=>`
+                  <div class="ls-bim-row">
+                    <span class="lbl">${lbl}</span>
+                    <input value="${esc(lsState.bim[t][i])}" oninput="lsUpdateBim('${t}',${i},this.value)" placeholder="%" />
+                  </div>
+                `).join('')}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title">Startup Times</div>
+          <table class="ls-startup-tbl">
+            <thead>
+              <tr><th>Dept/Module</th><th style="color:var(--bb)">BB</th><th style="color:var(--op)">OP</th><th>Full</th><th>Partial</th></tr>
+            </thead>
+            <tbody>
+              ${lsState.startup.map((r,i)=>`
+                <tr>
+                  <td style="text-align:left;font-weight:600">${esc(r.dept)}:</td>
+                  <td><input value="${esc(r.bb)}" placeholder="--:--" oninput="lsUpdateStartup(${i},'bb',this.value)" /></td>
+                  <td><input value="${esc(r.op)}" placeholder="--:--" oninput="lsUpdateStartup(${i},'op',this.value)" /></td>
+                  <td><div class="ls-x-cell ${r.full?'checked':''}" onclick="lsToggleStartup(${i},'full')">${r.full?'X':''}</div></td>
+                  <td><div class="ls-x-cell ${r.partial?'checked':''}" onclick="lsToggleStartup(${i},'partial')">${r.partial?'X':''}</div></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title">Unpacking / Shipments</div>
+          <table class="ls-unpack-tbl">
+            <thead>
+              <tr><th rowspan="2" style="width:90px">Unpacking</th><th>Ongoing</th><th>Completed</th></tr>
+              <tr>
+                <td><div class="ls-x-cell ${lsState.unpacking.ongoing?'checked':''}" onclick="lsToggleUnpack('ongoing')">${lsState.unpacking.ongoing?'X':''}</div></td>
+                <td><div class="ls-x-cell ${lsState.unpacking.completed?'checked':''}" onclick="lsToggleUnpack('completed')">${lsState.unpacking.completed?'X':''}</div></td>
+              </tr>
+            </thead>
+          </table>
+          <table class="ls-unpack-tbl" style="margin-top:5px">
+            <thead><tr><th style="width:90px">Line Haul</th><th>FLX</th><th>FedEx</th><th>UPS</th><th>WC</th></tr></thead>
+            <tbody>
+              <tr>
+                <td></td>
+                <td><input value="${esc(lsState.unpacking.lh_flx)}" placeholder="X" oninput="lsUpdateNested('unpacking','lh_flx',this.value)" /></td>
+                <td><input value="${esc(lsState.unpacking.lh_fedex)}" placeholder="X" oninput="lsUpdateNested('unpacking','lh_fedex',this.value)" /></td>
+                <td><input value="${esc(lsState.unpacking.lh_ups)}" placeholder="X" oninput="lsUpdateNested('unpacking','lh_ups',this.value)" /></td>
+                <td><input value="${esc(lsState.unpacking.lh_wc)}" placeholder="X" oninput="lsUpdateNested('unpacking','lh_wc',this.value)" /></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="ls-row-sub">Type X (or any text like "1, Misc") in each cell as needed.</div>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title" style="display:flex;align-items:center">
+            BB / OP Notes
+            <button class="ls-add-btn" style="margin-left:auto;font-size:11px;padding:3px 9px" onclick="lsRefreshNotes()">Refresh from Board</button>
+          </div>
+          <div class="ls-cell-hdr bb" style="margin-top:5px">BB</div>
+          <textarea class="ls-textarea" placeholder="One issue per line (will render as bullets)" oninput="lsUpdate('bbNotes',this.value)">${esc(lsState.bbNotes)}</textarea>
+          <div class="ls-cell-hdr op" style="margin-top:8px">OP</div>
+          <textarea class="ls-textarea" placeholder="One issue per line (will render as bullets)" oninput="lsUpdate('opNotes',this.value)">${esc(lsState.opNotes)}</textarea>
+        </div>
+
+        <div class="ls-actions">
+          <button class="btn-clear" onclick="lsClear()">Clear All</button>
+          <button class="btn-snap" onclick="lsSaveSnapshot()">Save Snapshot</button>
+          <button class="btn-copy" onclick="lsCopy()">Copy to Clipboard</button>
+        </div>
+      </div>
+
+      <div class="ls-preview">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Live Preview</div>
+        <div class="ls-render" id="lsRender">${renderLsHTML()}</div>
+      </div>
+    </div>
+  `;
+  wireCsvZone();
+}
+
+// Helper: render <option> list
+function optList(arr, selected){
+  return arr.map(v=>`<option value="${v}" ${String(selected)===String(v)?'selected':''}>${v}</option>`).join('');
+}
+
+function renderOosTags(key){
+  return lsState.oos[key].map(v=>`<span class="ls-tag">${esc(v)}<span class="ls-tag-x" onclick="lsRemoveOos('${key}','${esc(v)}')">×</span></span>`).join('') || '<span style="color:var(--muted);font-size:11px">none</span>';
+}
+
+// State updaters
+function lsUpdate(field, value){
+  lsState[field] = value;
+  if(field==='projected') localStorage.setItem('lt_lsProjected', value);
+  refreshPreview();
+}
+function lsUpdateNested(parent, key, value){
+  lsState[parent][key] = value;
+  refreshPreview();
+}
+function lsUpdateBim(track, idx, value){
+  lsState.bim[track][idx] = value;
+  refreshPreview();
+}
+function lsUpdateStartup(idx, field, value){
+  lsState.startup[idx][field] = value;
+  refreshPreview();
+}
+function lsToggleStartup(idx, field){
+  lsState.startup[idx][field] = !lsState.startup[idx][field];
+  renderLineStatus();
+}
+function lsToggleUnpack(field){
+  lsState.unpacking[field] = !lsState.unpacking[field];
+  renderLineStatus();
+}
+function lsAddOos(key){
+  const sel = document.getElementById('oosSel_'+key);
+  if(sel?.value && !lsState.oos[key].includes(sel.value)){
+    lsState.oos[key].push(sel.value);
+    renderLineStatus();
+  }
+}
+function lsAddOosCustom(key, value){
+  const v = value.trim();
+  if(v && !lsState.oos[key].includes(v)){
+    lsState.oos[key].push(v);
+    renderLineStatus();
+  }
+}
+function lsRemoveOos(key, value){
+  lsState.oos[key] = lsState.oos[key].filter(v=>v!==value);
+  renderLineStatus();
+}
+
+// Auto-pull notes from active LabTrack issues
+function lsRefreshNotes(){
+  const bbItems = issues.filter(i=>i.track==='bb' && i.status!=='resolved').map(i=>{
+    const inst = [i.instrumentType,i.unitNumber].filter(Boolean).join(' ');
+    return inst ? `${inst}: ${i.title}` : i.title;
+  });
+  const opItems = issues.filter(i=>i.track==='op' && i.status!=='resolved').map(i=>{
+    const inst = [i.instrumentType,i.unitNumber].filter(Boolean).join(' ');
+    return inst ? `${inst}: ${i.title}` : i.title;
+  });
+  lsState.bbNotes = bbItems.join('\n');
+  lsState.opNotes = opItems.join('\n');
+  renderLineStatus();
+  showToast('Notes refreshed from board.');
+}
+
+// Refresh just the preview without re-rendering form (preserves cursor focus)
+function refreshPreview(){
+  const el = document.getElementById('lsRender');
+  if(el) el.innerHTML = renderLsHTML();
+}
+
+function lsClear(){
+  if(!confirm('Clear all Line Status fields? CSV files will also be removed.')) return;
+  const keepProjected = lsState.projected;
+  lsState = {
+    date: formatTodayLong(),
+    projected: keepProjected,
+    csvOp: null, csvBb: null,
+    bucketCount:'', bucketTime:'', bucketNotes:'',
+    relabelBb:'', relabelOp:'',
+    oos: {bb_hemo:[], bb_special:[], bb_auto:[], op_hemo:[], op_special:[], op_auto:[]},
+    oosNotes: {bb_hemo:'', bb_special:'', bb_auto:'', op_hemo:'', op_special:'', op_auto:''},
+    overloads: {bb_hemo:'', bb_special:'', bb_auto:'', op_hemo:'', op_special:'', op_auto:''},
+    overloadNotes:'',
+    bim: {bb:Array(10).fill(''), op:Array(10).fill('')},
+    startup: [
+      {dept:'Hematology', bb:'', op:'', full:false, partial:false},
+      {dept:'A1Cs Atellica', bb:'', op:'', full:false, partial:false},
+      {dept:'IM Atellicas', bb:'', op:'', full:false, partial:false},
+      {dept:'CHE Atellicas', bb:'', op:'', full:false, partial:false}
+    ],
+    unpacking: {ongoing:false, completed:false, lh_flx:'', lh_fedex:'', lh_ups:'', lh_wc:''},
+    bbNotes:'', opNotes:''
+  };
+  renderLineStatus();
+  showToast('Line Status cleared.');
+}
+
+// ── CSV PROCESSING (adapted from original Automated Line Status) ─────
+function wireCsvZone(){
+  const zone = document.getElementById('lsCsvZone');
+  if(!zone) return;
+  zone.onclick = ()=>{
+    const inp = document.createElement('input');
+    inp.type='file'; inp.accept='.csv'; inp.multiple=true;
+    inp.onchange = ()=>{ if(inp.files?.length) lsHandleCsvFiles(Array.from(inp.files)); };
+    inp.click();
+  };
+  zone.ondragover = e=>{ e.preventDefault(); zone.classList.add('drag'); };
+  zone.ondragleave = e=>{ e.preventDefault(); zone.classList.remove('drag'); };
+  zone.ondrop = e=>{
+    e.preventDefault(); zone.classList.remove('drag');
+    if(e.dataTransfer.files?.length) lsHandleCsvFiles(Array.from(e.dataTransfer.files));
+  };
+  renderCsvFiles();
+}
+
+async function lsHandleCsvFiles(files){
+  for(const f of files){
+    if(!f.name.toLowerCase().endsWith('.csv')){
+      showToast(`Skipped ${f.name} (not CSV)`);
+      continue;
+    }
+    const which = f.name.includes(LS_CSV_OP_TAG) ? 'op' : f.name.includes(LS_CSV_BB_TAG) ? 'bb' : null;
+    if(!which){
+      showToast(`Couldn't classify ${f.name}. Filename should contain "${LS_CSV_OP_TAG}" (OP) or "${LS_CSV_BB_TAG}" (BB).`);
+      continue;
+    }
+    const rows = await new Promise((resolve,reject)=>{
+      Papa.parse(f, {header:true, skipEmptyLines:true, complete:r=>resolve(r.data||[]), error:reject});
+    });
+    const processed = lsProcessCsvRows(rows);
+    if(which==='op') lsState.csvOp = {file:f, rows:processed};
+    else lsState.csvBb = {file:f, rows:processed};
+  }
+  renderCsvFiles();
+  refreshPreview();
+}
+
+function lsProcessCsvRows(rows){
+  // Aggregate 30-min counts into hourly buckets
+  const hourData = Object.create(null);
+  rows.forEach(row=>{
+    const time = row['@timestamp per 30 minutes'];
+    const rawCount = row['Count'];
+    if(!time) return;
+    const cleaned = String(rawCount).replace(/,/g,'').trim();
+    const count = parseInt(cleaned,10) || 0;
+    const [hh, mm] = String(time).split(':');
+    const hour = parseInt(hh,10);
+    const minute = parseInt(mm,10);
+    const hourKey = `${String(hour).padStart(2,'0')}:00-${String(hour).padStart(2,'0')}:59`;
+    const half = minute < 30 ? 'first' : 'second';
+    if(!hourData[hourKey]) hourData[hourKey] = {first:0, second:0};
+    hourData[hourKey][half] += count;
+  });
+  return Object.entries(hourData).map(([slot, h])=>[slot, h.first, h.second, h.first+h.second]);
+}
+
+function renderCsvFiles(){
+  const el = document.getElementById('lsCsvFiles');
+  if(!el) return;
+  const items = [];
+  if(lsState.csvOp) items.push({which:'op', name:lsState.csvOp.file.name});
+  if(lsState.csvBb) items.push({which:'bb', name:lsState.csvBb.file.name});
+  el.innerHTML = items.map(i=>`<div class="ls-csv-file is-${i.which}">${i.which.toUpperCase()}: ${esc(i.name)}<button onclick="lsRemoveCsv('${i.which}')">×</button></div>`).join('');
+}
+
+function lsRemoveCsv(which){
+  if(which==='op') lsState.csvOp = null;
+  else lsState.csvBb = null;
+  renderCsvFiles();
+  refreshPreview();
+}
+
+// Build the merged Final table from OP+BB CSV data
+function lsBuildFinalTable(){
+  const projected = parseFloat(lsState.projected);
+  if(!Number.isFinite(projected)) return null;
+  const opData = lsState.csvOp?.rows || [];
+  const bbData = lsState.csvBb?.rows || [];
+  if(!opData.length && !bbData.length) return null;
+
+  const allSlots = new Set([...opData.map(r=>r[0]), ...bbData.map(r=>r[0])]);
+  // Infer shift start hour by finding the start that produces longest consecutive run
+  const startHour = lsInferShiftStart(allSlots);
+  const sortedSlots = Array.from(allSlots).sort((a,b)=>{
+    let ha = parseInt(String(a).split(':')[0],10);
+    let hb = parseInt(String(b).split(':')[0],10);
+    if(ha >= startHour) ha -= 24;
+    if(hb >= startHour) hb -= 24;
+    return ha - hb;
+  });
+
+  const opMap = new Map(opData.map(r=>[r[0], r]));
+  const bbMap = new Map(bbData.map(r=>[r[0], r]));
+
+  const out = [];
+  let running = 0;
+  sortedSlots.forEach((slot, idx)=>{
+    const bb = bbMap.get(slot) || [slot,0,0,0];
+    const op = opMap.get(slot) || [slot,0,0,0];
+    const hourly = (bb[3]||0) + (op[3]||0);
+    running += hourly;
+    const remaining = projected - running;
+    out.push({
+      time: slot,
+      bb: bb[3]||0,
+      op: op[3]||0,
+      hourly,
+      running,
+      remaining,
+      projected: idx===0 ? projected : ''
+    });
+  });
+  return out;
+}
+
+function lsInferShiftStart(slots){
+  if(!slots.size) return 7;
+  let best = 7, bestScore = -1;
+  for(let h=0; h<24; h++){
+    const sorted = Array.from(slots).sort((a,b)=>{
+      let ha = parseInt(String(a).split(':')[0],10);
+      let hb = parseInt(String(b).split(':')[0],10);
+      if(ha >= h) ha -= 24;
+      if(hb >= h) hb -= 24;
+      return ha - hb;
+    });
+    const hours = sorted.map(s=>parseInt(String(s).split(':')[0],10));
+    let score = 0;
+    for(let i=1; i<hours.length; i++){
+      const diff = (hours[i] - hours[i-1] + 24) % 24;
+      if(diff===1) score++;
+    }
+    if(score > bestScore){ bestScore = score; best = h; }
+  }
+  return best;
+}
+
+// Render the full HTML preview (matches the email body format)
+function renderLsHTML(){
+  const final = lsBuildFinalTable();
+  const fmt = n => typeof n === 'number' ? n.toLocaleString() : (n || '');
+  let html = `<h1>LINE STATUS: ${esc(lsState.date)}</h1>`;
+
+  // Final table
+  if(final){
+    html += `<table class="final-tbl"><thead><tr>
+      <th>Time</th>
+      <th style="background:#FFDE2A">BB Total</th>
+      <th style="background:#FF5B5B">OP Total</th>
+      <th>Hourly Total</th>
+      <th>Running Total</th>
+      <th>Projected Remaining</th>
+      <th>Projected</th>
+    </tr></thead><tbody>`;
+    final.forEach(r=>{
+      html += `<tr>
+        <td><b>${esc(r.time)}</b></td>
+        <td>${fmt(r.bb)}</td>
+        <td>${fmt(r.op)}</td>
+        <td>${fmt(r.hourly)}</td>
+        <td>${fmt(r.running)}</td>
+        <td>${fmt(r.remaining)}</td>
+        <td>${fmt(r.projected)}</td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+  } else {
+    html += `<div style="font-style:italic;color:#777;font-size:11px;margin:10px 0">Upload CSV files and enter projected to generate the table.</div>`;
+  }
+
+  // Unpacking / Shipments table
+  const unp = lsState.unpacking;
+  const anyUnp = unp.ongoing || unp.completed || unp.lh_flx || unp.lh_fedex || unp.lh_ups || unp.lh_wc;
+  if(anyUnp){
+    html += `<div class="sec-h">UNPACKING/SHIPMENTS:</div>`;
+    html += `<table class="sub-tbl"><tr>
+      <th rowspan="2">Unpacking:</th><th>Ongoing</th><th>Completed</th></tr>
+      <tr><td style="text-align:center">${unp.ongoing?'X':''}</td><td style="text-align:center">${unp.completed?'X':''}</td></tr>
+    </table>`;
+    html += `<table class="sub-tbl" style="margin-top:5px"><tr>
+      <th>Line Haul:</th><th>FLX</th><th>FedEx</th><th>UPS</th><th>WC</th></tr>
+      <tr><td></td><td style="text-align:center">${esc(unp.lh_flx)}</td><td style="text-align:center">${esc(unp.lh_fedex)}</td><td style="text-align:center">${esc(unp.lh_ups)}</td><td style="text-align:center">${esc(unp.lh_wc)}</td></tr>
+    </table>`;
+  }
+
+  // BB / OP notes (top placement matches email examples)
+  if(lsState.bbNotes.trim()){
+    html += `<div class="bb-h">BB:</div><ul>${noteLines(lsState.bbNotes)}</ul>`;
+  }
+  if(lsState.opNotes.trim()){
+    html += `<div class="op-h">OP:</div><ul>${noteLines(lsState.opNotes)}</ul>`;
+  }
+
+  // Startup Times
+  const anyStartup = lsState.startup.some(r=>r.bb||r.op||r.full||r.partial);
+  if(anyStartup){
+    html += `<div class="sec-h">Startup Time(s):</div>`;
+    html += `<table class="sub-tbl"><thead><tr>
+      <th>Departments/Module</th><th class="bb">BB</th><th class="op">OP</th><th>Full</th><th>Partial</th></tr></thead><tbody>`;
+    lsState.startup.forEach(r=>{
+      html += `<tr>
+        <td><b>${esc(r.dept)}:</b></td>
+        <td style="text-align:center">${esc(r.bb)}</td>
+        <td style="text-align:center">${esc(r.op)}</td>
+        <td style="text-align:center">${r.full?'X':''}</td>
+        <td style="text-align:center">${r.partial?'X':''}</td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  // Buckets to Load
+  if(lsState.bucketCount!=='' || lsState.bucketTime){
+    html += `<div class="sec-h">Buckets to Load:</div>`;
+    html += `<div class="b2l">${esc(lsState.bucketCount)} @ ${esc(lsState.bucketTime)}</div>`;
+    if(lsState.bucketNotes.trim()){
+      html += `<div style="font-size:12px;margin-top:4px">${esc(lsState.bucketNotes).replace(/\n/g,'<br>')}</div>`;
+    }
+  }
+
+  // Pending Buckets to Relabel
+  if(lsState.relabelBb!=='' || lsState.relabelOp!==''){
+    html += `<div class="sec-h">Pending Buckets to Relabel:</div>`;
+    html += `<table class="sub-tbl"><thead><tr><th class="bb">BB</th><th class="op">OP</th></tr></thead>
+      <tbody><tr><td style="text-align:center">${esc(lsState.relabelBb)}</td><td style="text-align:center">${esc(lsState.relabelOp)}</td></tr></tbody></table>`;
+  }
+
+  // OOS Analyzers
+  const hasOos = Object.values(lsState.oos).some(arr=>arr.length);
+  if(hasOos){
+    html += `<div class="sec-h">OOS Analyzers:</div>`;
+    html += `<table class="sub-tbl" style="width:100%"><thead><tr><th class="bb">BB</th><th class="op">OP</th></tr></thead><tbody>`;
+    ['hemo','special','auto'].forEach(d=>{
+      const lbl = d==='hemo'?'HEMO':d==='special'?'SPECIAL':'AUTO';
+      html += `<tr>
+        <td><b>${lbl}:</b> ${lsState.oos['bb_'+d].map(esc).join(', ')}</td>
+        <td><b>${lbl}:</b> ${lsState.oos['op_'+d].map(esc).join(', ')}</td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  // Overloads
+  const hasOver = Object.values(lsState.overloads).some(v=>v) || lsState.overloadNotes.trim();
+  if(hasOver){
+    html += `<div class="sec-h">Overloads/Buffer Status:</div>`;
+    html += `<table class="sub-tbl" style="width:100%"><thead><tr><th class="bb">BB</th><th class="op">OP</th></tr></thead><tbody>`;
+    ['hemo','special','auto'].forEach(d=>{
+      const lbl = d==='hemo'?'HEMO':d==='special'?'SPECIAL':'AUTO';
+      html += `<tr>
+        <td><b>${lbl}:</b> ${esc(lsState.overloads['bb_'+d])}</td>
+        <td><b>${lbl}:</b> ${esc(lsState.overloads['op_'+d])}</td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+    if(lsState.overloadNotes.trim()){
+      html += `<div style="font-size:12px;margin-top:4px;background:#fee;padding:3px 6px">${esc(lsState.overloadNotes).replace(/\n/g,'<br>')}</div>`;
+    }
+  }
+
+  // BIM Read Rates
+  const hasBim = lsState.bim.bb.some(v=>v) || lsState.bim.op.some(v=>v);
+  if(hasBim){
+    html += `<div class="sec-h">BIM Read Rates:</div>`;
+    html += `<table class="bim-tbl"><thead><tr>
+      <th class="bb">BB</th><th>% Success</th><th></th><th class="op">OP</th><th>% Success</th>
+    </tr></thead><tbody>`;
+    const labels = ['1','2','3','4','5','6','7','8','IOM 1','IOM 2'];
+    labels.forEach((lbl,i)=>{
+      html += `<tr>
+        <td><b>${lbl}</b></td>
+        <td>${esc(lsState.bim.bb[i])}</td>
+        <td></td>
+        <td><b>${lbl}</b></td>
+        <td>${esc(lsState.bim.op[i])}</td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  return html;
+}
+
+function noteLines(text){
+  return text.split('\n').filter(l=>l.trim()).map(l=>`<li>${esc(l.trim())}</li>`).join('');
+}
+
+// Copy preview HTML to clipboard as rich content (so it pastes into email clients formatted)
+async function lsCopy(){
+  const el = document.getElementById('lsRender');
+  if(!el) return;
+  try {
+    const html = el.innerHTML;
+    const blob = new Blob([html], {type:'text/html'});
+    const text = el.innerText; // plain-text fallback
+    const textBlob = new Blob([text], {type:'text/plain'});
+    if(navigator.clipboard?.write){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':blob, 'text/plain':textBlob})]);
+    } else {
+      // Fallback: select + execCommand
+      const range = document.createRange();
+      range.selectNode(el);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      document.execCommand('copy');
+      window.getSelection().removeAllRanges();
+    }
+    showToast('Copied to clipboard. Paste into your email.');
+  } catch(e){
+    console.warn('Copy failed:',e);
+    showToast('Copy failed. Try again.');
+  }
+}
+
+// Save snapshot to Firestore (excludes the CSV-derived final table by design)
+async function lsSaveSnapshot(){
+  const snapshot = {...lsState};
+  // Don't store the actual CSV file objects, just remove them
+  delete snapshot.csvOp;
+  delete snapshot.csvBb;
+  await db.collection('lsSnapshots').add({
+    data: JSON.stringify(snapshot),
+    submittedBy: user.name,
+    role: user.role,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast('Snapshot saved.');
+}
+
+// ── SNAPSHOTS TAB ──────────────────────────────────────────────
+async function renderSnapshots(){
+  const body = document.getElementById('reportsBody');
+  body.innerHTML = `<div style="font-size:13px;color:var(--muted);margin-bottom:6px">Snapshots auto-purge daily at 6:00 AM EST. CSV-derived tables are not saved.</div><div class="snap-list" id="snapList">Loading…</div>`;
+  const snap = await db.collection('lsSnapshots').orderBy('createdAt','desc').get();
+  const items = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  const list = document.getElementById('snapList');
+  if(!items.length){
+    list.innerHTML = '<div style="color:var(--muted);font-style:italic;padding:20px;text-align:center">No snapshots yet.</div>';
+    return;
+  }
+  list.innerHTML = items.map(s=>`
+    <div class="snap-item">
+      <div class="snap-info">
+        <div style="font-weight:600">${esc(s.submittedBy||'?')}</div>
+        <div class="snap-time">${fmtTime(s.createdAt)}</div>
+      </div>
+      <div class="snap-actions">
+        <button onclick="lsLoadSnapshot('${s.id}')">Load</button>
+        <button class="del" onclick="lsDeleteSnapshot('${s.id}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function lsLoadSnapshot(id){
+  const doc = await db.collection('lsSnapshots').doc(id).get();
+  if(!doc.exists) return;
+  const data = JSON.parse(doc.data().data);
+  // Restore everything except CSV-derived state
+  Object.assign(lsState, data);
+  lsState.csvOp = null;
+  lsState.csvBb = null;
+  switchReportTab('ls');
+  showToast('Snapshot loaded into form.');
+}
+
+async function lsDeleteSnapshot(id){
+  if(!confirm('Delete this snapshot?')) return;
+  await db.collection('lsSnapshots').doc(id).delete();
+  renderSnapshots();
+  showToast('Snapshot deleted.');
+}
+
+// Daily 6am EST snapshot purge (runs at app load)
+async function purgeSnapshotsDaily(){
+  try {
+    const now = new Date();
+    const utc = now.getTime();
+    const est = new Date(utc - 5*60*60*1000);
+    const dow = est.getUTCDay();
+    const cutoff = new Date(est);
+    cutoff.setUTCHours(6,0,0,0);
+    if(est.getUTCHours() < 6){
+      cutoff.setUTCDate(cutoff.getUTCDate() - 1);
+    }
+    const cutoffMs = cutoff.getTime() + 5*60*60*1000;
+
+    const metaRef = db.collection('meta').doc('snapshots');
+    const metaSnap = await metaRef.get();
+    const lastRun = metaSnap.exists ? (metaSnap.data().lastPurge?.toMillis?.() || 0) : 0;
+    if(lastRun >= cutoffMs) return;
+
+    const old = await db.collection('lsSnapshots').where('createdAt','<', new Date(cutoffMs)).get();
+    let deleted = 0;
+    for(const d of old.docs){ await d.ref.delete(); deleted++; }
+    await metaRef.set({lastPurge: firebase.firestore.FieldValue.serverTimestamp()}, {merge:true});
+    if(deleted) console.log(`Purged ${deleted} old snapshot(s).`);
+  } catch(e){ console.warn('Snapshot purge failed:',e); }
+}
+
+// ── EOD TAB (placeholder) ──────────────────────────────────────
+function renderEOD(){
+  document.getElementById('reportsBody').innerHTML = `
+    <div style="padding:60px 20px;text-align:center;color:var(--muted)">
+      <div style="font-size:36px;margin-bottom:10px">🛠️</div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px">EOD Reports: Coming Soon</div>
+      <div style="font-size:12px">This tab will host the End-of-Day report once we build it together.</div>
+    </div>
+  `;
 }
 
 // ── BOOT ──────────────────────────────────────────────────────
