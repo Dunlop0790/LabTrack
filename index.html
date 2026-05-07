@@ -62,6 +62,17 @@
     .h-entry{font-size:11px;color:var(--muted);padding:3px 0;line-height:1.5}
     .h-entry b{color:var(--text);font-weight:600}
     .h-time{color:#94a3b8;font-size:10px}
+
+    /* ── ASSIGNEE AUTOCOMPLETE ── */
+    .assign-wrap{position:relative}
+    .assign-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--border);border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:240px;overflow-y:auto;z-index:50;margin-top:3px;display:none}
+    .assign-list.open{display:block}
+    .assign-group-hdr{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:7px 11px 4px;background:#f8fafc;border-bottom:1px solid var(--border);position:sticky;top:0}
+    .assign-item{padding:7px 11px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px}
+    .assign-item:hover,.assign-item.active{background:#eff6ff}
+    .assign-item .a-dot{width:20px;height:20px;font-size:10px}
+    .assign-item.unassign{color:var(--muted);font-style:italic;border-bottom:1px solid var(--border)}
+    .assign-empty{padding:11px;font-size:12px;color:var(--muted);text-align:center}
     .dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin-right:5px;flex-shrink:0}
     .dot-op{background:var(--op)}
     .dot-bb{background:var(--bb)}
@@ -265,7 +276,13 @@
     </div>
     <div class="fg">
       <label class="flbl">Assign To</label>
-      <input class="fc" id="issueAssignee" placeholder="Name (leave blank if unassigned)" />
+      <div class="assign-wrap">
+        <input class="fc" id="issueAssignee" placeholder="Type to search names…" autocomplete="off"
+               oninput="showAssignDropdown('issueAssignee','issueAssignList',this.value)"
+               onfocus="showAssignDropdown('issueAssignee','issueAssignList',this.value)"
+               onblur="setTimeout(()=>hideAssignDropdown('issueAssignList'),180)" />
+        <div class="assign-list" id="issueAssignList"></div>
+      </div>
     </div>
     <div class="fg">
       <label class="flbl">Description / Notes</label>
@@ -374,6 +391,16 @@ const PRIORITY_ORDER = {critical:0,urgent:1,monitor:2,low:3};
 const PRIORITY_LABELS = {critical:'Critical',urgent:'Urgent',monitor:'Monitor',low:'Low'};
 // Aging thresholds in milliseconds — if Critical sits Open >1hr, show warning
 const AGE_WARN_MS = {critical:60*60*1000, urgent:2*60*60*1000, monitor:24*60*60*1000, low:7*24*60*60*1000};
+
+// Seeded roster — these names get added on first launch if not already present
+const SEED_ROSTER = {
+  ALO: ['Corey','Matt','Bruce','Jorge','Lyza','Daisy','Katie','Melanie','Grace'],
+  Siemens: ['Angel','Johnny','Malachi','Alvin','Greg','Malek','Deanna','Mitch','Eric','Steve','Santiago','Ryan','Kevin','Dan'],
+  Lead: ['Zack','Victoria','Veronica','Amanda','Ashley','Nichole','Morgan']
+};
+const ROLE_ORDER = ['Lead','ALO','Siemens'];
+const ROLE_LABELS = {ALO:'ALOs', Siemens:'Siemens', Lead:'Leads'};
+let roster = []; // [{name, role}]
 
 // ── HELPERS ───────────────────────────────────────────────────
 const esc = s => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
@@ -519,10 +546,60 @@ async function initApp(){
   // Unlock audio on first user interaction (browsers block audio without it)
   document.addEventListener('click', unlockAudio, {once:false, capture:true});
   document.addEventListener('keydown', unlockAudio, {once:false, capture:true});
+  await loadRoster();
+  await ensureUserInRoster();
   await loadBoards();
   if('Notification' in window && Notification.permission==='default') Notification.requestPermission();
   // Re-render every minute so card ages update and aging warnings appear
   setInterval(()=>{ if(issues.length) renderBoard(); }, 60000);
+}
+
+// ── ROSTER ────────────────────────────────────────────────────
+async function loadRoster(){
+  const snap = await db.collection('roster').get();
+  roster = snap.docs.map(d=>({name:d.id, ...d.data()}));
+  // Seed initial roster on first run
+  if(!roster.length){
+    const batch = db.batch();
+    Object.entries(SEED_ROSTER).forEach(([role, names])=>{
+      names.forEach(name=>{
+        batch.set(db.collection('roster').doc(name), {role, addedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      });
+    });
+    await batch.commit();
+    roster = [];
+    Object.entries(SEED_ROSTER).forEach(([role, names])=>{
+      names.forEach(name=> roster.push({name, role}));
+    });
+  }
+  // Live updates so new users show up immediately
+  db.collection('roster').onSnapshot(snap=>{
+    roster = snap.docs.map(d=>({name:d.id, ...d.data()}));
+  });
+}
+
+async function ensureUserInRoster(){
+  const exists = roster.some(r => r.name.toLowerCase() === user.name.toLowerCase());
+  if(!exists){
+    await db.collection('roster').doc(user.name).set({
+      role: user.role,
+      addedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    roster.push({name:user.name, role:user.role});
+  }
+}
+
+// Group roster by role, in display order
+function groupedRoster(filterTerm){
+  const term = (filterTerm||'').toLowerCase().trim();
+  const out = {};
+  ROLE_ORDER.forEach(r=> out[r] = []);
+  roster.forEach(r=>{
+    if(term && !r.name.toLowerCase().includes(term)) return;
+    if(out[r.role]) out[r.role].push(r.name);
+  });
+  ROLE_ORDER.forEach(r=> out[r].sort((a,b)=>a.localeCompare(b)));
+  return out;
 }
 
 // ── BOARDS ────────────────────────────────────────────────────
@@ -810,9 +887,15 @@ function buildDetailHTML(i){
       </div>
       <div class="sb-sec">
         <div class="sb-lbl">Assigned To</div>
-        <div class="assign-row">
-          <input class="fc" id="dAssign" value="${esc(i.assignee||'')}" placeholder="Unassigned" />
-          <button class="btn-me" onclick="claimIssue('${i.id}')">Me</button>
+        <div class="assign-wrap">
+          <div class="assign-row">
+            <input class="fc" id="dAssign" value="${esc(i.assignee||'')}" placeholder="Unassigned" autocomplete="off"
+                   oninput="showAssignDropdown('dAssign','dAssignList',this.value)"
+                   onfocus="showAssignDropdown('dAssign','dAssignList',this.value)"
+                   onblur="setTimeout(()=>hideAssignDropdown('dAssignList'),180)" />
+            <button class="btn-me" onclick="claimIssue('${i.id}')">Me</button>
+          </div>
+          <div class="assign-list" id="dAssignList"></div>
         </div>
         <button class="btn btn-g" style="margin-top:6px;width:100%;font-size:12px" onclick="saveAssign('${i.id}')">Save Assignee</button>
       </div>
@@ -923,6 +1006,42 @@ async function deleteIssue(id){
 function onSearch(val){
   searchTerm = val;
   renderBoard();
+}
+
+// ── ASSIGNEE AUTOCOMPLETE ──────────────────────────────────────
+function showAssignDropdown(inputId, listId, term){
+  const list = document.getElementById(listId);
+  if(!list) return;
+  const grouped = groupedRoster(term);
+  const totalMatches = ROLE_ORDER.reduce((sum,r)=>sum+grouped[r].length,0);
+
+  let html = `<div class="assign-item unassign" onclick="pickAssignee('${inputId}','${listId}','')">— Unassigned —</div>`;
+  if(totalMatches === 0){
+    html += '<div class="assign-empty">No matching names.</div>';
+  } else {
+    ROLE_ORDER.forEach(role=>{
+      if(!grouped[role].length) return;
+      html += `<div class="assign-group-hdr">${ROLE_LABELS[role]}</div>`;
+      grouped[role].forEach(name=>{
+        html += `<div class="assign-item" onclick="pickAssignee('${inputId}','${listId}','${esc(name).replace(/'/g,"\\'")}')">
+          <div class="a-dot">${initials(name)}</div>${esc(name)}
+        </div>`;
+      });
+    });
+  }
+  list.innerHTML = html;
+  list.classList.add('open');
+}
+
+function hideAssignDropdown(listId){
+  const list = document.getElementById(listId);
+  if(list) list.classList.remove('open');
+}
+
+function pickAssignee(inputId, listId, name){
+  const input = document.getElementById(inputId);
+  if(input) input.value = name;
+  hideAssignDropdown(listId);
 }
 
 // ── FILTERS ───────────────────────────────────────────────────
