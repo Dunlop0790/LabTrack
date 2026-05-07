@@ -560,6 +560,7 @@ function describeActivity(h){
       ? `${a} assigned to <b>${esc(h.details.to)}</b>`
       : `${a} unassigned the issue`;
     case 'claimed': return `${a} claimed the issue`;
+    case 'moved': return `${a} moved this issue to <b>${esc(h.details.to)}</b>`;
     default: return `${a} made an update`;
   }
 }
@@ -1045,6 +1046,13 @@ function buildDetailHTML(i){
         <div class="sb-val">${tl}</div>
       </div>
       ${inst?`<div class="sb-sec"><div class="sb-lbl">Instrument</div><div class="sb-val" style="font-family:monospace">${esc(inst)}</div></div>`:''}
+      <div class="sb-sec">
+        <div class="sb-lbl">Move to Board</div>
+        <select class="fc" onchange="moveIssueToBoard('${i.id}',this.value);this.value=''">
+          <option value="">— Select board —</option>
+          ${boards.filter(b=>b.id!==boardId).map(b=>`<option value="${b.id}">${esc(b.title)}</option>`).join('')}
+        </select>
+      </div>
       <div class="sb-del">
         <button class="btn btn-d" style="width:100%;font-size:12px" onclick="deleteIssue('${i.id}')">Delete Issue</button>
       </div>
@@ -1145,6 +1153,20 @@ async function deleteIssue(id){
   await db.collection('issues').doc(id).delete();
   closeDetail();
   showToast('Issue deleted.');
+}
+
+async function moveIssueToBoard(issueId, targetBoardId){
+  if(!targetBoardId) return;
+  const target = boards.find(b=>b.id===targetBoardId);
+  if(!target) return;
+  if(!confirm(`Move this issue to "${target.title}"?`)) return;
+  await db.collection('issues').doc(issueId).update({
+    boardId: targetBoardId,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  await logActivity(issueId, 'moved', {to: target.title});
+  closeDetail();
+  showToast(`Moved to "${target.title}".`);
 }
 
 // ── SEARCH ────────────────────────────────────────────────────
