@@ -2239,7 +2239,7 @@ let lsState = {
     {dept:'IM Atellicas', bb:'', op:'', full:false, partial:false},
     {dept:'CHE Atellicas', bb:'', op:'', full:false, partial:false}
   ],
-  unpacking: {ongoing:false, completed:false, lh_flx:'', lh_fedex:'', lh_ups:'', lh_wc:''},
+  unpacking: {ongoing:false, completed:false, lh_flx:false, lh_fedex:false, lh_ups:false, lh_wc:false},
   bbNotes: '',
   opNotes: ''
 };
@@ -2424,21 +2424,16 @@ function renderLineStatus(){
                 <td><div class="ls-x-cell ${lsState.unpacking.ongoing?'checked':''}" onclick="lsToggleUnpack('ongoing')">${lsState.unpacking.ongoing?'X':''}</div></td>
                 <td><div class="ls-x-cell ${lsState.unpacking.completed?'checked':''}" onclick="lsToggleUnpack('completed')">${lsState.unpacking.completed?'X':''}</div></td>
               </tr>
-            </thead>
-          </table>
-          <table class="ls-unpack-tbl" style="margin-top:5px">
-            <thead><tr><th style="width:90px">Line Haul</th><th>FLX</th><th>FedEx</th><th>UPS</th><th>WC</th></tr></thead>
-            <tbody>
+              <tr><th style="width:90px">Line Haul</th><th>FLX</th><th>FedEx</th><th>UPS</th><th>WC</th></tr>
               <tr>
                 <td></td>
-                <td><input value="${esc(lsState.unpacking.lh_flx)}" placeholder="X" oninput="lsUpdateNested('unpacking','lh_flx',this.value)" /></td>
-                <td><input value="${esc(lsState.unpacking.lh_fedex)}" placeholder="X" oninput="lsUpdateNested('unpacking','lh_fedex',this.value)" /></td>
-                <td><input value="${esc(lsState.unpacking.lh_ups)}" placeholder="X" oninput="lsUpdateNested('unpacking','lh_ups',this.value)" /></td>
-                <td><input value="${esc(lsState.unpacking.lh_wc)}" placeholder="X" oninput="lsUpdateNested('unpacking','lh_wc',this.value)" /></td>
+                <td><div class="ls-x-cell ${lsState.unpacking.lh_flx?'checked':''}" onclick="lsToggleUnpack('lh_flx')">${lsState.unpacking.lh_flx?'X':''}</div></td>
+                <td><div class="ls-x-cell ${lsState.unpacking.lh_fedex?'checked':''}" onclick="lsToggleUnpack('lh_fedex')">${lsState.unpacking.lh_fedex?'X':''}</div></td>
+                <td><div class="ls-x-cell ${lsState.unpacking.lh_ups?'checked':''}" onclick="lsToggleUnpack('lh_ups')">${lsState.unpacking.lh_ups?'X':''}</div></td>
+                <td><div class="ls-x-cell ${lsState.unpacking.lh_wc?'checked':''}" onclick="lsToggleUnpack('lh_wc')">${lsState.unpacking.lh_wc?'X':''}</div></td>
               </tr>
-            </tbody>
+            </thead>
           </table>
-          <div class="ls-row-sub">Type X (or any text like "1, Misc") in each cell as needed.</div>
         </div>
 
         <div class="ls-section">
@@ -2564,7 +2559,7 @@ function lsClear(){
       {dept:'IM Atellicas', bb:'', op:'', full:false, partial:false},
       {dept:'CHE Atellicas', bb:'', op:'', full:false, partial:false}
     ],
-    unpacking: {ongoing:false, completed:false, lh_flx:'', lh_fedex:'', lh_ups:'', lh_wc:''},
+    unpacking: {ongoing:false, completed:false, lh_flx:false, lh_fedex:false, lh_ups:false, lh_wc:false},
     bbNotes:'', opNotes:''
   };
   renderLineStatus();
@@ -2714,144 +2709,198 @@ function lsInferShiftStart(slots){
 }
 
 // Render the full HTML preview (matches the email body format)
+// Render the full HTML preview with INLINE styles only.
+// Outlook web (and most email clients) strip <style> blocks and CSS classes,
+// so every visual rule must live on the element itself for paste fidelity.
 function renderLsHTML(){
   const final = lsBuildFinalTable();
   const fmt = n => typeof n === 'number' ? n.toLocaleString() : (n || '');
-  let html = `<h1>LINE STATUS: ${esc(lsState.date)}</h1>`;
 
-  // Final table
+  // Reusable inline style snippets for clipboard fidelity
+  const T_RESET = 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;';
+  const TD_BASE = 'border:1px solid #000;padding:4px 7px;font-size:11px;font-family:Calibri,Arial,sans-serif;text-align:center;vertical-align:middle;';
+  const TH_BASE = TD_BASE + 'font-weight:bold;background:#FFFFFF;';
+  const BLUE_FILL = 'background:#ADD8E6;font-weight:bold;';
+  const SEC_H = 'font-size:12px;font-weight:bold;color:#1F4E79;margin:14px 0 4px 0;font-family:Calibri,Arial,sans-serif;';
+  const BB_H = 'color:#D9A300;font-weight:bold;margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif;';
+  const OP_H = 'color:#C00000;font-weight:bold;margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif;';
+
+  let html = '';
+
+  // Final table (CSV-driven). Time column + the right-side totals are blue-filled.
   if(final){
-    html += `<table class="final-tbl"><thead><tr>
-      <th>Time</th>
-      <th style="background:#FFDE2A">BB Total</th>
-      <th style="background:#FF5B5B">OP Total</th>
-      <th>Hourly Total</th>
-      <th>Running Total</th>
-      <th>Projected Remaining</th>
-      <th>Projected</th>
-    </tr></thead><tbody>`;
+    html += `<table style="${T_RESET}"><thead><tr>` +
+      `<th style="${TH_BASE}${BLUE_FILL}">Time</th>` +
+      `<th style="${TH_BASE}background:#FFDE2A;">BB Total</th>` +
+      `<th style="${TH_BASE}background:#FF5B5B;">OP Total</th>` +
+      `<th style="${TH_BASE}${BLUE_FILL}">Hourly Total</th>` +
+      `<th style="${TH_BASE}${BLUE_FILL}">Running Total</th>` +
+      `<th style="${TH_BASE}${BLUE_FILL}">Projected Remaining</th>` +
+      `<th style="${TH_BASE}${BLUE_FILL}">Projected</th>` +
+    `</tr></thead><tbody>`;
     final.forEach(r=>{
-      html += `<tr>
-        <td><b>${esc(r.time)}</b></td>
-        <td>${fmt(r.bb)}</td>
-        <td>${fmt(r.op)}</td>
-        <td>${fmt(r.hourly)}</td>
-        <td>${fmt(r.running)}</td>
-        <td>${fmt(r.remaining)}</td>
-        <td>${fmt(r.projected)}</td>
-      </tr>`;
+      html += `<tr>` +
+        `<td style="${TD_BASE}${BLUE_FILL}">${esc(r.time)}</td>` +
+        `<td style="${TD_BASE}">${fmt(r.bb)}</td>` +
+        `<td style="${TD_BASE}">${fmt(r.op)}</td>` +
+        `<td style="${TD_BASE}${BLUE_FILL}">${fmt(r.hourly)}</td>` +
+        `<td style="${TD_BASE}${BLUE_FILL}">${fmt(r.running)}</td>` +
+        `<td style="${TD_BASE}${BLUE_FILL}">${fmt(r.remaining)}</td>` +
+        `<td style="${TD_BASE}${BLUE_FILL}">${fmt(r.projected)}</td>` +
+      `</tr>`;
     });
     html += `</tbody></table>`;
   } else {
-    html += `<div style="font-style:italic;color:#777;font-size:11px;margin:10px 0">Upload CSV files and enter projected to generate the table.</div>`;
+    html += `<div style="font-style:italic;color:#777;font-size:11px;margin:10px 0;font-family:Calibri,Arial,sans-serif">Upload CSV files and enter projected to generate the table.</div>`;
   }
 
-  // Unpacking / Shipments table
+  // Unpacking + Shipments: single combined table with click-to-X cells everywhere
   const unp = lsState.unpacking;
   const anyUnp = unp.ongoing || unp.completed || unp.lh_flx || unp.lh_fedex || unp.lh_ups || unp.lh_wc;
   if(anyUnp){
-    html += `<div class="sec-h">UNPACKING/SHIPMENTS:</div>`;
-    html += `<table class="sub-tbl"><tr>
-      <th rowspan="2">Unpacking:</th><th>Ongoing</th><th>Completed</th></tr>
-      <tr><td style="text-align:center">${unp.ongoing?'X':''}</td><td style="text-align:center">${unp.completed?'X':''}</td></tr>
-    </table>`;
-    html += `<table class="sub-tbl" style="margin-top:5px"><tr>
-      <th>Line Haul:</th><th>FLX</th><th>FedEx</th><th>UPS</th><th>WC</th></tr>
-      <tr><td></td><td style="text-align:center">${esc(unp.lh_flx)}</td><td style="text-align:center">${esc(unp.lh_fedex)}</td><td style="text-align:center">${esc(unp.lh_ups)}</td><td style="text-align:center">${esc(unp.lh_wc)}</td></tr>
-    </table>`;
+    html += `<div style="${SEC_H}">UNPACKING/SHIPMENTS:</div>`;
+    html += `<table style="${T_RESET}">` +
+      `<tr>` +
+        `<td style="${TD_BASE}font-weight:bold;text-align:left" rowspan="2">Unpacking:</td>` +
+        `<th style="${TH_BASE}" colspan="2">Ongoing</th>` +
+        `<th style="${TH_BASE}" colspan="2">Completed</th>` +
+      `</tr>` +
+      `<tr>` +
+        `<td style="${TD_BASE}" colspan="2">${unp.ongoing?'X':''}</td>` +
+        `<td style="${TD_BASE}" colspan="2">${unp.completed?'X':''}</td>` +
+      `</tr>` +
+      `<tr>` +
+        `<td style="${TD_BASE}font-weight:bold;text-align:left">Line Haul:</td>` +
+        `<th style="${TH_BASE}">FLX</th>` +
+        `<th style="${TH_BASE}">FedEx</th>` +
+        `<th style="${TH_BASE}">UPS</th>` +
+        `<th style="${TH_BASE}">WC</th>` +
+      `</tr>` +
+      `<tr>` +
+        `<td style="${TD_BASE}"></td>` +
+        `<td style="${TD_BASE}">${unp.lh_flx?'X':''}</td>` +
+        `<td style="${TD_BASE}">${unp.lh_fedex?'X':''}</td>` +
+        `<td style="${TD_BASE}">${unp.lh_ups?'X':''}</td>` +
+        `<td style="${TD_BASE}">${unp.lh_wc?'X':''}</td>` +
+      `</tr>` +
+    `</table>`;
   }
 
-  // BB / OP notes (top placement matches email examples)
+  // BB / OP notes
   if(lsState.bbNotes.trim()){
-    html += `<div class="bb-h">BB:</div><ul>${noteLines(lsState.bbNotes)}</ul>`;
+    html += `<div style="${BB_H}">BB:</div><ul style="margin:4px 0 8px 22px;padding:0;font-family:Calibri,Arial,sans-serif">${noteLines(lsState.bbNotes)}</ul>`;
   }
   if(lsState.opNotes.trim()){
-    html += `<div class="op-h">OP:</div><ul>${noteLines(lsState.opNotes)}</ul>`;
+    html += `<div style="${OP_H}">OP:</div><ul style="margin:4px 0 8px 22px;padding:0;font-family:Calibri,Arial,sans-serif">${noteLines(lsState.opNotes)}</ul>`;
   }
 
   // Startup Times
   const anyStartup = lsState.startup.some(r=>r.bb||r.op||r.full||r.partial);
   if(anyStartup){
-    html += `<div class="sec-h">Startup Time(s):</div>`;
-    html += `<table class="sub-tbl"><thead><tr>
-      <th>Departments/Module</th><th class="bb">BB</th><th class="op">OP</th><th>Full</th><th>Partial</th></tr></thead><tbody>`;
+    html += `<div style="${SEC_H}">Startup Time(s):</div>`;
+    html += `<table style="${T_RESET}"><thead><tr>` +
+      `<th style="${TH_BASE}text-align:left">Departments/Module</th>` +
+      `<th style="${TH_BASE}color:#D9A300">BB</th>` +
+      `<th style="${TH_BASE}color:#C00000">OP</th>` +
+      `<th style="${TH_BASE}">Full</th>` +
+      `<th style="${TH_BASE}">Partial</th>` +
+    `</tr></thead><tbody>`;
     lsState.startup.forEach(r=>{
-      html += `<tr>
-        <td><b>${esc(r.dept)}:</b></td>
-        <td style="text-align:center">${esc(r.bb)}</td>
-        <td style="text-align:center">${esc(r.op)}</td>
-        <td style="text-align:center">${r.full?'X':''}</td>
-        <td style="text-align:center">${r.partial?'X':''}</td>
-      </tr>`;
+      html += `<tr>` +
+        `<td style="${TD_BASE}text-align:left;font-weight:bold">${esc(r.dept)}:</td>` +
+        `<td style="${TD_BASE}">${esc(r.bb)}</td>` +
+        `<td style="${TD_BASE}">${esc(r.op)}</td>` +
+        `<td style="${TD_BASE}">${r.full?'X':''}</td>` +
+        `<td style="${TD_BASE}">${r.partial?'X':''}</td>` +
+      `</tr>`;
     });
     html += `</tbody></table>`;
   }
 
-  // Buckets to Load
+  // Buckets to Load: boxed like the template
   if(lsState.bucketCount!=='' || lsState.bucketTime){
-    html += `<div class="sec-h">Buckets to Load:</div>`;
-    html += `<div class="b2l">${esc(lsState.bucketCount)} @ ${esc(lsState.bucketTime)}</div>`;
+    html += `<div style="${SEC_H}">Buckets to Load:</div>`;
+    html += `<table style="${T_RESET}"><tbody><tr>` +
+      `<td style="${TD_BASE}font-weight:bold;padding:5px 12px">${esc(lsState.bucketCount)} @ ${esc(lsState.bucketTime)}</td>` +
+    `</tr></tbody></table>`;
     if(lsState.bucketNotes.trim()){
-      html += `<div style="font-size:12px;margin-top:4px">${esc(lsState.bucketNotes).replace(/\n/g,'<br>')}</div>`;
+      html += `<div style="font-size:12px;margin-top:4px;font-family:Calibri,Arial,sans-serif">${esc(lsState.bucketNotes).replace(/\n/g,'<br>')}</div>`;
     }
   }
 
   // Pending Buckets to Relabel
   if(lsState.relabelBb!=='' || lsState.relabelOp!==''){
-    html += `<div class="sec-h">Pending Buckets to Relabel:</div>`;
-    html += `<table class="sub-tbl"><thead><tr><th class="bb">BB</th><th class="op">OP</th></tr></thead>
-      <tbody><tr><td style="text-align:center">${esc(lsState.relabelBb)}</td><td style="text-align:center">${esc(lsState.relabelOp)}</td></tr></tbody></table>`;
+    html += `<div style="${SEC_H}">Pending Buckets to Relabel:</div>`;
+    html += `<table style="${T_RESET}"><thead><tr>` +
+      `<th style="${TH_BASE}color:#D9A300;min-width:60px">BB</th>` +
+      `<th style="${TH_BASE}color:#C00000;min-width:60px">OP</th>` +
+    `</tr></thead><tbody><tr>` +
+      `<td style="${TD_BASE}">${esc(lsState.relabelBb)}</td>` +
+      `<td style="${TD_BASE}">${esc(lsState.relabelOp)}</td>` +
+    `</tr></tbody></table>`;
   }
 
-  // OOS Analyzers
+  // OOS Analyzers: narrower row labels, BB/OP side-by-side as in template
   const hasOos = Object.values(lsState.oos).some(arr=>arr.length);
   if(hasOos){
-    html += `<div class="sec-h">OOS Analyzers:</div>`;
-    html += `<table class="sub-tbl" style="width:100%"><thead><tr><th class="bb">BB</th><th class="op">OP</th></tr></thead><tbody>`;
+    html += `<div style="${SEC_H}">OOS Analyzers:</div>`;
+    html += `<table style="${T_RESET}"><thead><tr>` +
+      `<th style="${TH_BASE}color:#D9A300;text-align:left;min-width:200px" colspan="2">BB</th>` +
+      `<th style="${TH_BASE}color:#C00000;text-align:left;min-width:200px" colspan="2">OP</th>` +
+    `</tr></thead><tbody>`;
     ['hemo','special','auto'].forEach(d=>{
       const lbl = d==='hemo'?'HEMO':d==='special'?'SPECIAL':'AUTO';
-      html += `<tr>
-        <td><b>${lbl}:</b> ${lsState.oos['bb_'+d].map(esc).join(', ')}</td>
-        <td><b>${lbl}:</b> ${lsState.oos['op_'+d].map(esc).join(', ')}</td>
-      </tr>`;
+      html += `<tr>` +
+        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px">${lbl}:</td>` +
+        `<td style="${TD_BASE}text-align:left;min-width:140px">${lsState.oos['bb_'+d].map(esc).join(', ')}</td>` +
+        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px">${lbl}:</td>` +
+        `<td style="${TD_BASE}text-align:left;min-width:140px">${lsState.oos['op_'+d].map(esc).join(', ')}</td>` +
+      `</tr>`;
     });
     html += `</tbody></table>`;
   }
 
-  // Overloads
+  // Overloads / Buffer Status
   const hasOver = Object.values(lsState.overloads).some(v=>v) || lsState.overloadNotes.trim();
   if(hasOver){
-    html += `<div class="sec-h">Overloads/Buffer Status:</div>`;
-    html += `<table class="sub-tbl" style="width:100%"><thead><tr><th class="bb">BB</th><th class="op">OP</th></tr></thead><tbody>`;
+    html += `<div style="${SEC_H}">Overloads/Buffer Status:</div>`;
+    html += `<table style="${T_RESET}"><thead><tr>` +
+      `<th style="${TH_BASE}color:#D9A300;text-align:left;min-width:200px" colspan="2">BB</th>` +
+      `<th style="${TH_BASE}color:#C00000;text-align:left;min-width:200px" colspan="2">OP</th>` +
+    `</tr></thead><tbody>`;
     ['hemo','special','auto'].forEach(d=>{
       const lbl = d==='hemo'?'HEMO':d==='special'?'SPECIAL':'AUTO';
-      html += `<tr>
-        <td><b>${lbl}:</b> ${esc(lsState.overloads['bb_'+d])}</td>
-        <td><b>${lbl}:</b> ${esc(lsState.overloads['op_'+d])}</td>
-      </tr>`;
+      html += `<tr>` +
+        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px">${lbl}:</td>` +
+        `<td style="${TD_BASE}text-align:left;min-width:140px">${esc(lsState.overloads['bb_'+d])}</td>` +
+        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px">${lbl}:</td>` +
+        `<td style="${TD_BASE}text-align:left;min-width:140px">${esc(lsState.overloads['op_'+d])}</td>` +
+      `</tr>`;
     });
     html += `</tbody></table>`;
     if(lsState.overloadNotes.trim()){
-      html += `<div style="font-size:12px;margin-top:4px;background:#fee;padding:3px 6px">${esc(lsState.overloadNotes).replace(/\n/g,'<br>')}</div>`;
+      html += `<div style="font-size:12px;margin-top:4px;background:#fde2e2;padding:3px 6px;font-family:Calibri,Arial,sans-serif">${esc(lsState.overloadNotes).replace(/\n/g,'<br>')}</div>`;
     }
   }
 
-  // BIM Read Rates
+  // BIM Read Rates: single combined table, no gap between BB and OP halves
   const hasBim = lsState.bim.bb.some(v=>v) || lsState.bim.op.some(v=>v);
   if(hasBim){
-    html += `<div class="sec-h">BIM Read Rates:</div>`;
-    html += `<table class="bim-tbl"><thead><tr>
-      <th class="bb">BB</th><th>% Success</th><th></th><th class="op">OP</th><th>% Success</th>
-    </tr></thead><tbody>`;
+    html += `<div style="${SEC_H}">BIM Read Rates:</div>`;
+    html += `<table style="${T_RESET}"><thead><tr>` +
+      `<th style="${TH_BASE}color:#D9A300;width:60px">BB</th>` +
+      `<th style="${TH_BASE}width:80px">% Success</th>` +
+      `<th style="${TH_BASE}color:#C00000;width:60px">OP</th>` +
+      `<th style="${TH_BASE}width:80px">% Success</th>` +
+    `</tr></thead><tbody>`;
     const labels = ['1','2','3','4','5','6','7','8','IOM 1','IOM 2'];
     labels.forEach((lbl,i)=>{
-      html += `<tr>
-        <td><b>${lbl}</b></td>
-        <td>${esc(lsState.bim.bb[i])}</td>
-        <td></td>
-        <td><b>${lbl}</b></td>
-        <td>${esc(lsState.bim.op[i])}</td>
-      </tr>`;
+      html += `<tr>` +
+        `<td style="${TD_BASE}font-weight:bold">${lbl}</td>` +
+        `<td style="${TD_BASE}">${esc(lsState.bim.bb[i])}</td>` +
+        `<td style="${TD_BASE}font-weight:bold">${lbl}</td>` +
+        `<td style="${TD_BASE}">${esc(lsState.bim.op[i])}</td>` +
+      `</tr>`;
     });
     html += `</tbody></table>`;
   }
@@ -2868,11 +2917,13 @@ async function lsCopy(){
   const el = document.getElementById('lsRender');
   if(!el) return;
   try {
-    const html = el.innerHTML;
-    const blob = new Blob([html], {type:'text/html'});
-    const text = el.innerText; // plain-text fallback
-    const textBlob = new Blob([text], {type:'text/plain'});
+    // Wrap the rendered body in a minimal HTML document. Some clipboard handlers
+    // (Outlook web included) work better when the payload is a complete document.
+    const html = `<html><head><meta charset="utf-8"></head><body>${el.innerHTML}</body></html>`;
+    const text = el.innerText;
     if(navigator.clipboard?.write){
+      const blob = new Blob([html], {type:'text/html'});
+      const textBlob = new Blob([text], {type:'text/plain'});
       await navigator.clipboard.write([new ClipboardItem({'text/html':blob, 'text/plain':textBlob})]);
     } else {
       // Fallback: select + execCommand
