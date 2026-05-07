@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LabTrack — Issue Board</title>
+  <title>LabTrack: Issue Board</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -82,17 +82,6 @@
     .mention-item:hover,.mention-item.active{background:#eff6ff}
     .mention-item .a-dot{width:18px;height:18px;font-size:9px}
     .mention-role{font-size:10px;color:var(--muted);margin-left:auto}
-
-    /* ── NEEDS FLAG ── */
-    .needs-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.3px;margin-top:6px}
-    .needs-alo{background:#dbeafe;color:#1e40af}
-    .needs-siemens{background:#fef3c7;color:#92400e}
-    .needs-toggle{display:flex;gap:4px;margin-top:5px}
-    .needs-opt{font-size:11px;padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;flex:1;text-align:center;font-weight:500;transition:all .12s}
-    .needs-opt:hover{border-color:#93c5fd}
-    .needs-opt.sel-alo{border-color:#1e40af;background:#dbeafe;color:#1e40af}
-    .needs-opt.sel-siemens{border-color:#92400e;background:#fef3c7;color:#92400e}
-    .needs-opt.sel-none{border-color:#64748b;background:#f1f5f9;color:#475569}
 
     /* ── REACTIONS ── */
     .reactions{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
@@ -208,6 +197,61 @@
     .toast.show{transform:translateY(0);opacity:1}
     .loading{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted)}
     .credit{position:fixed;bottom:10px;right:14px;font-size:11px;color:#94a3b8;pointer-events:none;user-select:none;z-index:50}
+
+    /* ── BUNCH 3: ARCHIVE / STATS / PRINT ── */
+    .btn-tool{background:transparent;border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.75);padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;white-space:nowrap}
+    .btn-tool:hover{background:rgba(255,255,255,.1);color:#fff}
+
+    /* Full-screen overlays for archive and stats */
+    .panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;padding:24px}
+    .panel-overlay.open{display:flex;align-items:flex-start;justify-content:center}
+    .panel{background:#fff;border-radius:12px;width:100%;max-width:1100px;max-height:calc(100vh - 48px);overflow-y:auto;display:flex;flex-direction:column}
+    .panel-hdr{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;position:sticky;top:0;background:#fff;z-index:5;border-radius:12px 12px 0 0}
+    .panel-title{font-size:18px;font-weight:700}
+    .panel-body{padding:18px 22px;flex:1}
+    .panel-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+
+    /* Archive specific */
+    .week-pick{font-size:13px;padding:6px 11px;border:1.5px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;min-width:200px}
+    .arch-list{display:flex;flex-direction:column;gap:8px}
+    .arch-empty{padding:50px 20px;text-align:center;color:var(--muted);font-size:14px}
+    .arch-card{background:#f8fafc;border:1px solid var(--border);border-left:4px solid #94a3b8;border-radius:7px;padding:11px 14px;cursor:pointer;transition:all .12s}
+    .arch-card:hover{background:#f1f5f9;border-color:#94a3b8}
+    .arch-card.op{border-left-color:var(--op)}
+    .arch-card.bb{border-left-color:var(--bb)}
+    .arch-card-top{display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap}
+    .arch-card-title{font-size:14px;font-weight:600;margin-bottom:4px}
+    .arch-card-meta{font-size:11px;color:var(--muted)}
+    .arch-purge-note{font-size:11px;color:var(--muted);font-style:italic;margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)}
+
+    /* Stats specific */
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:6px}
+    .stat-card{background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+    .stat-card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px}
+    .stat-big{font-size:30px;font-weight:800;color:var(--text);line-height:1}
+    .stat-sub{font-size:12px;color:var(--muted);margin-top:4px}
+    .bar-row{display:flex;align-items:center;gap:9px;margin-bottom:7px;font-size:12px}
+    .bar-label{min-width:80px;font-weight:600}
+    .bar-track{flex:1;height:18px;background:#e2e7ef;border-radius:4px;overflow:hidden;position:relative}
+    .bar-fill{height:100%;background:#3b82f6;border-radius:4px;transition:width .4s}
+    .bar-cnt{font-weight:700;min-width:24px;text-align:right;font-size:12px}
+    .recur-list{font-size:13px}
+    .recur-item{padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+    .recur-item:last-child{border-bottom:none}
+    .recur-name{font-weight:600}
+    .recur-cnt{font-size:11px;background:#fee2e2;color:var(--critical);padding:2px 8px;border-radius:10px;font-weight:700}
+
+    /* Print view */
+    @media print {
+      body{background:#fff !important}
+      header,.fbar,.credit,.toast,.btn-tool,.panel-overlay,.overlay{display:none !important}
+      .board{padding:8px;display:block}
+      .col{break-inside:avoid;width:100%;max-width:100%;margin-bottom:14px;page-break-inside:avoid;background:#fff}
+      .col-cards{overflow:visible;display:block}
+      .card{box-shadow:none;border:1px solid #ccc;page-break-inside:avoid;margin-bottom:6px}
+    }
+    .print-hdr{display:none;text-align:center;padding:14px;border-bottom:2px solid #333}
+    @media print {.print-hdr{display:block}}
   </style>
 </head>
 <body>
@@ -217,7 +261,7 @@
   <div class="modal setup-modal">
     <div class="setup-icon">🔬</div>
     <div class="setup-title">Welcome to LabTrack</div>
-    <div class="setup-sub">Enter your name once — it'll be saved to this device so you never have to type it again.</div>
+    <div class="setup-sub">Enter your name once. It'll be saved to this device so you never have to type it again.</div>
     <div class="fg" style="text-align:left">
       <label class="flbl">Your Name</label>
       <input class="fc" id="setupName" placeholder="e.g. John D." />
@@ -277,7 +321,7 @@
       <div class="fg">
         <label class="flbl">Instrument Type</label>
         <select class="fc" id="issueInstrument">
-          <option value="">— Select —</option>
+          <option value="">Select...</option>
           <option value="HVS">HVS</option>
           <option value="ROM400">ROM400</option>
           <option value="TBM">TBM</option>
@@ -310,14 +354,6 @@
                onfocus="showAssignDropdown('issueAssignee','issueAssignList',this.value)"
                onblur="setTimeout(()=>hideAssignDropdown('issueAssignList'),180)" />
         <div class="assign-list" id="issueAssignList"></div>
-      </div>
-    </div>
-    <div class="fg">
-      <label class="flbl">Needs Help From</label>
-      <div class="needs-toggle">
-        <div class="needs-opt sel-none" id="needsNone" onclick="setNewNeeds('none')">— None —</div>
-        <div class="needs-opt" id="needsAlo" onclick="setNewNeeds('alo')">Needs ALO</div>
-        <div class="needs-opt" id="needsSiemens" onclick="setNewNeeds('siemens')">Needs Siemens</div>
       </div>
     </div>
     <div class="fg">
@@ -364,6 +400,9 @@
   <button class="btn-nb" onclick="openNewBoard()">+ New Board</button>
   <button class="btn-del-board" onclick="deleteBoard()" title="Delete current board">×</button>
   <div class="hdr-right">
+    <button class="btn-tool" onclick="openArchive()" title="View archived issues">Archive</button>
+    <button class="btn-tool" onclick="openStats()" title="View statistics">Stats</button>
+    <button class="btn-tool" onclick="window.print()" title="Print current board">Print</button>
     <button class="btn-sound" id="soundBtn" onclick="toggleSound()" title="Toggle alert sounds">🔊</button>
     <div class="user-badge" onclick="resetUser()" title="Click to change name">
       <div class="avatar" id="userAvatar"></div>
@@ -387,11 +426,6 @@
   <span class="chip" id="pUrg" onclick="setPF('urgent')">Urgent</span>
   <span class="chip" id="pMon" onclick="setPF('monitor')">Monitor</span>
   <span class="chip" id="pLow" onclick="setPF('low')">Low</span>
-  <div class="fdivider"></div>
-  <span class="flabel">Needs</span>
-  <span class="chip c-all" id="nAll" onclick="setNF('all')">All</span>
-  <span class="chip" id="nALO" onclick="setNF('alo')">ALO</span>
-  <span class="chip" id="nSiemens" onclick="setNF('siemens')">Siemens</span>
   <div class="search-wrap">
     <span class="search-icon">🔍</span>
     <input class="search-input" id="searchInput" placeholder="Search issues, instruments..." oninput="onSearch(this.value)" />
@@ -400,6 +434,47 @@
 
 <!-- ── BOARD ── -->
 <div class="board" id="boardArea"><div class="loading">Connecting…</div></div>
+
+<!-- Print-only header -->
+<div class="print-hdr">
+  <div style="font-size:18px;font-weight:700">LabTrack: Current Issues</div>
+  <div style="font-size:12px;color:#666;margin-top:4px" id="printDate"></div>
+</div>
+
+<!-- ── ARCHIVE PANEL ── -->
+<div class="panel-overlay" id="archivePanel">
+  <div class="panel">
+    <div class="panel-hdr">
+      <div class="panel-title">Archive</div>
+      <select class="week-pick" id="archWeek" onchange="renderArchive()"></select>
+      <select class="week-pick" id="archBoard" onchange="renderArchive()" style="min-width:160px"></select>
+      <input class="search-input" id="archSearch" placeholder="Search archived…" oninput="renderArchive()" style="margin-left:0;width:200px;padding-left:11px" />
+      <button class="btn-tool" style="background:#3b82f6;color:#fff;border-color:#3b82f6;margin-left:auto" onclick="exportCSV('archive')">Export CSV</button>
+      <button class="mclose" onclick="closeArchive()">×</button>
+    </div>
+    <div class="panel-body">
+      <div class="arch-list" id="archList"></div>
+      <div class="arch-purge-note">Items older than 90 days are permanently removed.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── STATS PANEL ── -->
+<div class="panel-overlay" id="statsPanel">
+  <div class="panel">
+    <div class="panel-hdr">
+      <div class="panel-title">Statistics</div>
+      <select class="week-pick" id="statsRange" onchange="renderStats()" style="min-width:140px">
+        <option value="7">Last 7 days</option>
+        <option value="30" selected>Last 30 days</option>
+        <option value="90">Last 90 days</option>
+      </select>
+      <button class="btn-tool" style="background:#3b82f6;color:#fff;border-color:#3b82f6;margin-left:auto" onclick="exportCSV('stats')">Export CSV</button>
+      <button class="mclose" onclick="closeStats()">×</button>
+    </div>
+    <div class="panel-body" id="statsBody"></div>
+  </div>
+</div>
 
 <div class="credit">Made by Corey Hausterman</div>
 
@@ -423,19 +498,18 @@ let user = null, selectedRole = null;
 let boardId = null, boards = [];
 let issues = [], issueSub = null;
 let detailSub = null, historySub = null;
-let tFilter = 'all', pFilter = 'all', searchTerm = '', nFilter = 'all';
+let tFilter = 'all', pFilter = 'all', searchTerm = '';
 let soundEnabled = localStorage.getItem('lt_sound')!=='off';
 let isFirstLoad = true;
-let newNeeds = 'none';
 let mentionState = {textareaId:null, listId:null, startPos:0, term:''};
 const COLS = ['open','inprogress','monitoring','resolved'];
 const COL_LABELS = {open:'Open',inprogress:'In Progress',monitoring:'Monitoring',resolved:'Resolved'};
 const PRIORITY_ORDER = {critical:0,urgent:1,monitor:2,low:3};
 const PRIORITY_LABELS = {critical:'Critical',urgent:'Urgent',monitor:'Monitor',low:'Low'};
-// Aging thresholds in milliseconds — if Critical sits Open >1hr, show warning
+// Aging thresholds in milliseconds. If Critical sits Open >1hr, show warning
 const AGE_WARN_MS = {critical:60*60*1000, urgent:2*60*60*1000, monitor:24*60*60*1000, low:7*24*60*60*1000};
 
-// Seeded roster — these names get added on first launch if not already present
+// Seeded roster. These names get added on first launch if not already present
 const SEED_ROSTER = {
   ALO: ['Corey','Matt','Bruce','Jorge','Lyza','Daisy','Katie','Melanie','Grace'],
   Siemens: ['Angel','Johnny','Malachi','Alvin','Greg','Malek','Deanna','Mitch','Eric','Steve','Santiago','Ryan','Kevin','Dan'],
@@ -605,6 +679,11 @@ async function initApp(){
   setInterval(()=>{ if(issues.length) renderBoard(); }, 60000);
   // Watch for @mentions of the current user across all comments
   watchForMyMentions();
+  // Run archive maintenance: archives resolved cards from past Sundays, purges old archives
+  runArchiveMaintenance();
+  // Set print date
+  const pd = document.getElementById('printDate');
+  if(pd) pd.textContent = new Date().toLocaleString();
 }
 
 // Track recent comment IDs we've already notified on, to prevent duplicate alerts
@@ -761,11 +840,11 @@ function subscribeIssues(bid){
       if(!isFirstLoad){
         newIssues.forEach(issue=>{
           const prev = prevIssueMap[issue.id];
-          // New issue from someone else — alert if Critical/Urgent
+          // New issue from someone else: alert if Critical/Urgent
           if(!prev && ['critical','urgent'].includes(issue.priority) && issue.createdBy!==user.name){
             playAlert();
             if(Notification.permission==='granted'){
-              new Notification(`⚠️ ${issue.priority.toUpperCase()} — ${issue.title}`,{body:`Logged by ${issue.createdBy}`});
+              new Notification(`⚠️ ${issue.priority.toUpperCase()}: ${issue.title}`,{body:`Logged by ${issue.createdBy}`});
             }
           }
           // Existing issue escalated to Critical/Urgent
@@ -794,7 +873,6 @@ function renderBoard(){
   const filtered = issues.filter(i=>{
     if(tFilter!=='all' && i.track!==tFilter) return false;
     if(pFilter!=='all' && i.priority!==pFilter) return false;
-    if(nFilter!=='all' && i.needs!==nFilter) return false;
     if(term){
       const hay = `${i.title||''} ${i.description||''} ${i.instrumentType||''} ${i.unitNumber||''} ${i.assignee||''} ${i.createdBy||''}`.toLowerCase();
       if(!hay.includes(term)) return false;
@@ -833,10 +911,6 @@ function renderCard(issue){
   const ai = initials(issue.assignee||'');
   const aging = isAging(issue);
   const age = fmtAge(issue.createdAt);
-  const needs = issue.needs;
-  const needsHtml = needs==='alo' ? '<span class="needs-badge needs-alo">Needs ALO</span>'
-                  : needs==='siemens' ? '<span class="needs-badge needs-siemens">Needs Siemens</span>'
-                  : '';
   return `<div class="card ${tc}" onclick="openDetail('${issue.id}')">
     <div class="card-top">
       <span class="pbadge ${issue.priority}">${issue.priority}</span>
@@ -844,7 +918,6 @@ function renderCard(issue){
     </div>
     <div class="card-title">${esc(issue.title)}</div>
     ${inst?`<div class="card-inst">${esc(inst)}</div>`:''}
-    ${needsHtml}
     <div class="card-bot">
       ${issue.assignee
         ? `<div class="a-chip"><div class="a-dot">${ai}</div>${esc(issue.assignee)}</div>`
@@ -858,8 +931,6 @@ function renderCard(issue){
 // ── NEW ISSUE ─────────────────────────────────────────────────
 function openNewIssue(){
   document.getElementById('issueAssignee').value='';
-  newNeeds = 'none';
-  setNewNeeds('none');
   document.getElementById('newIssueOverlay').classList.remove('hidden');
   document.getElementById('issueTitle').focus();
 }
@@ -869,14 +940,6 @@ function closeNewIssue(){
   document.getElementById('issuePriority').value='monitor';
   document.getElementById('issueTrack').value='op';
   document.getElementById('issueInstrument').value='';
-  newNeeds = 'none';
-}
-
-function setNewNeeds(val){
-  newNeeds = val;
-  document.getElementById('needsNone').className = 'needs-opt' + (val==='none'?' sel-none':'');
-  document.getElementById('needsAlo').className = 'needs-opt' + (val==='alo'?' sel-alo':'');
-  document.getElementById('needsSiemens').className = 'needs-opt' + (val==='siemens'?' sel-siemens':'');
 }
 
 async function submitNewIssue(){
@@ -891,7 +954,6 @@ async function submitNewIssue(){
     instrumentType:document.getElementById('issueInstrument').value,
     unitNumber:document.getElementById('issueUnit').value.trim(),
     assignee:document.getElementById('issueAssignee').value.trim(),
-    needs: newNeeds==='none' ? null : newNeeds,
     createdBy:user.name,
     createdAt:firebase.firestore.FieldValue.serverTimestamp(),
     updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
@@ -1034,14 +1096,6 @@ function buildDetailHTML(i){
         <button class="btn btn-g" style="margin-top:6px;width:100%;font-size:12px" onclick="saveAssign('${i.id}')">Save Assignee</button>
       </div>
       <div class="sb-sec">
-        <div class="sb-lbl">Needs Help From</div>
-        <div class="needs-toggle">
-          <div class="needs-opt ${!i.needs?'sel-none':''}" onclick="setIssueNeeds('${i.id}','none')">— None —</div>
-          <div class="needs-opt ${i.needs==='alo'?'sel-alo':''}" onclick="setIssueNeeds('${i.id}','alo')">ALO</div>
-          <div class="needs-opt ${i.needs==='siemens'?'sel-siemens':''}" onclick="setIssueNeeds('${i.id}','siemens')">Siemens</div>
-        </div>
-      </div>
-      <div class="sb-sec">
         <div class="sb-lbl">Track</div>
         <div class="sb-val">${tl}</div>
       </div>
@@ -1049,7 +1103,7 @@ function buildDetailHTML(i){
       <div class="sb-sec">
         <div class="sb-lbl">Move to Board</div>
         <select class="fc" onchange="moveIssueToBoard('${i.id}',this.value);this.value=''">
-          <option value="">— Select board —</option>
+          <option value="">Select board...</option>
           ${boards.filter(b=>b.id!==boardId).map(b=>`<option value="${b.id}">${esc(b.title)}</option>`).join('')}
         </select>
       </div>
@@ -1182,7 +1236,7 @@ function showAssignDropdown(inputId, listId, term){
   const grouped = groupedRoster(term);
   const totalMatches = ROLE_ORDER.reduce((sum,r)=>sum+grouped[r].length,0);
 
-  let html = `<div class="assign-item unassign" onclick="pickAssignee('${inputId}','${listId}','')">— Unassigned —</div>`;
+  let html = `<div class="assign-item unassign" onclick="pickAssignee('${inputId}','${listId}','')">Unassigned</div>`;
   if(totalMatches === 0){
     html += '<div class="assign-empty">No matching names.</div>';
   } else {
@@ -1230,38 +1284,12 @@ function setPF(v){
   renderBoard();
 }
 
-function setNF(v){
-  nFilter=v;
-  const map={all:'nAll',alo:'nALO',siemens:'nSiemens'};
-  Object.values(map).forEach(id=>document.getElementById(id).className='chip');
-  document.getElementById(map[v]).classList.add(v==='all'?'c-all':v==='alo'?'c-all':'c-all');
-  // simpler: reuse blue active style for all of them
-  document.getElementById(map[v]).className='chip c-all';
-  renderBoard();
-}
-
-// ── NEEDS (per-issue) ─────────────────────────────────────────
-async function setIssueNeeds(id, val){
-  const newVal = val==='none' ? null : val;
-  await db.collection('issues').doc(id).update({
-    needs: newVal,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
-  // Refresh the open detail view
-  const issue = issues.find(i=>i.id===id);
-  if(issue){
-    issue.needs = newVal;
-    document.getElementById('detailModal').innerHTML = buildDetailHTML(issue);
-  }
-  showToast('Needs updated.');
-}
-
 // ── MENTIONS IN COMMENTS ──────────────────────────────────────
 function onCommentInput(e){
   const ta = e.target;
   document.getElementById('ccnt').textContent = ta.value.length;
 
-  // Detect @ trigger — find the most recent @ before the cursor
+  // Detect @ trigger: find the most recent @ before the cursor
   const cursor = ta.selectionStart;
   const text = ta.value.slice(0, cursor);
   const atMatch = text.match(/@([A-Za-z]*)$/);
@@ -1364,6 +1392,440 @@ async function toggleReaction(issueId, commentId, key){
   }
   reactions[key] = list;
   await ref.update({reactions});
+}
+
+// ── BUNCH 3: ARCHIVE / STATS / CSV ─────────────────────────────
+// Compute the most recent Sunday 6am EST as a UTC timestamp.
+// EST is UTC-5 (we ignore DST drift for simplicity, close enough for archival).
+function lastSunday6amEST(){
+  const now = new Date();
+  // Convert to a Date representing "now in EST"
+  const utcMs = now.getTime();
+  const estMs = utcMs - 5*60*60*1000;
+  const est = new Date(estMs);
+  // Find this past Sunday 6am in EST
+  const dow = est.getUTCDay(); // 0=Sun
+  const target = new Date(est);
+  target.setUTCHours(6,0,0,0);
+  if(dow===0 && est.getUTCHours() < 6){
+    // It's Sunday before 6am EST, use last Sunday
+    target.setUTCDate(target.getUTCDate() - 7);
+  } else {
+    target.setUTCDate(target.getUTCDate() - dow);
+  }
+  // Convert back to UTC ms
+  return target.getTime() + 5*60*60*1000;
+}
+
+// Returns Monday 00:00 UTC for the week containing the given timestamp (used as week bucket)
+function weekKey(ts){
+  const d = new Date(ts);
+  const dow = d.getUTCDay();
+  const monOffset = dow===0 ? -6 : 1-dow;
+  d.setUTCDate(d.getUTCDate() + monOffset);
+  d.setUTCHours(0,0,0,0);
+  return d.getTime();
+}
+
+function fmtWeekRange(weekStartMs){
+  const start = new Date(weekStartMs);
+  const end = new Date(weekStartMs + 6*24*60*60*1000);
+  const opt = {month:'short', day:'numeric'};
+  return `Week of ${start.toLocaleDateString(undefined,opt)} – ${end.toLocaleDateString(undefined,{...opt, year:'numeric'})}`;
+}
+
+// Run on every app load. Archives Resolved cards if the last archive run was before
+// the most recent Sunday 6am EST. Also purges archives older than 90 days.
+async function runArchiveMaintenance(){
+  try {
+    const cutoff = lastSunday6amEST();
+    const metaRef = db.collection('meta').doc('archive');
+    const metaSnap = await metaRef.get();
+    const lastRun = metaSnap.exists ? (metaSnap.data().lastRun?.toMillis?.() || 0) : 0;
+
+    if(lastRun < cutoff){
+      // Archive Resolved issues across all boards
+      const resolvedSnap = await db.collection('issues').where('status','==','resolved').get();
+      let archived = 0;
+      for(const doc of resolvedSnap.docs){
+        const data = doc.data();
+        const archivedAt = firebase.firestore.FieldValue.serverTimestamp();
+        const wk = weekKey(Date.now());
+        // Copy to archive collection (preserve original ID for reference)
+        await db.collection('archive').doc(doc.id).set({
+          ...data,
+          archivedAt,
+          weekBucket: wk,
+          originalId: doc.id
+        });
+        // Copy comments and history (best effort, keep small via batch where possible)
+        const commentsSnap = await doc.ref.collection('comments').get();
+        for(const c of commentsSnap.docs){
+          await db.collection('archive').doc(doc.id).collection('comments').doc(c.id).set(c.data());
+        }
+        const historySnap = await doc.ref.collection('history').get();
+        for(const h of historySnap.docs){
+          await db.collection('archive').doc(doc.id).collection('history').doc(h.id).set(h.data());
+        }
+        // Delete original (and its subcollections)
+        for(const c of commentsSnap.docs) await c.ref.delete();
+        for(const h of historySnap.docs) await h.ref.delete();
+        await doc.ref.delete();
+        archived++;
+      }
+      await metaRef.set({lastRun: firebase.firestore.FieldValue.serverTimestamp()}, {merge:true});
+      if(archived) console.log(`Archived ${archived} resolved issue(s).`);
+    }
+
+    // Purge archives older than 90 days
+    const purgeBefore = Date.now() - 90*24*60*60*1000;
+    const oldSnap = await db.collection('archive').where('archivedAt','<', new Date(purgeBefore)).get();
+    let purged = 0;
+    for(const doc of oldSnap.docs){
+      const cs = await doc.ref.collection('comments').get();
+      for(const c of cs.docs) await c.ref.delete();
+      const hs = await doc.ref.collection('history').get();
+      for(const h of hs.docs) await h.ref.delete();
+      await doc.ref.delete();
+      purged++;
+    }
+    if(purged) console.log(`Purged ${purged} archived issue(s) older than 90 days.`);
+  } catch(e){
+    console.warn('Archive maintenance failed (non-fatal):', e);
+  }
+}
+
+// ── ARCHIVE VIEWER ────────────────────────────────────────────
+let archiveData = [];
+
+async function openArchive(){
+  document.getElementById('archivePanel').classList.add('open');
+  // Populate board filter
+  const boardSel = document.getElementById('archBoard');
+  boardSel.innerHTML = '<option value="">All boards</option>' + boards.map(b=>`<option value="${b.id}">${esc(b.title)}</option>`).join('');
+  // Load archive data
+  const snap = await db.collection('archive').orderBy('archivedAt','desc').get();
+  archiveData = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  // Build week dropdown from unique weekBuckets
+  const weeks = [...new Set(archiveData.map(a=>a.weekBucket).filter(Boolean))].sort((a,b)=>b-a);
+  const weekSel = document.getElementById('archWeek');
+  weekSel.innerHTML = '<option value="">All weeks</option>' + weeks.map(w=>`<option value="${w}">${fmtWeekRange(w)}</option>`).join('');
+  renderArchive();
+}
+
+function closeArchive(){
+  document.getElementById('archivePanel').classList.remove('open');
+}
+
+function renderArchive(){
+  const wk = document.getElementById('archWeek').value;
+  const bd = document.getElementById('archBoard').value;
+  const term = (document.getElementById('archSearch').value||'').toLowerCase().trim();
+  let items = archiveData;
+  if(wk) items = items.filter(a=>String(a.weekBucket)===wk);
+  if(bd) items = items.filter(a=>a.boardId===bd);
+  if(term){
+    items = items.filter(a=>{
+      const hay = `${a.title||''} ${a.description||''} ${a.instrumentType||''} ${a.unitNumber||''} ${a.assignee||''} ${a.createdBy||''}`.toLowerCase();
+      return hay.includes(term);
+    });
+  }
+  const list = document.getElementById('archList');
+  if(!items.length){
+    list.innerHTML = '<div class="arch-empty">No archived issues match your filters.</div>';
+    return;
+  }
+  list.innerHTML = items.map(a=>{
+    const inst = [a.instrumentType, a.unitNumber].filter(Boolean).join(' ');
+    const tc = a.track||'general';
+    const tl = tc==='op'?'OP':tc==='bb'?'BB':'GEN';
+    const board = boards.find(b=>b.id===a.boardId);
+    const boardName = board ? board.title : '(deleted board)';
+    return `<div class="arch-card ${tc}" onclick="openArchiveDetail('${a.id}')">
+      <div class="arch-card-top">
+        <span class="pbadge ${a.priority}">${a.priority||''}</span>
+        <span class="tbadge ${tc}">${tl}</span>
+        ${inst?`<span style="font-size:10px;background:#f0fdf4;color:#15803d;padding:1px 6px;border-radius:3px;font-weight:700;font-family:monospace">${esc(inst)}</span>`:''}
+      </div>
+      <div class="arch-card-title">${esc(a.title||'')}</div>
+      <div class="arch-card-meta">
+        ${esc(boardName)} · Logged by ${esc(a.createdBy||'?')} · Resolved by ${esc(a.assignee||'?')}
+        · Archived ${fmtTime(a.archivedAt)}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function openArchiveDetail(archId){
+  const a = archiveData.find(x=>x.id===archId);
+  if(!a) return;
+  // Build a read-only detail view in the existing detail modal
+  const modal = document.getElementById('detailModal');
+  const inst = [a.instrumentType, a.unitNumber].filter(Boolean).join(' ');
+  const trackName = a.track==='op'?'Optimus Prime':a.track==='bb'?'Bumblebee':'General';
+  const board = boards.find(b=>b.id===a.boardId);
+
+  // Pull comments and history for this archived issue
+  const [csSnap, hsSnap] = await Promise.all([
+    db.collection('archive').doc(archId).collection('comments').orderBy('createdAt').get(),
+    db.collection('archive').doc(archId).collection('history').orderBy('createdAt','desc').get()
+  ]);
+  const comments = csSnap.docs.map(d=>d.data());
+  const history = hsSnap.docs.map(d=>d.data());
+
+  modal.innerHTML = `
+    <div class="mhdr">
+      <div style="flex:1">
+        <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+          <span class="pbadge ${a.priority}">${a.priority||''}</span>
+          <span style="font-size:11px;background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:4px;font-weight:600">${trackName}</span>
+          ${inst?`<span style="font-size:11px;background:#f0fdf4;color:#15803d;padding:2px 8px;border-radius:4px;font-weight:700;font-family:monospace">${esc(inst)}</span>`:''}
+          <span style="font-size:11px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-weight:700">ARCHIVED</span>
+        </div>
+        <div class="mtitle">${esc(a.title||'')}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px">
+          Board: ${esc(board?board.title:'(deleted)')} · Logged by ${esc(a.createdBy||'?')} · ${fmtTime(a.createdAt)} · Archived ${fmtTime(a.archivedAt)}
+        </div>
+      </div>
+      <button class="mclose" onclick="closeDetail()">×</button>
+    </div>
+
+    <div class="dbody">
+      <div>
+        <div class="sec-lbl">Description</div>
+        <div class="desc-box">${a.description ? esc(a.description) : '<span style="color:#94a3b8">No description.</span>'}</div>
+
+        <div class="sec-lbl" style="margin-bottom:9px">Comments (${comments.length})</div>
+        <div class="clist">
+          ${comments.length ? comments.map(c=>`<div class="ci">
+            <div class="ci-author">${esc(c.author)} <span style="font-weight:400;color:var(--muted)">(${c.role||''})</span></div>
+            <div class="ci-text">${parseMentions(c.text||'')}</div>
+            <div class="ci-time">${fmtTime(c.createdAt)}</div>
+          </div>`).join('') : '<div style="color:#94a3b8;font-size:13px">No comments.</div>'}
+        </div>
+
+        ${history.length ? `<div class="sec-lbl" style="margin-top:18px;margin-bottom:9px">History</div>
+          <div>${history.map(h=>`<div class="h-entry">${describeActivity(h)} <span class="h-time">· ${fmtTime(h.createdAt)}</span></div>`).join('')}</div>` : ''}
+      </div>
+
+      <div class="sidebar">
+        <div class="sb-sec"><div class="sb-lbl">Final Status</div><div class="sb-val">Resolved</div></div>
+        <div class="sb-sec"><div class="sb-lbl">Priority</div><div class="sb-val">${PRIORITY_LABELS[a.priority]||a.priority||''}</div></div>
+        <div class="sb-sec"><div class="sb-lbl">Resolved By</div><div class="sb-val">${esc(a.assignee||'Unassigned')}</div></div>
+        <div class="sb-sec"><div class="sb-lbl">Track</div><div class="sb-val">${trackName}</div></div>
+        ${inst?`<div class="sb-sec"><div class="sb-lbl">Instrument</div><div class="sb-val" style="font-family:monospace">${esc(inst)}</div></div>`:''}
+      </div>
+    </div>
+  `;
+  document.getElementById('detailOverlay').classList.remove('hidden');
+}
+
+// ── STATS DASHBOARD ───────────────────────────────────────────
+let statsCache = {issues:[], archive:[]};
+
+async function openStats(){
+  document.getElementById('statsPanel').classList.add('open');
+  // Load both active and archived for stats
+  const [activeSnap, archSnap] = await Promise.all([
+    db.collection('issues').get(),
+    db.collection('archive').get()
+  ]);
+  statsCache.issues = activeSnap.docs.map(d=>({id:d.id, ...d.data()}));
+  statsCache.archive = archSnap.docs.map(d=>({id:d.id, ...d.data()}));
+  renderStats();
+}
+
+function closeStats(){
+  document.getElementById('statsPanel').classList.remove('open');
+}
+
+function renderStats(){
+  const days = parseInt(document.getElementById('statsRange').value, 10);
+  const cutoff = Date.now() - days*24*60*60*1000;
+  const all = [...statsCache.issues, ...statsCache.archive].filter(i=>{
+    const ts = i.createdAt?.toMillis ? i.createdAt.toMillis() : 0;
+    return ts >= cutoff;
+  });
+
+  // Most problematic instruments
+  const instCounts = {};
+  all.forEach(i=>{
+    if(!i.instrumentType) return;
+    instCounts[i.instrumentType] = (instCounts[i.instrumentType]||0) + 1;
+  });
+  const topInst = Object.entries(instCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxInst = topInst[0] ? topInst[0][1] : 1;
+
+  // Average resolution time per priority (resolved/archived only)
+  const resByPri = {critical:[], urgent:[], monitor:[], low:[]};
+  all.forEach(i=>{
+    if(i.status!=='resolved' && !i.archivedAt) return;
+    const created = i.createdAt?.toMillis ? i.createdAt.toMillis() : 0;
+    const resolvedTs = i.archivedAt?.toMillis ? i.archivedAt.toMillis() : (i.updatedAt?.toMillis ? i.updatedAt.toMillis() : 0);
+    if(!created || !resolvedTs) return;
+    const ms = resolvedTs - created;
+    if(resByPri[i.priority]) resByPri[i.priority].push(ms);
+  });
+  const avgResHtml = ['critical','urgent','monitor','low'].map(p=>{
+    const arr = resByPri[p];
+    if(!arr.length) return `<div class="bar-row"><span class="bar-label">${PRIORITY_LABELS[p]}</span><span style="color:var(--muted);font-size:12px">No data</span></div>`;
+    const avg = arr.reduce((a,b)=>a+b,0)/arr.length;
+    return `<div class="bar-row"><span class="bar-label">${PRIORITY_LABELS[p]}</span><span style="font-size:12px">${fmtDuration(avg)} <span style="color:var(--muted)">(${arr.length})</span></span></div>`;
+  }).join('');
+
+  // Issues per role
+  const roleCounts = {ALO:0, Siemens:0, Lead:0};
+  all.forEach(i=>{
+    if(!i.assignee) return;
+    const r = roster.find(x=>x.name===i.assignee);
+    if(r && roleCounts[r.role]!==undefined) roleCounts[r.role]++;
+  });
+  const totalRole = Object.values(roleCounts).reduce((a,b)=>a+b,0) || 1;
+
+  // By track
+  const trackCounts = {op:0, bb:0, general:0};
+  all.forEach(i=>{
+    if(trackCounts[i.track]!==undefined) trackCounts[i.track]++;
+  });
+
+  // Recurring problems: same instrument+title appearing 3+ times
+  const recurMap = {};
+  all.forEach(i=>{
+    if(!i.instrumentType) return;
+    const key = `${i.instrumentType} ${i.unitNumber||''} – ${(i.title||'').toLowerCase().trim()}`.trim();
+    recurMap[key] = (recurMap[key]||0)+1;
+  });
+  const recurring = Object.entries(recurMap).filter(([k,v])=>v>=3).sort((a,b)=>b[1]-a[1]);
+
+  document.getElementById('statsBody').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-title">Total Issues</div>
+        <div class="stat-big">${all.length}</div>
+        <div class="stat-sub">in last ${days} days</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-title">Most Problematic Instruments</div>
+        ${topInst.length ? topInst.map(([n,c])=>`
+          <div class="bar-row">
+            <span class="bar-label">${esc(n)}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${(c/maxInst)*100}%"></div></div>
+            <span class="bar-cnt">${c}</span>
+          </div>`).join('') : '<div style="color:var(--muted);font-size:13px">No data yet</div>'}
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-title">Avg Resolution Time</div>
+        ${avgResHtml}
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-title">Issues by Role</div>
+        ${ROLE_ORDER.map(r=>`
+          <div class="bar-row">
+            <span class="bar-label">${ROLE_LABELS[r]}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${(roleCounts[r]/totalRole)*100}%"></div></div>
+            <span class="bar-cnt">${roleCounts[r]}</span>
+          </div>`).join('')}
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-title">By Track</div>
+        <div class="bar-row"><span class="bar-label">OP</span><div class="bar-track"><div class="bar-fill" style="width:${(trackCounts.op/(all.length||1))*100}%;background:var(--op)"></div></div><span class="bar-cnt">${trackCounts.op}</span></div>
+        <div class="bar-row"><span class="bar-label">BB</span><div class="bar-track"><div class="bar-fill" style="width:${(trackCounts.bb/(all.length||1))*100}%;background:var(--bb)"></div></div><span class="bar-cnt">${trackCounts.bb}</span></div>
+        <div class="bar-row"><span class="bar-label">General</span><div class="bar-track"><div class="bar-fill" style="width:${(trackCounts.general/(all.length||1))*100}%;background:#94a3b8"></div></div><span class="bar-cnt">${trackCounts.general}</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-title">Recurring Problems (3+)</div>
+        ${recurring.length ? `<div class="recur-list">${recurring.map(([k,v])=>`
+          <div class="recur-item"><span class="recur-name">${esc(k)}</span><span class="recur-cnt">${v}×</span></div>
+        `).join('')}</div>` : '<div style="color:var(--muted);font-size:13px">No recurring patterns yet</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function fmtDuration(ms){
+  if(!ms || ms<0) return 'N/A';
+  const mins = Math.round(ms/60000);
+  if(mins < 60) return `${mins}m`;
+  const hrs = mins/60;
+  if(hrs < 24) return `${hrs.toFixed(1)}h`;
+  return `${(hrs/24).toFixed(1)}d`;
+}
+
+// ── CSV EXPORT ────────────────────────────────────────────────
+function csvEscape(v){
+  if(v===null || v===undefined) return '';
+  const s = String(v);
+  if(/[",\n\r]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+  return s;
+}
+
+function exportCSV(source){
+  let rows = [];
+  let filename = 'labtrack-export.csv';
+
+  if(source==='archive'){
+    const wk = document.getElementById('archWeek').value;
+    const bd = document.getElementById('archBoard').value;
+    const term = (document.getElementById('archSearch').value||'').toLowerCase().trim();
+    let items = archiveData;
+    if(wk) items = items.filter(a=>String(a.weekBucket)===wk);
+    if(bd) items = items.filter(a=>a.boardId===bd);
+    if(term){
+      items = items.filter(a=>{
+        const hay = `${a.title||''} ${a.description||''} ${a.instrumentType||''} ${a.unitNumber||''} ${a.assignee||''} ${a.createdBy||''}`.toLowerCase();
+        return hay.includes(term);
+      });
+    }
+    rows = items;
+    filename = `labtrack-archive-${new Date().toISOString().slice(0,10)}.csv`;
+  } else {
+    // Stats source = all issues + archive in current range
+    const days = parseInt(document.getElementById('statsRange').value, 10);
+    const cutoff = Date.now() - days*24*60*60*1000;
+    rows = [...statsCache.issues, ...statsCache.archive].filter(i=>{
+      const ts = i.createdAt?.toMillis ? i.createdAt.toMillis() : 0;
+      return ts >= cutoff;
+    });
+    filename = `labtrack-stats-${days}d-${new Date().toISOString().slice(0,10)}.csv`;
+  }
+
+  if(!rows.length){
+    showToast('Nothing to export.');
+    return;
+  }
+
+  const headers = ['Title','Description','Priority','Status','Track','Instrument','Unit','Assignee','Created By','Created At','Updated At','Resolved/Archived At','Comments'];
+  const lines = [headers.map(csvEscape).join(',')];
+  rows.forEach(r=>{
+    const board = boards.find(b=>b.id===r.boardId);
+    const resolvedAt = r.archivedAt?.toDate ? r.archivedAt.toDate().toISOString() :
+                      (r.status==='resolved' && r.updatedAt?.toDate ? r.updatedAt.toDate().toISOString() : '');
+    lines.push([
+      r.title||'',
+      r.description||'',
+      r.priority||'',
+      r.archivedAt ? 'archived' : (r.status||''),
+      r.track||'',
+      r.instrumentType||'',
+      r.unitNumber||'',
+      r.assignee||'',
+      r.createdBy||'',
+      r.createdAt?.toDate ? r.createdAt.toDate().toISOString() : '',
+      r.updatedAt?.toDate ? r.updatedAt.toDate().toISOString() : '',
+      resolvedAt,
+      r.commentCount||0
+    ].map(csvEscape).join(','));
+  });
+
+  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`Exported ${rows.length} row(s).`);
 }
 
 // ── BOOT ──────────────────────────────────────────────────────
