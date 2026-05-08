@@ -2708,51 +2708,68 @@ function lsInferShiftStart(slots){
   return best;
 }
 
-// Render the full HTML preview (matches the email body format)
-// Render the full HTML preview with INLINE styles only.
-// Outlook web (and most email clients) strip <style> blocks and CSS classes,
-// so every visual rule must live on the element itself for paste fidelity.
-// Outlook's web sanitizer is particularly aggressive — it can even strip
-// CSS color rules. We use legacy HTML attributes (bgcolor, font color)
-// alongside CSS as belt-and-suspenders defense.
+// Render the full HTML preview with INLINE styles.
+// Important context discovered through testing:
+// - Inline CSS background on <td>/<th> SURVIVES Outlook web sanitization
+// - Inline CSS color via <span style="color:..."> SURVIVES if no parent fights it
+// - Margin/padding CSS gets stripped, so we use <br><br> for vertical spacing
+// - Width control survives via explicit <colgroup>/<col> declarations
 function renderLsHTML(){
   const final = lsBuildFinalTable();
   const fmt = n => typeof n === 'number' ? n.toLocaleString() : (n || '');
 
-  // Reusable inline style snippets for clipboard fidelity
+  // Reusable inline style snippets
   const T_RESET = 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;';
   const TD_BASE = 'border:1px solid #000;padding:4px 7px;font-size:11px;font-family:Calibri,Arial,sans-serif;text-align:center;vertical-align:middle;';
   const TH_BASE = TD_BASE + 'font-weight:bold;background:#FFFFFF;';
 
-  // Color wrappers — using <font color> as the OUTERMOST tag with no CSS.
-  // Outlook strips CSS but rarely strips legacy <font> attributes.
-  const BB = (txt) => `<font color="#D9A300"><b>${txt}</b></font>`;
-  const OP = (txt) => `<font color="#C00000"><b>${txt}</b></font>`;
-  const SECH = (txt) => `<p style="margin:14px 0 4px 0;font-family:Calibri,Arial,sans-serif"><font color="#1F4E79" size="3"><b>${txt}</b></font></p>`;
-  const BBH = (txt) => `<p style="margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif">${BB(txt)}</p>`;
-  const OPH = (txt) => `<p style="margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif">${OP(txt)}</p>`;
+  // Background fills for the colored cells. These ARE preserved by Outlook web
+  // when set via inline style on td/th elements.
+  const BLUE = 'background:#ADD8E6;';
+  const YELLOW = 'background:#FFDE2A;';
+  const RED = 'background:#FF5B5B;';
 
-  // Spacer paragraph for guaranteed vertical separation in email clients
-  const SPACE = `<p style="margin:0;line-height:6px">&nbsp;</p>`;
+  // Colored TEXT wrappers. Use <span style="color:..."> as the only color rule
+  // on text content. Avoid putting color on the parent <th> style attribute
+  // because some sanitizers strip it from there. The <b> handles bold.
+  const BB = (txt) => `<span style="color:#D9A300"><b>${txt}</b></span>`;
+  const OP = (txt) => `<span style="color:#C00000"><b>${txt}</b></span>`;
+  const SECH = (txt) => `<p style="margin:14px 0 4px 0;font-family:Calibri,Arial,sans-serif;font-size:13px"><span style="color:#1F4E79"><b>${txt}</b></span></p>`;
+  const BBH = (txt) => `<p style="margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px">${BB(txt)}</p>`;
+  const OPH = (txt) => `<p style="margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px">${OP(txt)}</p>`;
+
+  // Spacer: <br><br> is the only vertical-gap technique that no email client
+  // can strip. Margin/padding are unreliable.
+  const SPACE = `<br><br>`;
 
   let html = '';
 
   // Final table (CSV-driven). Headers: Time + the 4 right-side ones are blue-filled.
   // Data cells below them are plain white. Only Time COLUMN cells stay blue.
-  // Use bgcolor attributes (not CSS background) so Outlook can't strip them.
+  // Inline CSS background is used because it's confirmed to survive Outlook web.
   if(final){
-    html += `<table style="${T_RESET}max-width:680px"><thead><tr>` +
-      `<th bgcolor="#ADD8E6" style="${TH_BASE}">Time</th>` +
-      `<th bgcolor="#FFDE2A" style="${TH_BASE}">BB Total</th>` +
-      `<th bgcolor="#FF5B5B" style="${TH_BASE}">OP Total</th>` +
-      `<th bgcolor="#ADD8E6" style="${TH_BASE}">Hourly Total</th>` +
-      `<th bgcolor="#ADD8E6" style="${TH_BASE}">Running Total</th>` +
-      `<th bgcolor="#ADD8E6" style="${TH_BASE}">Projected Remaining</th>` +
-      `<th bgcolor="#ADD8E6" style="${TH_BASE}">Projected</th>` +
+    html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
+      `<colgroup>` +
+        `<col width="78">` +
+        `<col width="68">` +
+        `<col width="68">` +
+        `<col width="78">` +
+        `<col width="82">` +
+        `<col width="98">` +
+        `<col width="78">` +
+      `</colgroup>` +
+      `<thead><tr>` +
+      `<th style="${TH_BASE}${BLUE}">Time</th>` +
+      `<th style="${TH_BASE}${YELLOW}">BB Total</th>` +
+      `<th style="${TH_BASE}${RED}">OP Total</th>` +
+      `<th style="${TH_BASE}${BLUE}">Hourly Total</th>` +
+      `<th style="${TH_BASE}${BLUE}">Running Total</th>` +
+      `<th style="${TH_BASE}${BLUE}">Projected Remaining</th>` +
+      `<th style="${TH_BASE}${BLUE}">Projected</th>` +
     `</tr></thead><tbody>`;
     final.forEach(r=>{
       html += `<tr>` +
-        `<td bgcolor="#ADD8E6" style="${TD_BASE}font-weight:bold"><b>${esc(r.time)}</b></td>` +
+        `<td style="${TD_BASE}${BLUE}font-weight:bold"><b>${esc(r.time)}</b></td>` +
         `<td style="${TD_BASE}">${fmt(r.bb)}</td>` +
         `<td style="${TD_BASE}">${fmt(r.op)}</td>` +
         `<td style="${TD_BASE}">${fmt(r.hourly)}</td>` +
@@ -2772,7 +2789,10 @@ function renderLsHTML(){
   const anyUnp = unp.ongoing || unp.completed || unp.lh_flx || unp.lh_fedex || unp.lh_ups || unp.lh_wc;
   if(anyUnp){
     html += SECH("UNPACKING/SHIPMENTS:");
-    html += `<table style="${T_RESET}">` +
+    html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
+      `<colgroup>` +
+        `<col width="100"><col width="50"><col width="50"><col width="50"><col width="50">` +
+      `</colgroup>` +
       `<tr>` +
         `<td style="${TD_BASE}font-weight:bold;text-align:left" rowspan="2">Unpacking:</td>` +
         `<th style="${TH_BASE}" colspan="2">Ongoing</th>` +
@@ -2815,7 +2835,11 @@ function renderLsHTML(){
   const anyStartup = lsState.startup.some(r=>r.bb||r.op||r.full||r.partial);
   if(anyStartup){
     html += SECH("Startup Time(s):");
-    html += `<table style="${T_RESET}"><thead><tr>` +
+    html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
+      `<colgroup>` +
+        `<col width="160"><col width="55"><col width="55"><col width="50"><col width="55">` +
+      `</colgroup>` +
+      `<thead><tr>` +
       `<th style="${TH_BASE}text-align:left">Departments/Module</th>` +
       `<th style="${TH_BASE}">${BB("BB")}</th>` +
       `<th style="${TH_BASE}">${OP("OP")}</th>` +
@@ -2850,9 +2874,11 @@ function renderLsHTML(){
   // Pending Buckets to Relabel
   if(lsState.relabelBb!=='' || lsState.relabelOp!==''){
     html += SECH("Pending Buckets to Relabel:");
-    html += `<table style="${T_RESET}"><thead><tr>` +
-      `<th style="${TH_BASE}min-width:60px">${BB("BB")}</th>` +
-      `<th style="${TH_BASE}min-width:60px">${OP("OP")}</th>` +
+    html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
+      `<colgroup><col width="60"><col width="60"></colgroup>` +
+      `<thead><tr>` +
+      `<th style="${TH_BASE}">${BB("BB")}</th>` +
+      `<th style="${TH_BASE}">${OP("OP")}</th>` +
     `</tr></thead><tbody><tr>` +
       `<td style="${TD_BASE}">${esc(lsState.relabelBb)}</td>` +
       `<td style="${TD_BASE}">${esc(lsState.relabelOp)}</td>` +
@@ -2864,17 +2890,21 @@ function renderLsHTML(){
   const hasOos = Object.values(lsState.oos).some(arr=>arr.length);
   if(hasOos){
     html += SECH("OOS Analyzers:");
-    html += `<table style="${T_RESET}"><thead><tr>` +
-      `<th style="${TH_BASE}text-align:left;min-width:200px" colspan="2">${BB("BB")}</th>` +
-      `<th style="${TH_BASE}text-align:left;min-width:200px" colspan="2">${OP("OP")}</th>` +
+    html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
+      `<colgroup>` +
+        `<col width="65"><col width="155"><col width="65"><col width="155">` +
+      `</colgroup>` +
+      `<thead><tr>` +
+      `<th style="${TH_BASE}text-align:left" colspan="2">${BB("BB")}</th>` +
+      `<th style="${TH_BASE}text-align:left" colspan="2">${OP("OP")}</th>` +
     `</tr></thead><tbody>`;
     ['hemo','special','auto'].forEach(d=>{
       const lbl = d==='hemo'?'HEMO':d==='special'?'SPECIAL':'AUTO';
       html += `<tr>` +
-        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px"><b>${lbl}:</b></td>` +
-        `<td style="${TD_BASE}text-align:left;min-width:140px">${lsState.oos['bb_'+d].map(esc).join(', ')}</td>` +
-        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px"><b>${lbl}:</b></td>` +
-        `<td style="${TD_BASE}text-align:left;min-width:140px">${lsState.oos['op_'+d].map(esc).join(', ')}</td>` +
+        `<td style="${TD_BASE}text-align:left;font-weight:bold"><b>${lbl}:</b></td>` +
+        `<td style="${TD_BASE}text-align:left">${lsState.oos['bb_'+d].map(esc).join(', ')}</td>` +
+        `<td style="${TD_BASE}text-align:left;font-weight:bold"><b>${lbl}:</b></td>` +
+        `<td style="${TD_BASE}text-align:left">${lsState.oos['op_'+d].map(esc).join(', ')}</td>` +
       `</tr>`;
     });
     html += `</tbody></table>`;
@@ -2885,17 +2915,21 @@ function renderLsHTML(){
   const hasOver = Object.values(lsState.overloads).some(v=>v) || lsState.overloadNotes.trim();
   if(hasOver){
     html += SECH("Overloads/Buffer Status:");
-    html += `<table style="${T_RESET}"><thead><tr>` +
-      `<th style="${TH_BASE}text-align:left;min-width:200px" colspan="2">${BB("BB")}</th>` +
-      `<th style="${TH_BASE}text-align:left;min-width:200px" colspan="2">${OP("OP")}</th>` +
+    html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
+      `<colgroup>` +
+        `<col width="65"><col width="100"><col width="65"><col width="100">` +
+      `</colgroup>` +
+      `<thead><tr>` +
+      `<th style="${TH_BASE}text-align:left" colspan="2">${BB("BB")}</th>` +
+      `<th style="${TH_BASE}text-align:left" colspan="2">${OP("OP")}</th>` +
     `</tr></thead><tbody>`;
     ['hemo','special','auto'].forEach(d=>{
       const lbl = d==='hemo'?'HEMO':d==='special'?'SPECIAL':'AUTO';
       html += `<tr>` +
-        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px"><b>${lbl}:</b></td>` +
-        `<td style="${TD_BASE}text-align:left;min-width:140px">${esc(lsState.overloads['bb_'+d])}</td>` +
-        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px"><b>${lbl}:</b></td>` +
-        `<td style="${TD_BASE}text-align:left;min-width:140px">${esc(lsState.overloads['op_'+d])}</td>` +
+        `<td style="${TD_BASE}text-align:left;font-weight:bold"><b>${lbl}:</b></td>` +
+        `<td style="${TD_BASE}text-align:left">${esc(lsState.overloads['bb_'+d])}</td>` +
+        `<td style="${TD_BASE}text-align:left;font-weight:bold"><b>${lbl}:</b></td>` +
+        `<td style="${TD_BASE}text-align:left">${esc(lsState.overloads['op_'+d])}</td>` +
       `</tr>`;
     });
     html += `</tbody></table>`;
@@ -2909,11 +2943,15 @@ function renderLsHTML(){
   const hasBim = lsState.bim.bb.some(v=>v) || lsState.bim.op.some(v=>v);
   if(hasBim){
     html += SECH("BIM Read Rates:");
-    html += `<table style="${T_RESET}"><thead><tr>` +
-      `<th style="${TH_BASE}width:60px">${BB("BB")}</th>` +
-      `<th style="${TH_BASE}width:80px">% Success</th>` +
-      `<th style="${TH_BASE}width:60px">${OP("OP")}</th>` +
-      `<th style="${TH_BASE}width:80px">% Success</th>` +
+    html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
+      `<colgroup>` +
+        `<col width="55"><col width="75"><col width="55"><col width="75">` +
+      `</colgroup>` +
+      `<thead><tr>` +
+      `<th style="${TH_BASE}">${BB("BB")}</th>` +
+      `<th style="${TH_BASE}">% Success</th>` +
+      `<th style="${TH_BASE}">${OP("OP")}</th>` +
+      `<th style="${TH_BASE}">% Success</th>` +
     `</tr></thead><tbody>`;
     const labels = ['1','2','3','4','5','6','7','8','IOM 1','IOM 2'];
     labels.forEach((lbl,i)=>{
