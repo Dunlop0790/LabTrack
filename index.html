@@ -2421,9 +2421,15 @@ function renderLineStatus(){
         </div>
 
         <div class="ls-section">
-          <div class="ls-sec-title" style="display:flex;align-items:center">
+          <div class="ls-sec-title" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px">
             BB / OP Notes
-            <button class="ls-add-btn" style="margin-left:auto;font-size:11px;padding:3px 9px" onclick="lsRefreshNotes()">Refresh from Board</button>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <select class="ls-mini" style="font-size:11px" onchange="lsSourceBoard=this.value||null">
+                <option value="">Current board</option>
+                ${boards.map(b=>`<option value="${b.id}" ${lsSourceBoard===b.id?'selected':''}>${esc(b.title)}</option>`).join('')}
+              </select>
+              <button class="ls-add-btn" style="font-size:11px;padding:3px 9px" onclick="lsRefreshNotes()">Refresh from Board</button>
+            </div>
           </div>
           <div class="ls-cell-hdr bb" style="margin-top:5px">BB</div>
           <textarea class="ls-textarea" placeholder="One issue per line (will render as bullets)" oninput="lsUpdate('bbNotes',this.value)">${esc(lsState.bbNotes)}</textarea>
@@ -2503,18 +2509,21 @@ function lsRemoveOos(key, value){
 
 // Auto-pull notes from active LabTrack issues
 function lsRefreshNotes(){
-  const bbItems = issues.filter(i=>i.track==='bb' && i.status!=='resolved').map(i=>{
+  const sourceBid = lsSourceBoard || boardId;
+  const activeIssues = issues.filter(i=>i.boardId===sourceBid && i.status!=='resolved');
+  const bbItems = activeIssues.filter(i=>i.track==='bb').map(i=>{
     const inst = [i.instrumentType,i.unitNumber].filter(Boolean).join(' ');
     return inst ? `${inst}: ${i.title}` : i.title;
   });
-  const opItems = issues.filter(i=>i.track==='op' && i.status!=='resolved').map(i=>{
+  const opItems = activeIssues.filter(i=>i.track==='op').map(i=>{
     const inst = [i.instrumentType,i.unitNumber].filter(Boolean).join(' ');
     return inst ? `${inst}: ${i.title}` : i.title;
   });
   lsState.bbNotes = bbItems.join('\n');
   lsState.opNotes = opItems.join('\n');
   renderLineStatus();
-  showToast('Notes refreshed from board.');
+  const boardName = boards.find(b=>b.id===sourceBid)?.title || 'current board';
+  showToast(`Notes refreshed from "${boardName}".`);
 }
 
 // Refresh just the preview without re-rendering form (preserves cursor focus)
@@ -3023,7 +3032,7 @@ async function lsSaveSnapshot(){
 // ── SNAPSHOTS TAB ──────────────────────────────────────────────
 async function renderSnapshots(){
   const body = document.getElementById('reportsBody');
-  body.innerHTML = `<div style="font-size:13px;color:var(--muted);margin-bottom:6px">Snapshots auto-purge daily at 6:00 AM EST. CSV-derived tables are not saved.</div><div class="snap-list" id="snapList">Loading…</div>`;
+  body.innerHTML = `<div style="font-size:13px;color:var(--muted);margin-bottom:6px">Snapshots auto-purge daily at 6:00 AM EST. CSV-derived tables are not saved.</div><div class="snap-list" id="snapList">Loading...</div>`;
   const snap = await db.collection('lsSnapshots').orderBy('createdAt','desc').get();
   const items = snap.docs.map(d=>({id:d.id, ...d.data()}));
   const list = document.getElementById('snapList');
@@ -3031,30 +3040,43 @@ async function renderSnapshots(){
     list.innerHTML = '<div style="color:var(--muted);font-style:italic;padding:20px;text-align:center">No snapshots yet.</div>';
     return;
   }
-  list.innerHTML = items.map(s=>`
-    <div class="snap-item">
+  list.innerHTML = items.map(s=>{
+    const type = s.type === 'eod' ? 'EOD' : 'Line Status';
+    const typeColor = s.type === 'eod' ? '#10b981' : '#3b82f6';
+    return `<div class="snap-item">
       <div class="snap-info">
-        <div style="font-weight:600">${esc(s.submittedBy||'?')}</div>
+        <div style="font-weight:600">
+          <span style="background:${typeColor};color:#fff;font-size:10px;padding:1px 7px;border-radius:10px;font-weight:700;margin-right:6px;text-transform:uppercase">${type}</span>
+          ${esc(s.submittedBy||'?')}
+        </div>
         <div class="snap-time">${fmtTime(s.createdAt)}</div>
       </div>
       <div class="snap-actions">
         <button onclick="lsLoadSnapshot('${s.id}')">Load</button>
         <button class="del" onclick="lsDeleteSnapshot('${s.id}')">Delete</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 async function lsLoadSnapshot(id){
   const doc = await db.collection('lsSnapshots').doc(id).get();
   if(!doc.exists) return;
-  const data = JSON.parse(doc.data().data);
-  // Restore everything except CSV-derived state
-  Object.assign(lsState, data);
-  lsState.csvOp = null;
-  lsState.csvBb = null;
-  switchReportTab('ls');
-  showToast('Snapshot loaded into form.');
+  const docData = doc.data();
+  const data = JSON.parse(docData.data);
+  if(docData.type === 'eod'){
+    // Load into eodState and switch to EOD tab
+    Object.assign(eodState, data);
+    switchReportTab('eod');
+    showToast('EOD snapshot loaded into form.');
+  } else {
+    // Default: line status. CSV-derived state is not stored.
+    Object.assign(lsState, data);
+    lsState.csvOp = null;
+    lsState.csvBb = null;
+    switchReportTab('ls');
+    showToast('Line Status snapshot loaded into form.');
+  }
 }
 
 async function lsDeleteSnapshot(id){
@@ -3091,15 +3113,468 @@ async function purgeSnapshotsDaily(){
   } catch(e){ console.warn('Snapshot purge failed:',e); }
 }
 
-// ── EOD TAB (placeholder) ──────────────────────────────────────
+// ── EOD TAB ────────────────────────────────────────────────────
+// EOD report state. Form data plus auto-pulled BB/OP issues from the board.
+let eodState = {
+  date: '',
+  reportOn: 'Automated Line',
+  staffingPct: '100%',
+  callOutChecked: false,
+  callOutCount: '',
+  scheduledPtoChecked: false,
+  scheduledPtoCount: '',
+  remainingFreezerYes: false,
+  remainingFreezerNo: false,
+  freezerSamplesNum: 'N/A',
+  freezerSamplesType: 'N/A',
+  freezerReasonTrack: false,
+  freezerReasonStaffing: false,
+  freezerReasonHighVol: false,
+  freezerReasonOther: false,
+  freezerReasonOtherText: '',
+  // Remaining samples on line: dropdowns for OP and BB (complete and incomplete)
+  lineSamplesBbComplete: 'N/A',
+  lineSamplesBbIncomplete: 'N/A',
+  lineSamplesOpComplete: 'N/A',
+  lineSamplesOpIncomplete: 'N/A',
+  lineSamplesDept: 'N/A',
+  lineSamplesReasonTrack: false,
+  lineSamplesReasonStaffing: false,
+  lineSamplesReasonHighVol: false,
+  bbBimIssues: 'N/A',
+  opBimIssues: 'N/A',
+  bbIssues: 'N/A',
+  opIssues: 'N/A',
+  bbHvsIssues: 'N/A',
+  opHvsIssues: 'N/A',
+  maintOpYes: false,
+  maintOpNo: false,
+  maintBbYes: false,
+  maintBbNo: false,
+  maintRemaining: 'N/A',
+  instrumentIssues: 'N/A',
+  eodNotes: ''
+};
+
+// Source board selectors for auto-pull (separate from the active board the user is viewing)
+let lsSourceBoard = null; // null = use currently active board
+let eodSourceBoard = null;
+
+const EOD_SAMPLE_COUNTS = ['N/A', ...range(0,1000)];
+// Sample types and departments share the same options
+const EOD_DEPT_OPTIONS = ['N/A','All','Hemo','Special','Auto'];
+
 function renderEOD(){
-  document.getElementById('reportsBody').innerHTML = `
-    <div style="padding:60px 20px;text-align:center;color:var(--muted)">
-      <div style="font-size:36px;margin-bottom:10px">🛠️</div>
-      <div style="font-size:15px;font-weight:600;margin-bottom:6px">EOD Reports: Coming Soon</div>
-      <div style="font-size:12px">This tab will host the End-of-Day report once we build it together.</div>
+  if(!eodState.date) eodState.date = formatTodayLong();
+  const body = document.getElementById('reportsBody');
+  body.innerHTML = `
+    <div class="reports-split">
+      <div class="ls-form">
+        <div class="ls-section">
+          <div class="ls-sec-title">Header</div>
+          <div class="ls-row">
+            <span class="ls-lbl">Date:</span>
+            <input class="ls-mini" style="flex:1" value="${esc(eodState.date)}" oninput="eodUpdate('date',this.value)" />
+          </div>
+          <div class="ls-row">
+            <span class="ls-lbl">Report on:</span>
+            <input class="ls-mini" style="flex:1" value="${esc(eodState.reportOn)}" oninput="eodUpdate('reportOn',this.value)" />
+          </div>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title">Staffing</div>
+          <div class="ls-row">
+            <span class="ls-lbl">Staffing %:</span>
+            <input class="ls-mini w90" value="${esc(eodState.staffingPct)}" oninput="eodUpdate('staffingPct',this.value)" />
+          </div>
+          <div class="ls-row" style="margin-top:8px">
+            <div class="ls-x-cell ${eodState.callOutChecked?'checked':''}" onclick="eodToggle('callOutChecked')">${eodState.callOutChecked?'X':''}</div>
+            <span style="font-weight:600;font-size:12px">Call out / sick call:</span>
+            <input class="ls-mini w70" value="${esc(eodState.callOutCount)}" placeholder="# TMs" oninput="eodUpdate('callOutCount',this.value)" />
+          </div>
+          <div class="ls-row">
+            <div class="ls-x-cell ${eodState.scheduledPtoChecked?'checked':''}" onclick="eodToggle('scheduledPtoChecked')">${eodState.scheduledPtoChecked?'X':''}</div>
+            <span style="font-weight:600;font-size:12px">Scheduled PTO:</span>
+            <input class="ls-mini w70" value="${esc(eodState.scheduledPtoCount)}" placeholder="# TMs" oninput="eodUpdate('scheduledPtoCount',this.value)" />
+          </div>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title">Remaining Samples (in freezer)</div>
+          <div class="ls-row">
+            <div class="ls-x-cell ${eodState.remainingFreezerYes?'checked':''}" onclick="eodToggle('remainingFreezerYes')">${eodState.remainingFreezerYes?'X':''}</div>
+            <span style="font-weight:600;font-size:12px">YES</span>
+            <span style="margin-left:14px"></span>
+            <div class="ls-x-cell ${eodState.remainingFreezerNo?'checked':''}" onclick="eodToggle('remainingFreezerNo')">${eodState.remainingFreezerNo?'X':''}</div>
+            <span style="font-weight:600;font-size:12px">NO</span>
+          </div>
+          <div class="ls-row" style="margin-top:8px">
+            <span class="ls-lbl">No. of Samples:</span>
+            <input class="ls-mini w90" value="${esc(eodState.freezerSamplesNum)}" oninput="eodUpdate('freezerSamplesNum',this.value)" />
+          </div>
+          <div class="ls-row">
+            <span class="ls-lbl">Sample Type(s):</span>
+            <select class="ls-mini" style="flex:1" onchange="eodUpdate('freezerSamplesType',this.value)">
+              ${EOD_DEPT_OPTIONS.map(o=>`<option value="${o}" ${eodState.freezerSamplesType===o?'selected':''}>${o}</option>`).join('')}
+            </select>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-top:8px;margin-bottom:4px">Reason:</div>
+          <div class="ls-row">
+            <div class="ls-x-cell ${eodState.freezerReasonTrack?'checked':''}" onclick="eodToggle('freezerReasonTrack')">${eodState.freezerReasonTrack?'X':''}</div>
+            <span style="font-size:12px">Track/Automation</span>
+          </div>
+          <div class="ls-row">
+            <div class="ls-x-cell ${eodState.freezerReasonStaffing?'checked':''}" onclick="eodToggle('freezerReasonStaffing')">${eodState.freezerReasonStaffing?'X':''}</div>
+            <span style="font-size:12px">Staffing</span>
+          </div>
+          <div class="ls-row">
+            <div class="ls-x-cell ${eodState.freezerReasonHighVol?'checked':''}" onclick="eodToggle('freezerReasonHighVol')">${eodState.freezerReasonHighVol?'X':''}</div>
+            <span style="font-size:12px">High Volume</span>
+          </div>
+          <div class="ls-row">
+            <div class="ls-x-cell ${eodState.freezerReasonOther?'checked':''}" onclick="eodToggle('freezerReasonOther')">${eodState.freezerReasonOther?'X':''}</div>
+            <span style="font-size:12px">Other (Explain):</span>
+            <input class="ls-mini" style="flex:1" value="${esc(eodState.freezerReasonOtherText)}" oninput="eodUpdate('freezerReasonOtherText',this.value)" />
+          </div>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title">Remaining Samples on Line</div>
+          <div class="ls-grid ls-grid-2">
+            <div class="ls-cell">
+              <div class="ls-cell-hdr bb">BB Complete</div>
+              <select class="ls-mini" onchange="eodUpdate('lineSamplesBbComplete',this.value)">
+                ${optList(EOD_SAMPLE_COUNTS, eodState.lineSamplesBbComplete)}
+              </select>
+            </div>
+            <div class="ls-cell">
+              <div class="ls-cell-hdr bb">BB Incomplete</div>
+              <select class="ls-mini" onchange="eodUpdate('lineSamplesBbIncomplete',this.value)">
+                ${optList(EOD_SAMPLE_COUNTS, eodState.lineSamplesBbIncomplete)}
+              </select>
+            </div>
+            <div class="ls-cell">
+              <div class="ls-cell-hdr op">OP Complete</div>
+              <select class="ls-mini" onchange="eodUpdate('lineSamplesOpComplete',this.value)">
+                ${optList(EOD_SAMPLE_COUNTS, eodState.lineSamplesOpComplete)}
+              </select>
+            </div>
+            <div class="ls-cell">
+              <div class="ls-cell-hdr op">OP Incomplete</div>
+              <select class="ls-mini" onchange="eodUpdate('lineSamplesOpIncomplete',this.value)">
+                ${optList(EOD_SAMPLE_COUNTS, eodState.lineSamplesOpIncomplete)}
+              </select>
+            </div>
+          </div>
+          <div class="ls-row" style="margin-top:8px">
+            <span class="ls-lbl">Departments on Line:</span>
+            <select class="ls-mini" style="flex:1" onchange="eodUpdate('lineSamplesDept',this.value)">
+              ${EOD_DEPT_OPTIONS.map(o=>`<option value="${o}" ${eodState.lineSamplesDept===o?'selected':''}>${o}</option>`).join('')}
+            </select>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-top:8px;margin-bottom:4px">Reason:</div>
+          <div class="ls-row">
+            <div class="ls-x-cell ${eodState.lineSamplesReasonTrack?'checked':''}" onclick="eodToggle('lineSamplesReasonTrack')">${eodState.lineSamplesReasonTrack?'X':''}</div>
+            <span style="font-size:12px">Track/Automation</span>
+          </div>
+          <div class="ls-row">
+            <div class="ls-x-cell ${eodState.lineSamplesReasonStaffing?'checked':''}" onclick="eodToggle('lineSamplesReasonStaffing')">${eodState.lineSamplesReasonStaffing?'X':''}</div>
+            <span style="font-size:12px">Staffing</span>
+          </div>
+          <div class="ls-row">
+            <div class="ls-x-cell ${eodState.lineSamplesReasonHighVol?'checked':''}" onclick="eodToggle('lineSamplesReasonHighVol')">${eodState.lineSamplesReasonHighVol?'X':''}</div>
+            <span style="font-size:12px">High Volume</span>
+          </div>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px">
+            BB / OP Issues
+            <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <select class="ls-mini" style="font-size:11px" onchange="eodSourceBoard=this.value||null">
+                <option value="">Current board</option>
+                ${boards.map(b=>`<option value="${b.id}" ${eodSourceBoard===b.id?'selected':''}>${esc(b.title)}</option>`).join('')}
+              </select>
+              <button class="ls-add-btn" style="font-size:11px;padding:3px 9px" onclick="eodRefreshIssues()">Refresh from Board</button>
+            </div>
+          </div>
+          <div class="ls-cell-hdr bb" style="margin-top:6px">BB - BIM Issues</div>
+          <textarea class="ls-textarea" oninput="eodUpdate('bbBimIssues',this.value)">${esc(eodState.bbBimIssues)}</textarea>
+          <div class="ls-cell-hdr op" style="margin-top:8px">OP - BIM Issues</div>
+          <textarea class="ls-textarea" oninput="eodUpdate('opBimIssues',this.value)">${esc(eodState.opBimIssues)}</textarea>
+          <div class="ls-cell-hdr bb" style="margin-top:8px">BB - Issues</div>
+          <textarea class="ls-textarea" oninput="eodUpdate('bbIssues',this.value)">${esc(eodState.bbIssues)}</textarea>
+          <div class="ls-cell-hdr op" style="margin-top:8px">OP - Issues</div>
+          <textarea class="ls-textarea" oninput="eodUpdate('opIssues',this.value)">${esc(eodState.opIssues)}</textarea>
+          <div class="ls-cell-hdr bb" style="margin-top:8px">BB - HVS Issues</div>
+          <textarea class="ls-textarea" oninput="eodUpdate('bbHvsIssues',this.value)">${esc(eodState.bbHvsIssues)}</textarea>
+          <div class="ls-cell-hdr op" style="margin-top:8px">OP - HVS Issues</div>
+          <textarea class="ls-textarea" oninput="eodUpdate('opHvsIssues',this.value)">${esc(eodState.opHvsIssues)}</textarea>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title">Maintenance Tasks Completed</div>
+          <div class="ls-row">
+            <span class="ls-lbl" style="color:var(--op);font-weight:700">Optimus Prime:</span>
+            <div class="ls-x-cell ${eodState.maintOpYes?'checked':''}" onclick="eodToggle('maintOpYes')">${eodState.maintOpYes?'X':''}</div>
+            <span style="font-size:12px">YES</span>
+            <span style="margin-left:10px"></span>
+            <div class="ls-x-cell ${eodState.maintOpNo?'checked':''}" onclick="eodToggle('maintOpNo')">${eodState.maintOpNo?'X':''}</div>
+            <span style="font-size:12px">NO</span>
+          </div>
+          <div class="ls-row" style="margin-top:6px">
+            <span class="ls-lbl" style="color:var(--bb);font-weight:700">Bumblebee:</span>
+            <div class="ls-x-cell ${eodState.maintBbYes?'checked':''}" onclick="eodToggle('maintBbYes')">${eodState.maintBbYes?'X':''}</div>
+            <span style="font-size:12px">YES</span>
+            <span style="margin-left:10px"></span>
+            <div class="ls-x-cell ${eodState.maintBbNo?'checked':''}" onclick="eodToggle('maintBbNo')">${eodState.maintBbNo?'X':''}</div>
+            <span style="font-size:12px">NO</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:8px;font-weight:600">If no, what tasks are remaining?</div>
+          <textarea class="ls-textarea" oninput="eodUpdate('maintRemaining',this.value)">${esc(eodState.maintRemaining)}</textarea>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title">Instrument / Module Issues</div>
+          <textarea class="ls-textarea" oninput="eodUpdate('instrumentIssues',this.value)">${esc(eodState.instrumentIssues)}</textarea>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title">Notes</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">One note per line. Renders as a bulleted list.</div>
+          <textarea class="ls-textarea" style="min-height:90px" placeholder="Any additional notes for the EOD report..." oninput="eodUpdate('eodNotes',this.value)">${esc(eodState.eodNotes)}</textarea>
+        </div>
+
+        <div class="ls-actions">
+          <button class="btn-clear" onclick="eodClear()">Clear All</button>
+          <button class="btn-snap" onclick="eodSaveSnapshot()">Save Snapshot</button>
+          <button class="btn-copy" onclick="eodCopy()">Copy to Clipboard</button>
+        </div>
+      </div>
+
+      <div class="ls-preview">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Live Preview</div>
+        <div class="ls-render" id="eodRender">${renderEodHTML()}</div>
+      </div>
     </div>
   `;
+}
+
+function eodUpdate(field, value){
+  eodState[field] = value;
+  refreshEodPreview();
+}
+
+function eodToggle(field){
+  eodState[field] = !eodState[field];
+  renderEOD();
+}
+
+function refreshEodPreview(){
+  const el = document.getElementById('eodRender');
+  if(el) el.innerHTML = renderEodHTML();
+}
+
+// Auto-pull BB/OP issues from active LabTrack cards. We split BIM-related, HVS-related,
+// and general issues into the right sections based on the instrument tag on each card.
+function eodRefreshIssues(){
+  const sourceBid = eodSourceBoard || boardId;
+  const activeIssues = issues.filter(i=>i.boardId===sourceBid && i.status!=='resolved');
+  const groupActive = (track) => activeIssues.filter(i=>i.track===track);
+  const formatLine = (i) => {
+    const inst = [i.instrumentType, i.unitNumber].filter(Boolean).join(' ');
+    return inst ? `${inst}: ${i.title}` : i.title;
+  };
+  const isBim = i => /BIM/i.test(i.instrumentType||'');
+  const isHvs = i => /HVS/i.test(i.instrumentType||'');
+
+  const bb = groupActive('bb');
+  const op = groupActive('op');
+
+  eodState.bbBimIssues = bb.filter(isBim).map(formatLine).join('\n') || 'N/A';
+  eodState.opBimIssues = op.filter(isBim).map(formatLine).join('\n') || 'N/A';
+  eodState.bbHvsIssues = bb.filter(isHvs).map(formatLine).join('\n') || 'N/A';
+  eodState.opHvsIssues = op.filter(isHvs).map(formatLine).join('\n') || 'N/A';
+  eodState.bbIssues = bb.filter(i=>!isBim(i)&&!isHvs(i)).map(formatLine).join('\n') || 'N/A';
+  eodState.opIssues = op.filter(i=>!isBim(i)&&!isHvs(i)).map(formatLine).join('\n') || 'N/A';
+  renderEOD();
+  const boardName = boards.find(b=>b.id===sourceBid)?.title || 'current board';
+  showToast(`Issues refreshed from "${boardName}".`);
+}
+
+function eodClear(){
+  if(!confirm('Clear all EOD fields?')) return;
+  const keepDate = formatTodayLong();
+  eodState = {
+    date: keepDate, reportOn: 'Automated Line', staffingPct: '100%',
+    callOutChecked:false, callOutCount:'', scheduledPtoChecked:false, scheduledPtoCount:'',
+    remainingFreezerYes:false, remainingFreezerNo:false,
+    freezerSamplesNum:'N/A', freezerSamplesType:'N/A',
+    freezerReasonTrack:false, freezerReasonStaffing:false, freezerReasonHighVol:false,
+    freezerReasonOther:false, freezerReasonOtherText:'',
+    lineSamplesBbComplete:'N/A', lineSamplesBbIncomplete:'N/A',
+    lineSamplesOpComplete:'N/A', lineSamplesOpIncomplete:'N/A',
+    lineSamplesDept:'N/A',
+    lineSamplesReasonTrack:false, lineSamplesReasonStaffing:false, lineSamplesReasonHighVol:false,
+    bbBimIssues:'N/A', opBimIssues:'N/A', bbIssues:'N/A', opIssues:'N/A',
+    bbHvsIssues:'N/A', opHvsIssues:'N/A',
+    maintOpYes:false, maintOpNo:false, maintBbYes:false, maintBbNo:false,
+    maintRemaining:'N/A', instrumentIssues:'N/A', eodNotes:''
+  };
+  renderEOD();
+  showToast('EOD cleared.');
+}
+
+// Build the EOD report HTML in the same email-friendly format as Line Status.
+function renderEodHTML(){
+  const T  = 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;width:100%;';
+  const TD = 'border:1px solid #000;padding:5px 8px;font-size:12px;font-family:Calibri,Arial,sans-serif;vertical-align:top;';
+  const TH_TOP  = TD + 'font-weight:bold;background:#FCE4D6;';
+  // White background on all non-header left cells
+  const TH_L = TD + 'font-weight:bold;';
+  const x = b => b ? '&#9746;' : '&#9744;';
+
+  let html = '<h1 style="font-family:Calibri,Arial,sans-serif;font-size:18px;font-weight:bold;text-align:center;margin:0 0 12px 0">Automated Line EOD Report</h1>';
+
+  // Single outer table, 4 columns: [label | col2 | col3 | col4]
+  // colgroup pins widths so nothing bleeds out
+  html += '<table cellpadding="0" cellspacing="0" style="' + T + '">' +
+    '<colgroup><col width="28%"><col width="24%"><col width="24%"><col width="24%"></colgroup>' +
+    '<tbody>';
+
+  // Row 1: orange header
+  html += '<tr>' +
+    '<td style="' + TH_TOP + '"><b>DATE: ' + esc(eodState.date) + '</b></td>' +
+    '<td style="' + TH_TOP + '" colspan="3"><b>Report on: ' + esc(eodState.reportOn) + '</b></td>' +
+  '</tr>';
+
+  // Row 2: Staffing
+  html += '<tr>' +
+    '<td style="' + TH_L + '"><b>STAFFING:</b><br>' + esc(eodState.staffingPct) + '</td>' +
+    '<td style="' + TD + '" colspan="3">' +
+      '<b>Please indicate number of TMs if checked</b><br>' +
+      x(eodState.callOutChecked) + ' Call out/sick call: ' + esc(eodState.callOutCount) + '<br>' +
+      x(eodState.scheduledPtoChecked) + ' Scheduled PTO: ' + esc(eodState.scheduledPtoCount) +
+    '</td>' +
+  '</tr>';
+
+  // Row 3: Remaining in freezer YES/NO
+  html += '<tr>' +
+    '<td style="' + TH_L + '"><b>Remaining samples (in freezer)</b></td>' +
+    '<td style="' + TD + '" colspan="2">' + x(eodState.remainingFreezerYes) + ' <b>YES</b></td>' +
+    '<td style="' + TD + '">' + x(eodState.remainingFreezerNo) + ' <b>NO</b></td>' +
+  '</tr>';
+
+  // Row 4: If yes... left label + 3 sub-columns
+  const fReason =
+    x(eodState.freezerReasonTrack) + ' Track/Automation<br>' +
+    x(eodState.freezerReasonStaffing) + ' Staffing<br>' +
+    x(eodState.freezerReasonHighVol) + ' High Volume<br>' +
+    x(eodState.freezerReasonOther) + ' Other: ' + esc(eodState.freezerReasonOtherText);
+  html += '<tr>' +
+    '<td style="' + TH_L + '"><b>If yes, how many, what kind, and why were there samples left over?</b></td>' +
+    '<td style="' + TD + '"><b>No. of Samples:</b><br>' + esc(eodState.freezerSamplesNum) + '</td>' +
+    '<td style="' + TD + '"><b>Sample Type(s)</b><br>' + esc(eodState.freezerSamplesType) + '</td>' +
+    '<td style="' + TD + '"><b>Reason:</b><br>' + fReason + '</td>' +
+  '</tr>';
+
+  // Row 5: Remaining on line, left label + 3 sub-columns
+  const lReason =
+    x(eodState.lineSamplesReasonTrack) + ' Track/Automation<br>' +
+    x(eodState.lineSamplesReasonStaffing) + ' Staffing<br>' +
+    x(eodState.lineSamplesReasonHighVol) + ' High Volume';
+  html += '<tr>' +
+    '<td style="' + TH_L + '"><b>Remaining samples on line.</b></td>' +
+    '<td style="' + TD + '"><b>No. of samples</b><br>' +
+      'BB Complete: ' + esc(eodState.lineSamplesBbComplete) + '<br>' +
+      'BB Incomplete: ' + esc(eodState.lineSamplesBbIncomplete) + '<br>' +
+      'OP Complete: ' + esc(eodState.lineSamplesOpComplete) + '<br>' +
+      'OP Incomplete: ' + esc(eodState.lineSamplesOpIncomplete) +
+    '</td>' +
+    '<td style="' + TD + '"><b>Departments on Line:</b><br>' + esc(eodState.lineSamplesDept) + '</td>' +
+    '<td style="' + TD + '"><b>Reason:</b><br>' + lReason + '</td>' +
+  '</tr>';
+
+  // Issue rows: left label bold, content spans 3
+  const iRow = (lbl, val) => '<tr>' +
+    '<td style="' + TH_L + '"><b>' + lbl + '</b></td>' +
+    '<td style="' + TD + '" colspan="3">' + esc(val||'N/A').replace(/\n/g,'<br>') + '</td>' +
+  '</tr>';
+
+  html += iRow('BB - BIM Issues', eodState.bbBimIssues);
+  html += iRow('OP - BIM Issues', eodState.opBimIssues);
+  html += iRow('BB - Issues', eodState.bbIssues);
+  html += iRow('OP - Issues', eodState.opIssues);
+  html += iRow('BB - HVS Issues', eodState.bbHvsIssues);
+  html += iRow('OP - HVS Issues', eodState.opHvsIssues);
+
+  // Maintenance: right side split into OP and BB
+  html += '<tr>' +
+    '<td style="' + TH_L + '"><b>Maintenance Tasks Completed</b></td>' +
+    '<td style="' + TD + '" colspan="2">Optimus Prime &nbsp; ' + x(eodState.maintOpYes) + ' YES &nbsp; ' + x(eodState.maintOpNo) + ' NO</td>' +
+    '<td style="' + TD + '">Bumblebee &nbsp; ' + x(eodState.maintBbYes) + ' YES &nbsp; ' + x(eodState.maintBbNo) + ' NO</td>' +
+  '</tr>';
+
+  html += iRow('If no, what tasks are remaining?', eodState.maintRemaining);
+  html += iRow('Instrument/Module Issues:', eodState.instrumentIssues);
+
+  if(eodState.eodNotes && eodState.eodNotes.trim()){
+    const bullets = eodState.eodNotes.split('\n').filter(l=>l.trim())
+      .map(l=>'<li style="font-size:12px;font-family:Calibri,Arial,sans-serif">' + esc(l.trim()) + '</li>').join('');
+    html += '<tr>' +
+      '<td style="' + TH_L + '"><b>Notes</b></td>' +
+      '<td style="' + TD + '" colspan="3"><ul style="margin:2px 0 0 18px;padding:0">' + bullets + '</ul></td>' +
+    '</tr>';
+  }
+
+  html += '</tbody></table>';
+  return html;
+}
+
+async function eodCopy(){
+  const el = document.getElementById('eodRender');
+  if(!el) return;
+  try {
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="ProgId" content="Word.Document">
+<meta name="Generator" content="Microsoft Word 15">
+<meta name="Originator" content="Microsoft Word 15">
+</head>
+<body>${el.innerHTML}</body></html>`;
+    const text = el.innerText;
+    if(navigator.clipboard?.write){
+      const blob = new Blob([html], {type:'text/html'});
+      const textBlob = new Blob([text], {type:'text/plain'});
+      await navigator.clipboard.write([new ClipboardItem({'text/html':blob, 'text/plain':textBlob})]);
+    } else {
+      const range = document.createRange();
+      range.selectNode(el);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      document.execCommand('copy');
+      window.getSelection().removeAllRanges();
+    }
+    showToast('Copied to clipboard. Paste into your email.');
+  } catch(e){
+    console.warn('Copy failed:',e);
+    showToast('Copy failed. Try again.');
+  }
+}
+
+// Snapshot save reuses the same lsSnapshots collection but with type='eod'
+// so they show alongside Line Status snapshots and follow the same purge schedule.
+async function eodSaveSnapshot(){
+  await db.collection('lsSnapshots').add({
+    type: 'eod',
+    data: JSON.stringify(eodState),
+    submittedBy: user.name,
+    role: user.role,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast('EOD snapshot saved.');
 }
 
 // ── BOOT ──────────────────────────────────────────────────────
