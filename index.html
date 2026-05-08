@@ -2207,8 +2207,8 @@ const LS_TIME_SLOTS = (()=>{
   const out=[]; for(let h=0;h<24;h++){for(const m of ['00','30']) out.push(`${String(h).padStart(2,'0')}:${m}`);} return out;
 })();
 
-// Bucket count options 0 to 300 in 5-step increments
-const LS_BUCKET_COUNTS = range(0,60).map(n=>n*5);
+// Bucket count options 0 to 300 (single increments)
+const LS_BUCKET_COUNTS = range(0,300);
 // Pending relabel 0 to 15
 const LS_RELABEL_COUNTS = range(0,15);
 // Overload values: N/A or 0 to 725 in steps of 5
@@ -2721,13 +2721,18 @@ function renderLsHTML(){
   const TD_BASE = 'border:1px solid #000;padding:4px 7px;font-size:11px;font-family:Calibri,Arial,sans-serif;text-align:center;vertical-align:middle;';
   const TH_BASE = TD_BASE + 'font-weight:bold;background:#FFFFFF;';
   const BLUE_FILL = 'background:#ADD8E6;font-weight:bold;';
-  const SEC_H = 'font-size:12px;font-weight:bold;color:#1F4E79;margin:14px 0 4px 0;font-family:Calibri,Arial,sans-serif;';
-  const BB_H = 'color:#D9A300;font-weight:bold;margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif;';
-  const OP_H = 'color:#C00000;font-weight:bold;margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif;';
+  // Outlook web strips many CSS color rules but respects the legacy <font color>
+  // attribute. Wrap colored text in BOTH so it survives the paste.
+  const BB = (txt) => `<font color="#D9A300"><span style="color:#D9A300">${txt}</span></font>`;
+  const OP = (txt) => `<font color="#C00000"><span style="color:#C00000">${txt}</span></font>`;
+  const SECH = (txt) => `<div style="font-size:12px;font-weight:bold;margin:14px 0 4px 0;font-family:Calibri,Arial,sans-serif"><font color="#1F4E79"><span style="color:#1F4E79">${txt}</span></font></div>`;
+  const BBH = (txt) => `<div style="font-weight:bold;margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif">${BB(txt)}</div>`;
+  const OPH = (txt) => `<div style="font-weight:bold;margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif">${OP(txt)}</div>`;
 
   let html = '';
 
-  // Final table (CSV-driven). Time column + the right-side totals are blue-filled.
+  // Final table (CSV-driven). Headers: Time + the 4 right-side ones are blue-filled.
+  // Data cells below them are plain white. Only Time COLUMN cells stay blue.
   if(final){
     html += `<table style="${T_RESET}"><thead><tr>` +
       `<th style="${TH_BASE}${BLUE_FILL}">Time</th>` +
@@ -2743,10 +2748,10 @@ function renderLsHTML(){
         `<td style="${TD_BASE}${BLUE_FILL}">${esc(r.time)}</td>` +
         `<td style="${TD_BASE}">${fmt(r.bb)}</td>` +
         `<td style="${TD_BASE}">${fmt(r.op)}</td>` +
-        `<td style="${TD_BASE}${BLUE_FILL}">${fmt(r.hourly)}</td>` +
-        `<td style="${TD_BASE}${BLUE_FILL}">${fmt(r.running)}</td>` +
-        `<td style="${TD_BASE}${BLUE_FILL}">${fmt(r.remaining)}</td>` +
-        `<td style="${TD_BASE}${BLUE_FILL}">${fmt(r.projected)}</td>` +
+        `<td style="${TD_BASE}">${fmt(r.hourly)}</td>` +
+        `<td style="${TD_BASE}">${fmt(r.running)}</td>` +
+        `<td style="${TD_BASE}">${fmt(r.remaining)}</td>` +
+        `<td style="${TD_BASE}">${fmt(r.projected)}</td>` +
       `</tr>`;
     });
     html += `</tbody></table>`;
@@ -2758,7 +2763,7 @@ function renderLsHTML(){
   const unp = lsState.unpacking;
   const anyUnp = unp.ongoing || unp.completed || unp.lh_flx || unp.lh_fedex || unp.lh_ups || unp.lh_wc;
   if(anyUnp){
-    html += `<div style="${SEC_H}">UNPACKING/SHIPMENTS:</div>`;
+    html += SECH("UNPACKING/SHIPMENTS:");
     html += `<table style="${T_RESET}">` +
       `<tr>` +
         `<td style="${TD_BASE}font-weight:bold;text-align:left" rowspan="2">Unpacking:</td>` +
@@ -2788,20 +2793,20 @@ function renderLsHTML(){
 
   // BB / OP notes
   if(lsState.bbNotes.trim()){
-    html += `<div style="${BB_H}">BB:</div><ul style="margin:4px 0 8px 22px;padding:0;font-family:Calibri,Arial,sans-serif">${noteLines(lsState.bbNotes)}</ul>`;
+    html += BBH('BB:') + `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Calibri,Arial,sans-serif">${noteLines(lsState.bbNotes)}</ul>`;
   }
   if(lsState.opNotes.trim()){
-    html += `<div style="${OP_H}">OP:</div><ul style="margin:4px 0 8px 22px;padding:0;font-family:Calibri,Arial,sans-serif">${noteLines(lsState.opNotes)}</ul>`;
+    html += OPH('OP:') + `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Calibri,Arial,sans-serif">${noteLines(lsState.opNotes)}</ul>`;
   }
 
   // Startup Times
   const anyStartup = lsState.startup.some(r=>r.bb||r.op||r.full||r.partial);
   if(anyStartup){
-    html += `<div style="${SEC_H}">Startup Time(s):</div>`;
+    html += SECH("Startup Time(s):");
     html += `<table style="${T_RESET}"><thead><tr>` +
       `<th style="${TH_BASE}text-align:left">Departments/Module</th>` +
-      `<th style="${TH_BASE}color:#D9A300">BB</th>` +
-      `<th style="${TH_BASE}color:#C00000">OP</th>` +
+      `<th style="${TH_BASE}">${BB("BB")}</th>` +
+      `<th style="${TH_BASE}">${OP("OP")}</th>` +
       `<th style="${TH_BASE}">Full</th>` +
       `<th style="${TH_BASE}">Partial</th>` +
     `</tr></thead><tbody>`;
@@ -2819,7 +2824,7 @@ function renderLsHTML(){
 
   // Buckets to Load: boxed like the template
   if(lsState.bucketCount!=='' || lsState.bucketTime){
-    html += `<div style="${SEC_H}">Buckets to Load:</div>`;
+    html += SECH("Buckets to Load:");
     html += `<table style="${T_RESET}"><tbody><tr>` +
       `<td style="${TD_BASE}font-weight:bold;padding:5px 12px">${esc(lsState.bucketCount)} @ ${esc(lsState.bucketTime)}</td>` +
     `</tr></tbody></table>`;
@@ -2830,10 +2835,10 @@ function renderLsHTML(){
 
   // Pending Buckets to Relabel
   if(lsState.relabelBb!=='' || lsState.relabelOp!==''){
-    html += `<div style="${SEC_H}">Pending Buckets to Relabel:</div>`;
+    html += SECH("Pending Buckets to Relabel:");
     html += `<table style="${T_RESET}"><thead><tr>` +
-      `<th style="${TH_BASE}color:#D9A300;min-width:60px">BB</th>` +
-      `<th style="${TH_BASE}color:#C00000;min-width:60px">OP</th>` +
+      `<th style="${TH_BASE}min-width:60px">${BB("BB")}</th>` +
+      `<th style="${TH_BASE}min-width:60px">${OP("OP")}</th>` +
     `</tr></thead><tbody><tr>` +
       `<td style="${TD_BASE}">${esc(lsState.relabelBb)}</td>` +
       `<td style="${TD_BASE}">${esc(lsState.relabelOp)}</td>` +
@@ -2843,10 +2848,10 @@ function renderLsHTML(){
   // OOS Analyzers: narrower row labels, BB/OP side-by-side as in template
   const hasOos = Object.values(lsState.oos).some(arr=>arr.length);
   if(hasOos){
-    html += `<div style="${SEC_H}">OOS Analyzers:</div>`;
+    html += SECH("OOS Analyzers:");
     html += `<table style="${T_RESET}"><thead><tr>` +
-      `<th style="${TH_BASE}color:#D9A300;text-align:left;min-width:200px" colspan="2">BB</th>` +
-      `<th style="${TH_BASE}color:#C00000;text-align:left;min-width:200px" colspan="2">OP</th>` +
+      `<th style="${TH_BASE}text-align:left;min-width:200px" colspan="2">${BB("BB")}</th>` +
+      `<th style="${TH_BASE}text-align:left;min-width:200px" colspan="2">${OP("OP")}</th>` +
     `</tr></thead><tbody>`;
     ['hemo','special','auto'].forEach(d=>{
       const lbl = d==='hemo'?'HEMO':d==='special'?'SPECIAL':'AUTO';
@@ -2863,10 +2868,10 @@ function renderLsHTML(){
   // Overloads / Buffer Status
   const hasOver = Object.values(lsState.overloads).some(v=>v) || lsState.overloadNotes.trim();
   if(hasOver){
-    html += `<div style="${SEC_H}">Overloads/Buffer Status:</div>`;
+    html += SECH("Overloads/Buffer Status:");
     html += `<table style="${T_RESET}"><thead><tr>` +
-      `<th style="${TH_BASE}color:#D9A300;text-align:left;min-width:200px" colspan="2">BB</th>` +
-      `<th style="${TH_BASE}color:#C00000;text-align:left;min-width:200px" colspan="2">OP</th>` +
+      `<th style="${TH_BASE}text-align:left;min-width:200px" colspan="2">${BB("BB")}</th>` +
+      `<th style="${TH_BASE}text-align:left;min-width:200px" colspan="2">${OP("OP")}</th>` +
     `</tr></thead><tbody>`;
     ['hemo','special','auto'].forEach(d=>{
       const lbl = d==='hemo'?'HEMO':d==='special'?'SPECIAL':'AUTO';
@@ -2886,11 +2891,11 @@ function renderLsHTML(){
   // BIM Read Rates: single combined table, no gap between BB and OP halves
   const hasBim = lsState.bim.bb.some(v=>v) || lsState.bim.op.some(v=>v);
   if(hasBim){
-    html += `<div style="${SEC_H}">BIM Read Rates:</div>`;
+    html += SECH("BIM Read Rates:");
     html += `<table style="${T_RESET}"><thead><tr>` +
-      `<th style="${TH_BASE}color:#D9A300;width:60px">BB</th>` +
+      `<th style="${TH_BASE}width:60px">${BB("BB")}</th>` +
       `<th style="${TH_BASE}width:80px">% Success</th>` +
-      `<th style="${TH_BASE}color:#C00000;width:60px">OP</th>` +
+      `<th style="${TH_BASE}width:60px">${OP("OP")}</th>` +
       `<th style="${TH_BASE}width:80px">% Success</th>` +
     `</tr></thead><tbody>`;
     const labels = ['1','2','3','4','5','6','7','8','IOM 1','IOM 2'];
