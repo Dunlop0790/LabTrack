@@ -2712,6 +2712,9 @@ function lsInferShiftStart(slots){
 // Render the full HTML preview with INLINE styles only.
 // Outlook web (and most email clients) strip <style> blocks and CSS classes,
 // so every visual rule must live on the element itself for paste fidelity.
+// Outlook's web sanitizer is particularly aggressive — it can even strip
+// CSS color rules. We use legacy HTML attributes (bgcolor, font color)
+// alongside CSS as belt-and-suspenders defense.
 function renderLsHTML(){
   const final = lsBuildFinalTable();
   const fmt = n => typeof n === 'number' ? n.toLocaleString() : (n || '');
@@ -2720,32 +2723,36 @@ function renderLsHTML(){
   const T_RESET = 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;';
   const TD_BASE = 'border:1px solid #000;padding:4px 7px;font-size:11px;font-family:Calibri,Arial,sans-serif;text-align:center;vertical-align:middle;';
   const TH_BASE = TD_BASE + 'font-weight:bold;background:#FFFFFF;';
-  const BLUE_FILL = 'background:#ADD8E6;font-weight:bold;';
-  // Outlook web strips many CSS color rules but respects the legacy <font color>
-  // attribute. Wrap colored text in BOTH so it survives the paste.
-  const BB = (txt) => `<font color="#D9A300"><span style="color:#D9A300">${txt}</span></font>`;
-  const OP = (txt) => `<font color="#C00000"><span style="color:#C00000">${txt}</span></font>`;
-  const SECH = (txt) => `<div style="font-size:12px;font-weight:bold;margin:14px 0 4px 0;font-family:Calibri,Arial,sans-serif"><font color="#1F4E79"><span style="color:#1F4E79">${txt}</span></font></div>`;
-  const BBH = (txt) => `<div style="font-weight:bold;margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif">${BB(txt)}</div>`;
-  const OPH = (txt) => `<div style="font-weight:bold;margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif">${OP(txt)}</div>`;
+
+  // Color wrappers — using <font color> as the OUTERMOST tag with no CSS.
+  // Outlook strips CSS but rarely strips legacy <font> attributes.
+  const BB = (txt) => `<font color="#D9A300"><b>${txt}</b></font>`;
+  const OP = (txt) => `<font color="#C00000"><b>${txt}</b></font>`;
+  const SECH = (txt) => `<p style="margin:14px 0 4px 0;font-family:Calibri,Arial,sans-serif"><font color="#1F4E79" size="3"><b>${txt}</b></font></p>`;
+  const BBH = (txt) => `<p style="margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif">${BB(txt)}</p>`;
+  const OPH = (txt) => `<p style="margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif">${OP(txt)}</p>`;
+
+  // Spacer paragraph for guaranteed vertical separation in email clients
+  const SPACE = `<p style="margin:0;line-height:6px">&nbsp;</p>`;
 
   let html = '';
 
   // Final table (CSV-driven). Headers: Time + the 4 right-side ones are blue-filled.
   // Data cells below them are plain white. Only Time COLUMN cells stay blue.
+  // Use bgcolor attributes (not CSS background) so Outlook can't strip them.
   if(final){
-    html += `<table style="${T_RESET}"><thead><tr>` +
-      `<th style="${TH_BASE}${BLUE_FILL}">Time</th>` +
-      `<th style="${TH_BASE}background:#FFDE2A;">BB Total</th>` +
-      `<th style="${TH_BASE}background:#FF5B5B;">OP Total</th>` +
-      `<th style="${TH_BASE}${BLUE_FILL}">Hourly Total</th>` +
-      `<th style="${TH_BASE}${BLUE_FILL}">Running Total</th>` +
-      `<th style="${TH_BASE}${BLUE_FILL}">Projected Remaining</th>` +
-      `<th style="${TH_BASE}${BLUE_FILL}">Projected</th>` +
+    html += `<table style="${T_RESET}max-width:680px"><thead><tr>` +
+      `<th bgcolor="#ADD8E6" style="${TH_BASE}">Time</th>` +
+      `<th bgcolor="#FFDE2A" style="${TH_BASE}">BB Total</th>` +
+      `<th bgcolor="#FF5B5B" style="${TH_BASE}">OP Total</th>` +
+      `<th bgcolor="#ADD8E6" style="${TH_BASE}">Hourly Total</th>` +
+      `<th bgcolor="#ADD8E6" style="${TH_BASE}">Running Total</th>` +
+      `<th bgcolor="#ADD8E6" style="${TH_BASE}">Projected Remaining</th>` +
+      `<th bgcolor="#ADD8E6" style="${TH_BASE}">Projected</th>` +
     `</tr></thead><tbody>`;
     final.forEach(r=>{
       html += `<tr>` +
-        `<td style="${TD_BASE}${BLUE_FILL}">${esc(r.time)}</td>` +
+        `<td bgcolor="#ADD8E6" style="${TD_BASE}font-weight:bold"><b>${esc(r.time)}</b></td>` +
         `<td style="${TD_BASE}">${fmt(r.bb)}</td>` +
         `<td style="${TD_BASE}">${fmt(r.op)}</td>` +
         `<td style="${TD_BASE}">${fmt(r.hourly)}</td>` +
@@ -2755,6 +2762,7 @@ function renderLsHTML(){
       `</tr>`;
     });
     html += `</tbody></table>`;
+    html += SPACE;
   } else {
     html += `<div style="font-style:italic;color:#777;font-size:11px;margin:10px 0;font-family:Calibri,Arial,sans-serif">Upload CSV files and enter projected to generate the table.</div>`;
   }
@@ -2789,6 +2797,7 @@ function renderLsHTML(){
         `<td style="${TD_BASE}">${unp.lh_wc?'X':''}</td>` +
       `</tr>` +
     `</table>`;
+    html += SPACE;
   }
 
   // BB / OP notes
@@ -2797,6 +2806,9 @@ function renderLsHTML(){
   }
   if(lsState.opNotes.trim()){
     html += OPH('OP:') + `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Calibri,Arial,sans-serif">${noteLines(lsState.opNotes)}</ul>`;
+  }
+  if(lsState.bbNotes.trim() || lsState.opNotes.trim()){
+    html += SPACE;
   }
 
   // Startup Times
@@ -2820,17 +2832,19 @@ function renderLsHTML(){
       `</tr>`;
     });
     html += `</tbody></table>`;
+    html += SPACE;
   }
 
   // Buckets to Load: boxed like the template
   if(lsState.bucketCount!=='' || lsState.bucketTime){
     html += SECH("Buckets to Load:");
     html += `<table style="${T_RESET}"><tbody><tr>` +
-      `<td style="${TD_BASE}font-weight:bold;padding:5px 12px">${esc(lsState.bucketCount)} @ ${esc(lsState.bucketTime)}</td>` +
+      `<td style="${TD_BASE}font-weight:bold;padding:5px 12px"><b>${esc(lsState.bucketCount)} @ ${esc(lsState.bucketTime)}</b></td>` +
     `</tr></tbody></table>`;
     if(lsState.bucketNotes.trim()){
       html += `<div style="font-size:12px;margin-top:4px;font-family:Calibri,Arial,sans-serif">${esc(lsState.bucketNotes).replace(/\n/g,'<br>')}</div>`;
     }
+    html += SPACE;
   }
 
   // Pending Buckets to Relabel
@@ -2843,6 +2857,7 @@ function renderLsHTML(){
       `<td style="${TD_BASE}">${esc(lsState.relabelBb)}</td>` +
       `<td style="${TD_BASE}">${esc(lsState.relabelOp)}</td>` +
     `</tr></tbody></table>`;
+    html += SPACE;
   }
 
   // OOS Analyzers: narrower row labels, BB/OP side-by-side as in template
@@ -2856,13 +2871,14 @@ function renderLsHTML(){
     ['hemo','special','auto'].forEach(d=>{
       const lbl = d==='hemo'?'HEMO':d==='special'?'SPECIAL':'AUTO';
       html += `<tr>` +
-        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px">${lbl}:</td>` +
+        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px"><b>${lbl}:</b></td>` +
         `<td style="${TD_BASE}text-align:left;min-width:140px">${lsState.oos['bb_'+d].map(esc).join(', ')}</td>` +
-        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px">${lbl}:</td>` +
+        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px"><b>${lbl}:</b></td>` +
         `<td style="${TD_BASE}text-align:left;min-width:140px">${lsState.oos['op_'+d].map(esc).join(', ')}</td>` +
       `</tr>`;
     });
     html += `</tbody></table>`;
+    html += SPACE;
   }
 
   // Overloads / Buffer Status
@@ -2876,9 +2892,9 @@ function renderLsHTML(){
     ['hemo','special','auto'].forEach(d=>{
       const lbl = d==='hemo'?'HEMO':d==='special'?'SPECIAL':'AUTO';
       html += `<tr>` +
-        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px">${lbl}:</td>` +
+        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px"><b>${lbl}:</b></td>` +
         `<td style="${TD_BASE}text-align:left;min-width:140px">${esc(lsState.overloads['bb_'+d])}</td>` +
-        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px">${lbl}:</td>` +
+        `<td style="${TD_BASE}text-align:left;font-weight:bold;width:60px"><b>${lbl}:</b></td>` +
         `<td style="${TD_BASE}text-align:left;min-width:140px">${esc(lsState.overloads['op_'+d])}</td>` +
       `</tr>`;
     });
@@ -2886,6 +2902,7 @@ function renderLsHTML(){
     if(lsState.overloadNotes.trim()){
       html += `<div style="font-size:12px;margin-top:4px;background:#fde2e2;padding:3px 6px;font-family:Calibri,Arial,sans-serif">${esc(lsState.overloadNotes).replace(/\n/g,'<br>')}</div>`;
     }
+    html += SPACE;
   }
 
   // BIM Read Rates: single combined table, no gap between BB and OP halves
@@ -2901,9 +2918,9 @@ function renderLsHTML(){
     const labels = ['1','2','3','4','5','6','7','8','IOM 1','IOM 2'];
     labels.forEach((lbl,i)=>{
       html += `<tr>` +
-        `<td style="${TD_BASE}font-weight:bold">${lbl}</td>` +
+        `<td style="${TD_BASE}font-weight:bold"><b>${lbl}</b></td>` +
         `<td style="${TD_BASE}">${esc(lsState.bim.bb[i])}</td>` +
-        `<td style="${TD_BASE}font-weight:bold">${lbl}</td>` +
+        `<td style="${TD_BASE}font-weight:bold"><b>${lbl}</b></td>` +
         `<td style="${TD_BASE}">${esc(lsState.bim.op[i])}</td>` +
       `</tr>`;
     });
