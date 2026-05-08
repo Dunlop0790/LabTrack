@@ -1,6 +1,6 @@
 # LabTrack
 
-Internal operational tool for the Automated Line team at DaVita DeBary.
+Internal operational tool for DaVita.
 Built and maintained by Corey Hausterman.
 
 ---
@@ -19,10 +19,10 @@ activity history, @mentions, and sound alerts for Critical/Urgent issues.
 
 **Reports**
 A structured form builder for the two recurring shift reports:
-- Line Status (sent every 2 hours at the :30 mark) — processes FlexLab
+- Line Status (sent every 2 hours at the :30 mark) - processes FlexLab
   CSV exports into a formatted hourly summary table, plus all supporting
   fields (BIM read rates, OOS analyzers, overloads, startup times, etc.)
-- EOD Report — mirrors the Automated Line EOD Report template with all
+- EOD Report - mirrors the Automated Line EOD Report template with all
   checkboxes, dropdowns, and text fields. Both reports copy directly into
   Outlook web with formatting preserved.
 
