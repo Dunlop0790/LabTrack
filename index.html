@@ -675,7 +675,34 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 <script>
-// ── CONFIG ────────────────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════════════════
+// CLOUD PROVIDER CONFIGURATION
+// ─────────────────────────────────────────────────────────────────────────
+// LabTrack currently uses Google Firebase (Firestore) as its cloud database.
+// All connection credentials are in this block.
+//
+// TO TRANSFER TO A NEW FIREBASE PROJECT:
+//   1. Go to console.firebase.google.com
+//   2. Open the new project, register a web app
+//   3. Copy the firebaseConfig object shown and paste it below, replacing
+//      the existing one. No other changes needed.
+//
+// TO SWAP TO A DIFFERENT CLOUD PROVIDER (e.g. Azure Cosmos DB, AWS, etc.):
+//   This block initializes Firebase and creates `db`, the database handle.
+//   Every database operation in the app goes through `db` using the Firebase
+//   Firestore SDK. To swap providers:
+//     - Remove this block and the two Firebase <script> tags above
+//     - Initialize your provider's SDK instead
+//     - Replace the Database Layer functions (marked below in the script)
+//       with equivalent calls for your provider
+//     - The rest of the app (UI, state, logic) does not change
+//
+// SECURITY RULES:
+//   Rules are managed separately in the Firebase console under
+//   Firestore Database > Rules. A copy is maintained in the project README.
+//   Status: v1.0: validated collections, no authentication layer yet.
+//   Next step: add request.auth != null checks once auth is enabled.
+// ═════════════════════════════════════════════════════════════════════════
 firebase.initializeApp({
   apiKey:"AIzaSyCP9k-mZZGiRW94ZH9JopuURbVuw0MZro8",
   authDomain:"lab-tracking-928ec.firebaseapp.com",
@@ -685,8 +712,43 @@ firebase.initializeApp({
   appId:"1:1076816645332:web:43ed9d11de3f0e3c94ff41"
 });
 const db = firebase.firestore();
+// ─────────────────────────────────────────────────────────────────────────
+// DATABASE LAYER
+// All Firestore operations used by this app are listed below.
+// If migrating to another provider, these are the calls to replace.
+// Each is a thin wrapper around the Firestore SDK: no business logic here.
+//
+//   Collections used:
+//     boards         : board metadata (title, createdAt)
+//     issues         : issue cards with subcollections: comments, history
+//     archive        : resolved issues moved weekly, with subcollections
+//     roster         : team member names and roles
+//     meta           : internal maintenance timestamps
+//     lsSnapshots    : saved Line Status and EOD report drafts
+//
+//   Operation types used:
+//     .collection(name).add(data)            : create document
+//     .collection(name).doc(id).update(data) : update document
+//     .collection(name).doc(id).delete()     : delete document
+//     .collection(name).doc(id).get()        : read single document
+//     .collection(name).get()                : read entire collection
+//     .collection(name).where(f,op,v).get()  : filtered read (one-time)
+//     .collection(name).where(f,op,v)
+//       .onSnapshot(callback)                : real-time subscription
+//     .collectionGroup(name).where(...)
+//       .onSnapshot(callback)                : cross-collection subscription
+//     FieldValue.serverTimestamp()           : server-generated timestamp
+//     FieldValue.increment(n)                : atomic counter increment
+//     batch.set() / batch.commit()           : batched multi-document write
+// ─────────────────────────────────────────────────────────────────────────
 
 // ── STATE ─────────────────────────────────────────────────────
+// Module-level state shared across the entire application. These are
+// reassigned (rather than re-declared) as the app navigates between
+// boards, opens detail views, and receives realtime updates from
+// Firestore. Subscription handles (issueSub, detailSub, historySub) are
+// retained so they can be cleaned up on context switch to prevent
+// duplicate listeners and memory leaks.
 let user = null, selectedRole = null;
 let boardId = null, boards = [];
 let issues = [], issueSub = null;
@@ -721,6 +783,11 @@ const REACTIONS = [
 ];
 
 // ── HELPERS ───────────────────────────────────────────────────
+// Generic utility functions used throughout the app. Includes HTML
+// escaping (esc), short-id generation for client-side keys, time
+// formatting, toast notifications, and DOM helpers. None of these
+// touch Firestore or hold app state; they are safe to call from any
+// context.
 const esc = s => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600)}
 function initials(name){return name?name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase():'?'}
@@ -748,6 +815,11 @@ function isAging(issue){
 }
 
 // ── SOUND ─────────────────────────────────────────────────────
+// Web Audio API alert synthesis for high-priority issues. Uses a
+// synthesized "ding-dong" for Critical/Urgent events and a low-frequency
+// monster roar for Godzilla mode. The audio context starts suspended
+// per browser autoplay policy and is unlocked on the first user click
+// via unlockAudio(). User preference is persisted in localStorage.
 let audioCtx = null;
 let audioUnlocked = false;
 
@@ -900,6 +972,9 @@ function updateSoundBtn(){
 }
 
 // ── THEME (DARK MODE) ─────────────────────────────────────────
+// Theme toggle persists across sessions via localStorage. The theme
+// is applied to the html element early in the boot sequence (before
+// the body renders) to prevent a flash of incorrect theme on reload.
 function applyTheme(){
   const dark = localStorage.getItem('lt_theme') === 'dark';
   document.documentElement.classList.toggle('dark', dark);
@@ -918,6 +993,10 @@ function toggleTheme(){
 }
 
 // ── GODZILLA MODE ─────────────────────────────────────────────
+// Optional alternate alert sound for users who prefer a more attention
+// grabbing notification. Toggleable per-user; persisted in localStorage.
+// When enabled, all priority alerts use the synthesized roar instead
+// of the standard ding-dong tone.
 function toggleGodzilla(){
   godzillaMode = !godzillaMode;
   localStorage.setItem('lt_godzilla', godzillaMode ? 'on' : 'off');
@@ -938,6 +1017,10 @@ function updateGodzillaBtn(){
 }
 
 // ── HAMBURGER MENU (MOBILE) ───────────────────────────────────
+// Mobile-only navigation drawer. Header tool buttons (Reports, Archive,
+// Stats, Print) collapse into this menu when viewport width is below
+// the tablet breakpoint. Open/close is managed by a single CSS class
+// on the menu container.
 function toggleHamburger(){
   const menu = document.getElementById('hamMenu');
   if(menu) menu.classList.toggle('open');
@@ -957,6 +1040,11 @@ document.addEventListener('click', (e)=>{
 });
 
 // ── ACTIVITY LOG ──────────────────────────────────────────────
+// Append-only activity entries written to a per-issue history
+// subcollection in Firestore. Records status changes, priority
+// changes, assignee changes, claims, and inter-board moves. Entries
+// are immutable once written (enforced by security rules) and are
+// rendered in the issue detail view's history tab.
 async function logActivity(issueId, type, details){
   await db.collection('issues').doc(issueId).collection('history').add({
     type, details,
@@ -982,6 +1070,11 @@ function describeActivity(h){
 }
 
 // ── USER SETUP ────────────────────────────────────────────────
+// First-launch identity capture. The user picks a role (ALO, Lead,
+// Siemens) and selects or types their first name. Identity is stored
+// in localStorage and reused on subsequent visits. There is no
+// authentication; the chosen identity is used as the author tag on
+// comments, history entries, and report snapshots only.
 function selectRole(role){
   selectedRole=role;
   document.getElementById('roleALO').classList.toggle('sel',role==='ALO');
@@ -1006,6 +1099,10 @@ function resetUser(){
 }
 
 // ── INIT ──────────────────────────────────────────────────────
+// Application bootstrap. Runs once on DOMContentLoaded after the user
+// has been identified. Loads the board list, restores the last-active
+// board, kicks off the realtime issue subscription, and triggers any
+// scheduled maintenance tasks (archive sweep, snapshot purge).
 async function initApp(){
   document.getElementById('userName').textContent=user.name;
   document.getElementById('userAvatar').textContent=initials(user.name);
@@ -1062,6 +1159,11 @@ function watchForMyMentions(){
 }
 
 // ── ROSTER ────────────────────────────────────────────────────
+// Team member list grouped by role. Used for assignee autocomplete
+// and @mention suggestions. Seeded from SEED_ROSTER on first launch
+// and persisted to Firestore so the same list is shared across all
+// users. Currently append-only; member rename/removal UI is on the
+// future enhancements list.
 async function loadRoster(){
   const snap = await db.collection('roster').get();
   roster = snap.docs.map(d=>({name:d.id, ...d.data()}));
@@ -1110,6 +1212,11 @@ function groupedRoster(filterTerm){
 }
 
 // ── BOARDS ────────────────────────────────────────────────────
+// Multiple independent issue boards (one per shift, role group, or
+// project, at the team's discretion). Boards are top-level documents
+// with only a title and creation timestamp. Issues reference their
+// parent board via the boardId field. Switching boards rebinds the
+// realtime subscription to issues filtered by the new boardId.
 async function loadBoards(){
   const snap = await db.collection('boards').get();
   boards = snap.docs.map(d=>({id:d.id,...d.data()}));
@@ -1174,6 +1281,11 @@ async function deleteBoard(){
 }
 
 // ── ISSUES REALTIME ───────────────────────────────────────────
+// Live subscription to all issues on the active board. Fires on every
+// remote change (any user adding, editing, moving, or resolving an
+// issue) and re-renders the affected lanes. The subscription is
+// scoped to the active boardId; switching boards detaches the prior
+// listener via issueSub() before binding a new one.
 function subscribeIssues(bid){
   document.getElementById('boardArea').innerHTML='<div class="loading">Loading…</div>';
   let prevIssueMap = {};
@@ -1214,6 +1326,12 @@ function subscribeIssues(bid){
 }
 
 // ── RENDER BOARD ──────────────────────────────────────────────
+// Main UI rendering for the four-lane Kanban view. Issues are sorted
+// within each lane by priority then by creation time. Aging glow is
+// applied via CSS class when an issue has sat in its current status
+// longer than the threshold defined in AGE_WARN_MS. Card markup is
+// built as a single template string and assigned via innerHTML for
+// simplicity; volumes are small enough that this is not a perf issue.
 function renderBoard(){
   const term = searchTerm.toLowerCase().trim();
   const filtered = issues.filter(i=>{
@@ -1275,6 +1393,10 @@ function renderCard(issue){
 }
 
 // ── NEW ISSUE ─────────────────────────────────────────────────
+// Modal form for creating a new issue card. Captures title, priority,
+// track (BB or OP), instrument type, unit number, and optional
+// assignee. On submit, the card is written to Firestore which triggers
+// a realtime update on every connected client.
 function openNewIssue(){
   document.getElementById('issueAssignee').value='';
   document.getElementById('newIssueOverlay').classList.remove('hidden');
@@ -1311,6 +1433,11 @@ async function submitNewIssue(){
 }
 
 // ── ISSUE DETAIL ──────────────────────────────────────────────
+// Modal panel for viewing and editing a single issue. Shows the full
+// card content plus comment thread, activity history tab, and edit
+// controls for status, priority, assignee, and instrument tags. Maintains
+// its own realtime subscription for the issue's comments and history
+// subcollections so changes from other users appear immediately.
 function maybeCloseDetail(e){if(e.target===document.getElementById('detailOverlay')) closeDetail()}
 
 async function openDetail(issueId){
@@ -1570,12 +1697,19 @@ async function moveIssueToBoard(issueId, targetBoardId){
 }
 
 // ── SEARCH ────────────────────────────────────────────────────
+// Client-side text search across the active board. Matches against
+// issue title, instrument type, unit number, and assignee. Case
+// insensitive substring match; no ranking. Filter is applied at
+// render time so the underlying issue array is not mutated.
 function onSearch(val){
   searchTerm = val;
   renderBoard();
 }
 
 // ── ASSIGNEE AUTOCOMPLETE ──────────────────────────────────────
+// Dropdown suggester for the assignee field on the new issue form.
+// Matches against the full roster grouped by role (Leads first, then
+// ALOs, then Siemens). Closes on outside click or Escape.
 function showAssignDropdown(inputId, listId, term){
   const list = document.getElementById(listId);
   if(!list) return;
@@ -1612,6 +1746,9 @@ function pickAssignee(inputId, listId, name){
 }
 
 // ── FILTERS ───────────────────────────────────────────────────
+// Track and priority filters applied at the top of the board. Both
+// filters are independent and combine via AND. Like search, filters
+// are applied at render time without mutating the source array.
 function setTF(v){
   tFilter=v;
   const map={all:'fAll',op:'fOP',bb:'fBB',general:'fGen'};
@@ -1631,6 +1768,11 @@ function setPF(v){
 }
 
 // ── MENTIONS IN COMMENTS ──────────────────────────────────────
+// @mention parser and dropdown for the comment textarea. When the
+// user types '@' followed by a partial name, a suggestion list of
+// matching roster members appears. Selecting one inserts the full
+// name into the comment and fires a notification (toast + sound) to
+// any matching user currently viewing the app.
 function onCommentInput(e){
   const ta = e.target;
   document.getElementById('ccnt').textContent = ta.value.length;
@@ -1724,6 +1866,10 @@ function extractMentions(text){
 }
 
 // ── REACTIONS ─────────────────────────────────────────────────
+// Emoji reactions on individual comments. Three fixed options:
+// thumbs-up (acknowledge), eyes (looking into it), and check (done).
+// Reactions are stored as a map of emoji-to-username-array on the
+// comment document; toggling adds or removes the current user.
 async function toggleReaction(issueId, commentId, key){
   const ref = db.collection('issues').doc(issueId).collection('comments').doc(commentId);
   const snap = await ref.get();
@@ -1741,6 +1887,10 @@ async function toggleReaction(issueId, commentId, key){
 }
 
 // ── BUNCH 3: ARCHIVE / STATS / CSV ─────────────────────────────
+// Subsystems for historical data: weekly archive of resolved issues,
+// stats dashboard with rollup metrics, and CSV export from both views.
+// Archive maintenance runs once per session if conditions are met
+// (Sunday 6am EST cutoff has passed since the last run).
 // Compute the most recent Sunday 6am EST as a UTC timestamp.
 // EST is UTC-5 (we ignore DST drift for simplicity, close enough for archival).
 function lastSunday6amEST(){
@@ -1842,6 +1992,11 @@ async function runArchiveMaintenance(){
 }
 
 // ── ARCHIVE VIEWER ────────────────────────────────────────────
+// Read-only browser for archived issues. Filterable by week (Sunday
+// to Saturday), board, and search term. Selecting an issue opens a
+// read-only detail view with the comment thread and history at the
+// time of archival. Archived issues older than 90 days are purged
+// during the same Sunday maintenance run.
 let archiveData = [];
 
 async function openArchive(){
@@ -1967,6 +2122,11 @@ async function openArchiveDetail(archId){
 }
 
 // ── STATS DASHBOARD ───────────────────────────────────────────
+// Aggregate metrics computed client-side from the archive. Includes
+// most problematic instruments, average resolution time per priority,
+// issues by role, issues by track, and recurring problems (titles
+// matched 3+ times). Rebuilds on every dashboard open; volumes are
+// small enough that pre-aggregation is unnecessary.
 let statsCache = {issues:[], archive:[]};
 
 async function openStats(){
@@ -2098,6 +2258,9 @@ function fmtDuration(ms){
 }
 
 // ── CSV EXPORT ────────────────────────────────────────────────
+// Generates downloadable CSV from the archive viewer or stats
+// dashboard. Builds the file in memory as a string and triggers a
+// download via a synthesized anchor element with a blob URL.
 function csvEscape(v){
   if(v===null || v===undefined) return '';
   const s = String(v);
@@ -2175,6 +2338,14 @@ function exportCSV(source){
 }
 
 // ── BUNCH 5: REPORTS / LINE STATUS ─────────────────────────────
+// Reports panel and Line Status form builder. The Reports panel hosts
+// three tabs: Line Status (this section), Saved Snapshots, and EOD.
+// Line Status accepts FlexLab CSV exports for OP and BB, processes
+// them into a formatted hourly summary table, and combines that with
+// a structured form for all the supporting fields (buckets, OOS
+// analyzers, overloads, BIM read rates, startup times, unpacking,
+// and BB/OP notes). The output renders as fully inline-styled HTML
+// for clean copy-paste into Outlook.
 // Configuration: instrument lists per cell, ranges, etc.
 const LS_OOS_OPTIONS = {
   bb_hemo: [...range(201,221), 223].map(n=>'ADV'+n),
@@ -2480,6 +2651,9 @@ function lsUpdateStartup(idx, field, value){
   lsState.startup[idx][field] = value;
   refreshPreview();
 }
+// Toggles a boolean cell in the Startup Times grid (Full or Partial
+// columns). Triggers a full form re-render rather than just a preview
+// refresh because the cell's visual state is part of the form itself.
 function lsToggleStartup(idx, field){
   lsState.startup[idx][field] = !lsState.startup[idx][field];
   renderLineStatus();
@@ -2526,7 +2700,11 @@ function lsRefreshNotes(){
   showToast(`Notes refreshed from "${boardName}".`);
 }
 
-// Refresh just the preview without re-rendering form (preserves cursor focus)
+// Refreshes only the live preview pane without re-rendering the full
+// form. This is important because re-rendering the form would blur any
+// active textarea or select element, interrupting the user mid-typing.
+// Field-level updates therefore call refreshPreview() while toggle
+// interactions (X buttons, etc.) call the full renderLineStatus().
 function refreshPreview(){
   const el = document.getElementById('lsRender');
   if(el) el.innerHTML = renderLsHTML();
@@ -2560,6 +2738,14 @@ function lsClear(){
 }
 
 // ── CSV PROCESSING (adapted from original Automated Line Status) ─────
+// CSV ingest pipeline ported from the team's standalone Automated Line
+// Status tool. Each FlexLab export contains 30-minute count buckets;
+// these are aggregated into hourly totals (first half + second half =
+// hourly), then merged across both files into the final summary table
+// with running totals and projected remaining. Shift-start hour is
+// inferred by finding the rotation that produces the longest run of
+// consecutive hours, which correctly handles night shifts that cross
+// midnight.
 function wireCsvZone(){
   const zone = document.getElementById('lsCsvZone');
   if(!zone) return;
@@ -2578,6 +2764,12 @@ function wireCsvZone(){
   renderCsvFiles();
 }
 
+// Accepts dropped or selected CSV files and routes each to the
+// correct slot (OP or BB) based on the FlexLab analyzer ID embedded
+// in the filename: 191 indicates Optimus Prime, 192 indicates
+// Bumblebee. Files that match neither are skipped with a toast.
+// Successfully parsed rows are aggregated into hourly buckets via
+// lsProcessCsvRows() before being attached to lsState.
 async function lsHandleCsvFiles(files){
   for(const f of files){
     if(!f.name.toLowerCase().endsWith('.csv')){
@@ -2636,7 +2828,13 @@ function lsRemoveCsv(which){
   refreshPreview();
 }
 
-// Build the merged Final table from OP+BB CSV data
+// Builds the merged final summary table from the parsed OP and BB
+// CSV rows. The output is what gets pasted into the Line Status email
+// and is one row per hour the line ran (slots with no data on either
+// track are omitted). Running total and projected remaining are
+// calculated cumulatively across the rotation-corrected slot order.
+// Returns null if the projected total has not been entered or both
+// CSVs are missing.
 function lsBuildFinalTable(){
   const projected = parseFloat(lsState.projected);
   if(!Number.isFinite(projected)) return null;
@@ -2679,6 +2877,18 @@ function lsBuildFinalTable(){
   return out;
 }
 
+// Infers the shift start hour from a set of timestamp slots.
+// FlexLab CSVs use 24-hour times in chronological order, but the same
+// time format is used for both day shifts (07:00 to 19:00) and night
+// shifts that cross midnight (e.g. 19:00 to 04:00 next day). When a
+// night shift's data is sorted naively, midnight-crossing causes the
+// earliest hours to appear LAST instead of first.
+//
+// The algorithm rotates each candidate start hour to position 0 (by
+// subtracting 24 from any hour at or after the candidate start) and
+// scores how many adjacent hours are consecutive after the rotation.
+// The highest-scoring rotation is the actual shift start. This
+// handles all valid shift configurations without hardcoding times.
 function lsInferShiftStart(slots){
   if(!slots.size) return 7;
   let best = 7, bestScore = -1;
@@ -3030,6 +3240,11 @@ async function lsSaveSnapshot(){
 }
 
 // ── SNAPSHOTS TAB ──────────────────────────────────────────────
+// Saved-snapshot browser. Each saved snapshot is a serialized
+// snapshot of the form state at the time of save (CSV-derived data
+// excluded). Snapshots from both Line Status and EOD share a single
+// Firestore collection (lsSnapshots) differentiated by a 'type'
+// field. Auto-purges daily at 6am EST.
 async function renderSnapshots(){
   const body = document.getElementById('reportsBody');
   body.innerHTML = `<div style="font-size:13px;color:var(--muted);margin-bottom:6px">Snapshots auto-purge daily at 6:00 AM EST. CSV-derived tables are not saved.</div><div class="snap-list" id="snapList">Loading...</div>`;
@@ -3086,7 +3301,13 @@ async function lsDeleteSnapshot(id){
   showToast('Snapshot deleted.');
 }
 
-// Daily 6am EST snapshot purge (runs at app load)
+// Purges old Line Status and EOD snapshots once per day at 6am EST.
+// Implementation runs opportunistically at app load: each client checks
+// the last-purge timestamp stored in /meta/snapshots and runs the
+// cleanup only if the most recent 6am cutoff has not yet been processed.
+// This avoids needing a server-side cron and tolerates clients in any
+// timezone (the EST offset is hardcoded; daylight saving time is not
+// adjusted because the team is in Eastern Time year-round).
 async function purgeSnapshotsDaily(){
   try {
     const now = new Date();
@@ -3114,6 +3335,13 @@ async function purgeSnapshotsDaily(){
 }
 
 // ── EOD TAB ────────────────────────────────────────────────────
+// End-of-Day report builder. Mirrors the official Automated Line EOD
+// Report Word template structure: staffing, remaining samples (in
+// freezer and on line), BB/OP issues split by category (BIM, general,
+// HVS), maintenance task completion, instrument issues, and bulleted
+// notes. Issues can be auto-pulled from any board's active cards via
+// the board picker. Output uses the same email-friendly inline-style
+// approach as Line Status for clean copy-paste.
 // EOD report state. Form data plus auto-pulled BB/OP issues from the board.
 let eodState = {
   date: '',
@@ -3378,6 +3606,13 @@ function refreshEodPreview(){
 
 // Auto-pull BB/OP issues from active LabTrack cards. We split BIM-related, HVS-related,
 // and general issues into the right sections based on the instrument tag on each card.
+// Pulls active (non-resolved) issues from the selected source board
+// and routes each into the correct EOD section based on its instrument
+// type: cards tagged with BIM go to the BIM Issues row, HVS-tagged
+// cards go to the HVS row, and the remainder go to the general Issues
+// row. Tracks (BB vs OP) determine which side of the report each
+// issue lands on. Empty sections fall back to 'N/A' rather than
+// blanking out, matching how the team manually fills the form today.
 function eodRefreshIssues(){
   const sourceBid = eodSourceBoard || boardId;
   const activeIssues = issues.filter(i=>i.boardId===sourceBid && i.status!=='resolved');
@@ -3578,6 +3813,10 @@ async function eodSaveSnapshot(){
 }
 
 // ── BOOT ──────────────────────────────────────────────────────
+// Application entry point. Restores theme preference (before any
+// rendering, to avoid theme flash), then either shows the user setup
+// screen or proceeds to initApp() if the user has been identified
+// previously. All async work after this point is event-driven.
 // Apply theme before anything else so dark mode persists across reloads (no flash of light)
 if(localStorage.getItem('lt_theme') === 'dark') document.documentElement.classList.add('dark');
 
