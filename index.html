@@ -399,24 +399,8 @@
 
     /* Live preview rendering (must look like the email body) */
     .ls-render{font-family:'Calibri','Segoe UI',sans-serif;color:#000;background:#fff;padding:14px;border-radius:6px;font-size:13px;line-height:1.4}
-    body.dark .ls-render{background:#fff}
-    .ls-render h1{font-size:14px;font-weight:700;margin-bottom:10px;color:#000}
-    .ls-render table{border-collapse:collapse;margin-bottom:10px}
-    .ls-render table.final-tbl th,.ls-render table.final-tbl td{border:1px solid #000;padding:4px 6px;font-size:11px;text-align:center}
-    .ls-render table.final-tbl th{font-weight:700}
-    .ls-render .sec-h{font-size:12px;font-weight:700;color:#1F4E79;margin-top:14px;margin-bottom:4px}
-    .ls-render .bb-h{color:#D9A300;font-weight:700;margin-top:8px}
-    .ls-render .op-h{color:#C00000;font-weight:700;margin-top:8px}
-    .ls-render ul{margin:4px 0 8px 22px;padding:0}
-    .ls-render li{margin-bottom:2px;font-size:12px}
-    .ls-render table.sub-tbl th,.ls-render table.sub-tbl td{border:1px solid #000;padding:3px 6px;font-size:11px;text-align:left;vertical-align:top}
-    .ls-render table.sub-tbl th{font-weight:700;background:#fff;text-align:center}
-    .ls-render table.sub-tbl th.bb{color:#D9A300}
-    .ls-render table.sub-tbl th.op{color:#C00000}
-    .ls-render table.bim-tbl th,.ls-render table.bim-tbl td{border:1px solid #000;padding:2px 7px;font-size:11px;text-align:center}
-    .ls-render table.bim-tbl th.bb{color:#D9A300;font-weight:700}
-    .ls-render table.bim-tbl th.op{color:#C00000;font-weight:700}
-    .ls-render .b2l{font-weight:700;font-size:12px;margin-top:8px}
+    body.dark .ls-render{background:#fff;color:#000}
+    /* All Line Status visual styling is applied inline so it survives email-client sanitization. */
 
     /* Snapshots list */
     .snap-list{display:flex;flex-direction:column;gap:7px;margin-top:10px}
@@ -2721,26 +2705,37 @@ function renderLsHTML(){
   // Reusable inline style snippets
   const T_RESET = 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;';
   const TD_BASE = 'border:1px solid #000;padding:4px 7px;font-size:11px;font-family:Calibri,Arial,sans-serif;text-align:center;vertical-align:middle;';
-  const TH_BASE = TD_BASE + 'font-weight:bold;background:#FFFFFF;';
+  // No default background. Each cell that needs one declares it explicitly.
+  // (Some browsers parse duplicate `background` rules in a single style attribute
+  // unpredictably, so we only ever set background once per element.)
+  const TH_BASE = TD_BASE + 'font-weight:bold;';
+  const TH_WHITE = TH_BASE + 'background:#FFFFFF;';
 
-  // Background fills for the colored cells. These ARE preserved by Outlook web
-  // when set via inline style on td/th elements.
+  // Background fills. These ARE preserved by Outlook web when set inline.
   const BLUE = 'background:#ADD8E6;';
   const YELLOW = 'background:#FFDE2A;';
   const RED = 'background:#FF5B5B;';
 
-  // Colored TEXT wrappers. Use <span style="color:..."> as the only color rule
-  // on text content. Avoid putting color on the parent <th> style attribute
-  // because some sanitizers strip it from there. The <b> handles bold.
-  const BB = (txt) => `<span style="color:#D9A300"><b>${txt}</b></span>`;
-  const OP = (txt) => `<span style="color:#C00000"><b>${txt}</b></span>`;
-  const SECH = (txt) => `<p style="margin:14px 0 4px 0;font-family:Calibri,Arial,sans-serif;font-size:13px"><span style="color:#1F4E79"><b>${txt}</b></span></p>`;
-  const BBH = (txt) => `<p style="margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px">${BB(txt)}</p>`;
-  const OPH = (txt) => `<p style="margin:8px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px">${OP(txt)}</p>`;
+  // Color RULES to put directly on parent cell or paragraph style.
+  // Outlook web preserves color when it's set on the parent cell/element style,
+  // but strips it when set on inner <span>/<font> wrappers. So we apply colors
+  // at the cell level, not the text level.
+  // We also include `mso-color-alt` (Microsoft Office proprietary CSS) which is
+  // the same trick Word uses to preserve colors when pasted into Outlook.
+  const C_BB = 'color:#D9A300;mso-color-alt:#D9A300;';
+  const C_OP = 'color:#C00000;mso-color-alt:#C00000;';
+  const C_SEC = 'color:#1F4E79;mso-color-alt:#1F4E79;';
 
-  // Spacer: <br><br> is the only vertical-gap technique that no email client
-  // can strip. Margin/padding are unreliable.
-  const SPACE = `<br><br>`;
+  // For cases where color must wrap inline text (notes section), still use
+  // <font color> + <span> defense. These get patched at the parent paragraph
+  // level by SECH/BBH/OPH.
+  const SECH = (txt) => `<p style="${C_SEC}font-weight:bold;margin:8px 0 2px 0;font-family:Calibri,Arial,sans-serif;font-size:13px"><b>${txt}</b></p>`;
+  const BBH = (txt) => `<p style="${C_BB}font-weight:bold;margin:4px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px"><b>${txt}</b></p>`;
+  const OPH = (txt) => `<p style="${C_OP}font-weight:bold;margin:4px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px"><b>${txt}</b></p>`;
+
+  // Spacer: minimal vertical separation. Section headers below have their
+  // own top margin; we just want a small breath between sections.
+  const SPACE = '<div style="height:8px;line-height:8px">&nbsp;</div>';
 
   let html = '';
 
@@ -2750,13 +2745,13 @@ function renderLsHTML(){
   if(final){
     html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
       `<colgroup>` +
-        `<col width="78">` +
-        `<col width="68">` +
-        `<col width="68">` +
-        `<col width="78">` +
-        `<col width="82">` +
-        `<col width="98">` +
-        `<col width="78">` +
+        `<col width="64">` +
+        `<col width="64">` +
+        `<col width="64">` +
+        `<col width="64">` +
+        `<col width="64">` +
+        `<col width="64">` +
+        `<col width="64">` +
       `</colgroup>` +
       `<thead><tr>` +
       `<th style="${TH_BASE}${BLUE}">Time</th>` +
@@ -2795,8 +2790,8 @@ function renderLsHTML(){
       `</colgroup>` +
       `<tr>` +
         `<td style="${TD_BASE}font-weight:bold;text-align:left" rowspan="2">Unpacking:</td>` +
-        `<th style="${TH_BASE}" colspan="2">Ongoing</th>` +
-        `<th style="${TH_BASE}" colspan="2">Completed</th>` +
+        `<th style="${TH_WHITE}" colspan="2">Ongoing</th>` +
+        `<th style="${TH_WHITE}" colspan="2">Completed</th>` +
       `</tr>` +
       `<tr>` +
         `<td style="${TD_BASE}" colspan="2">${unp.ongoing?'X':''}</td>` +
@@ -2804,10 +2799,10 @@ function renderLsHTML(){
       `</tr>` +
       `<tr>` +
         `<td style="${TD_BASE}font-weight:bold;text-align:left">Line Haul:</td>` +
-        `<th style="${TH_BASE}">FLX</th>` +
-        `<th style="${TH_BASE}">FedEx</th>` +
-        `<th style="${TH_BASE}">UPS</th>` +
-        `<th style="${TH_BASE}">WC</th>` +
+        `<th style="${TH_WHITE}">FLX</th>` +
+        `<th style="${TH_WHITE}">FedEx</th>` +
+        `<th style="${TH_WHITE}">UPS</th>` +
+        `<th style="${TH_WHITE}">WC</th>` +
       `</tr>` +
       `<tr>` +
         `<td style="${TD_BASE}"></td>` +
@@ -2840,11 +2835,11 @@ function renderLsHTML(){
         `<col width="160"><col width="55"><col width="55"><col width="50"><col width="55">` +
       `</colgroup>` +
       `<thead><tr>` +
-      `<th style="${TH_BASE}text-align:left">Departments/Module</th>` +
-      `<th style="${TH_BASE}">${BB("BB")}</th>` +
-      `<th style="${TH_BASE}">${OP("OP")}</th>` +
-      `<th style="${TH_BASE}">Full</th>` +
-      `<th style="${TH_BASE}">Partial</th>` +
+      `<th style="${TH_WHITE}text-align:left">Departments/Module</th>` +
+      `<th style="${TH_WHITE}${C_BB}">BB</th>` +
+      `<th style="${TH_WHITE}${C_OP}">OP</th>` +
+      `<th style="${TH_WHITE}">Full</th>` +
+      `<th style="${TH_WHITE}">Partial</th>` +
     `</tr></thead><tbody>`;
     lsState.startup.forEach(r=>{
       html += `<tr>` +
@@ -2877,8 +2872,8 @@ function renderLsHTML(){
     html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
       `<colgroup><col width="60"><col width="60"></colgroup>` +
       `<thead><tr>` +
-      `<th style="${TH_BASE}">${BB("BB")}</th>` +
-      `<th style="${TH_BASE}">${OP("OP")}</th>` +
+      `<th style="${TH_WHITE}${C_BB}">BB</th>` +
+      `<th style="${TH_WHITE}${C_OP}">OP</th>` +
     `</tr></thead><tbody><tr>` +
       `<td style="${TD_BASE}">${esc(lsState.relabelBb)}</td>` +
       `<td style="${TD_BASE}">${esc(lsState.relabelOp)}</td>` +
@@ -2895,8 +2890,8 @@ function renderLsHTML(){
         `<col width="65"><col width="155"><col width="65"><col width="155">` +
       `</colgroup>` +
       `<thead><tr>` +
-      `<th style="${TH_BASE}text-align:left" colspan="2">${BB("BB")}</th>` +
-      `<th style="${TH_BASE}text-align:left" colspan="2">${OP("OP")}</th>` +
+      `<th style="${TH_WHITE}${C_BB}text-align:left" colspan="2">BB</th>` +
+      `<th style="${TH_WHITE}${C_OP}text-align:left" colspan="2">OP</th>` +
     `</tr></thead><tbody>`;
     ['hemo','special','auto'].forEach(d=>{
       const lbl = d==='hemo'?'HEMO':d==='special'?'SPECIAL':'AUTO';
@@ -2920,8 +2915,8 @@ function renderLsHTML(){
         `<col width="65"><col width="100"><col width="65"><col width="100">` +
       `</colgroup>` +
       `<thead><tr>` +
-      `<th style="${TH_BASE}text-align:left" colspan="2">${BB("BB")}</th>` +
-      `<th style="${TH_BASE}text-align:left" colspan="2">${OP("OP")}</th>` +
+      `<th style="${TH_WHITE}${C_BB}text-align:left" colspan="2">BB</th>` +
+      `<th style="${TH_WHITE}${C_OP}text-align:left" colspan="2">OP</th>` +
     `</tr></thead><tbody>`;
     ['hemo','special','auto'].forEach(d=>{
       const lbl = d==='hemo'?'HEMO':d==='special'?'SPECIAL':'AUTO';
@@ -2948,10 +2943,10 @@ function renderLsHTML(){
         `<col width="55"><col width="75"><col width="55"><col width="75">` +
       `</colgroup>` +
       `<thead><tr>` +
-      `<th style="${TH_BASE}">${BB("BB")}</th>` +
-      `<th style="${TH_BASE}">% Success</th>` +
-      `<th style="${TH_BASE}">${OP("OP")}</th>` +
-      `<th style="${TH_BASE}">% Success</th>` +
+      `<th style="${TH_WHITE}${C_BB}">BB</th>` +
+      `<th style="${TH_WHITE}">% Success</th>` +
+      `<th style="${TH_WHITE}${C_OP}">OP</th>` +
+      `<th style="${TH_WHITE}">% Success</th>` +
     `</tr></thead><tbody>`;
     const labels = ['1','2','3','4','5','6','7','8','IOM 1','IOM 2'];
     labels.forEach((lbl,i)=>{
@@ -2977,9 +2972,18 @@ async function lsCopy(){
   const el = document.getElementById('lsRender');
   if(!el) return;
   try {
-    // Wrap the rendered body in a minimal HTML document. Some clipboard handlers
-    // (Outlook web included) work better when the payload is a complete document.
-    const html = `<html><head><meta charset="utf-8"></head><body>${el.innerHTML}</body></html>`;
+    // Wrap the rendered body in a Word-flavored HTML document.
+    // Including the Microsoft Office XML namespaces (xmlns:o, xmlns:w) and the
+    // ProgId meta tag makes Outlook treat the paste as if it came from Word,
+    // which uses a more permissive sanitizer than for generic web HTML.
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="ProgId" content="Word.Document">
+<meta name="Generator" content="Microsoft Word 15">
+<meta name="Originator" content="Microsoft Word 15">
+</head>
+<body>${el.innerHTML}</body></html>`;
     const text = el.innerText;
     if(navigator.clipboard?.write){
       const blob = new Blob([html], {type:'text/html'});
