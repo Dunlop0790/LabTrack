@@ -267,8 +267,13 @@
     }
 
     /* ── BUNCH 3: ARCHIVE / STATS / PRINT ── */
-    .btn-tool{background:transparent;border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.75);padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;white-space:nowrap}
-    .btn-tool:hover{background:rgba(255,255,255,.1);color:#fff}
+    .btn-tool{background:transparent;border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.75);padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;white-space:nowrap;transition:all .12s ease}
+    .btn-tool:hover{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.32)}
+    /* Primary tool button: visually distinguished for the most-used view.
+       Used for the Today button, since the team will reach for that tab
+       most frequently throughout the day. */
+    .btn-tool.primary{background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.45);color:#fff}
+    .btn-tool.primary:hover{background:rgba(59,130,246,.28);border-color:rgba(59,130,246,.7)}
 
     /* Full-screen overlays for archive and stats */
     .panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;padding:24px}
@@ -411,6 +416,46 @@
     .snap-actions button{font-size:11px;padding:4px 9px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);border-radius:4px;cursor:pointer}
     .snap-actions button:hover{border-color:#3b82f6;color:#3b82f6}
     .snap-actions button.del:hover{border-color:var(--critical);color:var(--critical)}
+
+    /* ── TODAY PANEL (Bunch 6) ── */
+    /* Container for the read-only published-report view. The header strip
+       sits above the rendered report body and shows publisher metadata
+       and an "Edit & republish" affordance. */
+    .today-meta{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:10px 14px;background:var(--code-bg);border:1px solid var(--border);border-radius:8px;margin-bottom:14px}
+    .today-meta-left{display:flex;flex-direction:column;gap:2px;font-size:13px}
+    .today-meta-by{font-weight:600}
+    .today-meta-time{font-size:11px;color:var(--muted)}
+    .today-meta-actions{display:flex;gap:6px}
+    .today-meta-actions button{font-size:12px;padding:6px 12px;border:1.5px solid var(--border);background:var(--card-bg);color:var(--text);border-radius:5px;cursor:pointer;font-weight:600}
+    .today-meta-actions button:hover{border-color:#3b82f6;color:#3b82f6}
+    .today-empty{padding:50px 20px;text-align:center;color:var(--muted)}
+    .today-empty-ico{font-size:42px;margin-bottom:10px;opacity:0.5}
+    .today-empty-title{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text)}
+    .today-empty-sub{font-size:12px}
+
+    /* Revision history list: shows every publish/edit for today's reports.
+       Same visual style as the snapshot list for consistency. */
+    .rev-list{display:flex;flex-direction:column;gap:7px}
+    .rev-item{padding:10px 13px;background:var(--code-bg);border:1px solid var(--border);border-radius:6px}
+    .rev-hdr{display:flex;align-items:center;gap:8px;font-size:13px;flex-wrap:wrap}
+    .rev-type{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;color:#fff}
+    .rev-type.ls{background:#3b82f6}
+    .rev-type.eod{background:#10b981}
+    .rev-action{font-size:11px;color:var(--muted);font-style:italic}
+    .rev-by{font-weight:600}
+    .rev-time{font-size:11px;color:var(--muted);margin-left:auto}
+
+    /* Published indicator badge shown in the Reports panel header. Subtle
+       enough not to demand attention but visible when checked. */
+    .pub-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);margin-left:10px;font-weight:500}
+    .pub-badge .dot{width:7px;height:7px;border-radius:50%;background:#10b981}
+    .pub-badge.stale .dot{background:#f59e0b}
+    .pub-badge.never .dot{background:var(--border)}
+
+    /* Publish button: green to distinguish from the blue copy-to-clipboard.
+       Same shape and weight as the other action buttons for consistency. */
+    .btn-publish{background:#10b981;color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+    .btn-publish:hover{background:#059669}
   </style>
 </head>
 <body>
@@ -559,6 +604,7 @@
   <button class="btn-nb" onclick="openNewBoard()">+ New Board</button>
   <button class="btn-del-board" onclick="deleteBoard()" title="Delete current board">×</button>
   <div class="hdr-right">
+    <button class="btn-tool primary desktop-only" onclick="openToday()" title="Today's published reports and live status">Today</button>
     <button class="btn-tool desktop-only" onclick="openReports()" title="Line Status & EOD reports">Reports</button>
     <button class="btn-tool desktop-only" onclick="openArchive()" title="View archived issues">Archive</button>
     <button class="btn-tool desktop-only" onclick="openStats()" title="View statistics">Stats</button>
@@ -579,6 +625,7 @@
 <div class="ham-menu" id="hamMenu">
   <div class="ham-item" onclick="closeHam();openNewBoard()"><span class="ham-ico">＋</span>New Board</div>
   <div class="ham-item" onclick="closeHam();deleteBoard()"><span class="ham-ico">×</span>Delete Board</div>
+  <div class="ham-item" onclick="closeHam();openToday()"><span class="ham-ico">📌</span>Today</div>
   <div class="ham-item" onclick="closeHam();openReports()"><span class="ham-ico">📋</span>Reports</div>
   <div class="ham-item" onclick="closeHam();openArchive()"><span class="ham-ico">📦</span>Archive</div>
   <div class="ham-item" onclick="closeHam();openStats()"><span class="ham-ico">📊</span>Stats</div>
@@ -665,6 +712,29 @@
       <button class="mclose" style="margin-left:auto" onclick="closeReports()">×</button>
     </div>
     <div class="panel-body" id="reportsBody"></div>
+  </div>
+</div>
+
+<!-- ── TODAY PANEL (Bunch 6) ── -->
+<!--
+  The Today panel is a read-only view of the most recent published Line
+  Status and EOD reports for the day. It exists so anyone on the team
+  (especially Leads) can see the current operational state at a glance
+  without digging through email or asking the publisher to forward.
+  Editing-after-publish is supported with a full revision history.
+-->
+<div class="panel-overlay" id="todayPanel">
+  <div class="panel" style="max-width:1100px">
+    <div class="panel-hdr">
+      <div class="panel-title">Today</div>
+      <div class="reports-tabs" style="border:none;margin:0">
+        <div class="reports-tab active" id="tTabLs" onclick="switchTodayTab('ls')">Line Status</div>
+        <div class="reports-tab" id="tTabEod" onclick="switchTodayTab('eod')">EOD</div>
+        <div class="reports-tab" id="tTabHist" onclick="switchTodayTab('hist')">Revision History</div>
+      </div>
+      <button class="mclose" style="margin-left:auto" onclick="closeToday()">×</button>
+    </div>
+    <div class="panel-body" id="todayBody"></div>
   </div>
 </div>
 
@@ -2612,6 +2682,7 @@ function renderLineStatus(){
           <button class="btn-clear" onclick="lsClear()">Clear All</button>
           <button class="btn-snap" onclick="lsSaveSnapshot()">Save Snapshot</button>
           <button class="btn-copy" onclick="lsCopy()">Copy to Clipboard</button>
+          <button class="btn-publish" onclick="lsPublish()" title="Publish this report so the team can view it under the Today tab">Publish</button>
         </div>
       </div>
 
@@ -3578,6 +3649,7 @@ function renderEOD(){
           <button class="btn-clear" onclick="eodClear()">Clear All</button>
           <button class="btn-snap" onclick="eodSaveSnapshot()">Save Snapshot</button>
           <button class="btn-copy" onclick="eodCopy()">Copy to Clipboard</button>
+          <button class="btn-publish" onclick="eodPublish()" title="Publish this EOD so the team can view it under the Today tab">Publish</button>
         </div>
       </div>
 
@@ -3810,6 +3882,363 @@ async function eodSaveSnapshot(){
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
   showToast('EOD snapshot saved.');
+}
+
+// ── BUNCH 6: TODAY / PUBLISH SYSTEM ────────────────────────────
+// Live shared view of the most recent published Line Status and EOD
+// for the current day. The Publish button on the report forms writes
+// the form state to a single per-day record in Firestore (one for
+// Line Status, one for EOD), and every publish or edit appends to a
+// revision history. The Today panel renders the latest published
+// version read-only and provides an "Edit & republish" affordance.
+//
+// This addresses the "live updating shared status" use case raised by
+// the Lead team: instead of follow-up emails to correct or update an
+// earlier Line Status, the publisher (or anyone) can edit the live
+// record and the team sees the new version immediately.
+
+// Currently active Today sub-tab. Persisted across opens so that
+// returning to the Today panel picks up where you left off.
+let currentTodayTab = 'ls';
+
+// Cached published documents and their revision histories. Populated
+// by Firestore subscriptions started when the Today panel is opened.
+let todayPublished = { ls: null, eod: null };
+let todayRevisions = [];
+let todayLsSub = null;
+let todayEodSub = null;
+let todayRevSub = null;
+
+// Returns a YYYY-MM-DD key for "today" in EST. Used as the document ID
+// for per-day published records so all clients agree on which day's
+// report they are looking at, regardless of their browser's local
+// timezone setting.
+function todayKey(){
+  const now = new Date();
+  // Convert to EST: subtract 5 hours from UTC (year-round; matches the
+  // approach used elsewhere in the app for snapshot purge timing)
+  const est = new Date(now.getTime() - 5*60*60*1000);
+  const y = est.getUTCFullYear();
+  const m = String(est.getUTCMonth()+1).padStart(2,'0');
+  const d = String(est.getUTCDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+
+function openToday(){
+  document.getElementById('todayPanel').classList.add('open');
+  // Subscribe to today's published records and revision history so the
+  // view updates in real time as other users publish or edit.
+  startTodaySubscriptions();
+  switchTodayTab(currentTodayTab);
+}
+
+function closeToday(){
+  document.getElementById('todayPanel').classList.remove('open');
+  // Detach subscriptions when the panel is closed to avoid keeping
+  // unnecessary realtime listeners alive.
+  if(todayLsSub){ todayLsSub(); todayLsSub = null; }
+  if(todayEodSub){ todayEodSub(); todayEodSub = null; }
+  if(todayRevSub){ todayRevSub(); todayRevSub = null; }
+}
+
+function switchTodayTab(tab){
+  currentTodayTab = tab;
+  document.getElementById('tTabLs').classList.toggle('active', tab==='ls');
+  document.getElementById('tTabEod').classList.toggle('active', tab==='eod');
+  document.getElementById('tTabHist').classList.toggle('active', tab==='hist');
+  if(tab==='ls') renderTodayLs();
+  else if(tab==='eod') renderTodayEod();
+  else if(tab==='hist') renderTodayHistory();
+}
+
+// Realtime subscriptions to today's published records and revision log.
+// Each kind (ls, eod) is a single document keyed by todayKey() so there
+// is at most one "current" published version of each report per day.
+function startTodaySubscriptions(){
+  const key = todayKey();
+  if(!todayLsSub){
+    todayLsSub = db.collection('publishedReports').doc(`ls_${key}`)
+      .onSnapshot(doc => {
+        const prev = todayPublished.ls;
+        todayPublished.ls = doc.exists ? doc.data() : null;
+        // If a NEW publish happened (not just an edit by us), and the
+        // panel is showing the LS tab, refresh it. Also notify the user
+        // if someone else just published.
+        if(currentTodayTab==='ls' && document.getElementById('todayPanel')?.classList.contains('open')){
+          renderTodayLs();
+        }
+        if(prev && todayPublished.ls && prev.publishedBy !== todayPublished.ls.publishedBy
+           && todayPublished.ls.lastEditedBy !== user?.name){
+          showToast(`${todayPublished.ls.lastEditedBy || todayPublished.ls.publishedBy} updated the Line Status.`);
+        }
+      });
+  }
+  if(!todayEodSub){
+    todayEodSub = db.collection('publishedReports').doc(`eod_${key}`)
+      .onSnapshot(doc => {
+        todayPublished.eod = doc.exists ? doc.data() : null;
+        if(currentTodayTab==='eod' && document.getElementById('todayPanel')?.classList.contains('open')){
+          renderTodayEod();
+        }
+      });
+  }
+  if(!todayRevSub){
+    todayRevSub = db.collection('publishedReports').doc(`ls_${key}`)
+      .collection('revisions').orderBy('at','desc').limit(50)
+      .onSnapshot(snap => {
+        // Combine LS and EOD revisions; we'll re-fetch EOD revisions
+        // separately below. For simplicity in this version we only
+        // subscribe to the LS document's revisions; EOD revisions are
+        // loaded on demand when the History tab is opened.
+        todayRevisions = snap.docs.map(d => ({id:d.id, kind:'ls', ...d.data()}));
+        if(currentTodayTab==='hist' && document.getElementById('todayPanel')?.classList.contains('open')){
+          renderTodayHistory();
+        }
+      });
+  }
+}
+
+// Renders the Line Status tab in the Today panel.
+function renderTodayLs(){
+  const body = document.getElementById('todayBody');
+  const pub = todayPublished.ls;
+  if(!pub){
+    body.innerHTML = todayEmptyState('Line Status');
+    return;
+  }
+  const lastEditTime = pub.lastEditedAt || pub.publishedAt;
+  const editedNote = pub.editCount > 1
+    ? `<span class="rev-action">(edited ${pub.editCount-1} time${pub.editCount-1===1?'':'s'})</span>`
+    : '';
+  body.innerHTML = `
+    <div class="today-meta">
+      <div class="today-meta-left">
+        <div><span class="today-meta-by">${esc(pub.lastEditedBy || pub.publishedBy)}</span> ${editedNote}</div>
+        <div class="today-meta-time">${fmtTime(lastEditTime)}</div>
+      </div>
+      <div class="today-meta-actions">
+        <button onclick="todayLoadIntoForm('ls')">Edit &amp; republish</button>
+      </div>
+    </div>
+    <div class="ls-render">${pub.renderedHtml || '<i style="color:#777">No content</i>'}</div>
+  `;
+}
+
+// Renders the EOD tab in the Today panel.
+function renderTodayEod(){
+  const body = document.getElementById('todayBody');
+  const pub = todayPublished.eod;
+  if(!pub){
+    body.innerHTML = todayEmptyState('EOD');
+    return;
+  }
+  const lastEditTime = pub.lastEditedAt || pub.publishedAt;
+  const editedNote = pub.editCount > 1
+    ? `<span class="rev-action">(edited ${pub.editCount-1} time${pub.editCount-1===1?'':'s'})</span>`
+    : '';
+  body.innerHTML = `
+    <div class="today-meta">
+      <div class="today-meta-left">
+        <div><span class="today-meta-by">${esc(pub.lastEditedBy || pub.publishedBy)}</span> ${editedNote}</div>
+        <div class="today-meta-time">${fmtTime(lastEditTime)}</div>
+      </div>
+      <div class="today-meta-actions">
+        <button onclick="todayLoadIntoForm('eod')">Edit &amp; republish</button>
+      </div>
+    </div>
+    <div class="ls-render">${pub.renderedHtml || '<i style="color:#777">No content</i>'}</div>
+  `;
+}
+
+// Renders the revision history tab. Combines revisions from both
+// publishedReports/ls_{date}/revisions and publishedReports/eod_{date}/revisions
+// so the user can see a unified timeline of who changed what.
+async function renderTodayHistory(){
+  const body = document.getElementById('todayBody');
+  body.innerHTML = '<div style="color:var(--muted);font-style:italic;padding:20px;text-align:center">Loading history...</div>';
+  const key = todayKey();
+  // Pull both LS and EOD revisions in parallel
+  const [lsSnap, eodSnap] = await Promise.all([
+    db.collection('publishedReports').doc(`ls_${key}`).collection('revisions').orderBy('at','desc').limit(50).get(),
+    db.collection('publishedReports').doc(`eod_${key}`).collection('revisions').orderBy('at','desc').limit(50).get()
+  ]);
+  const all = [
+    ...lsSnap.docs.map(d => ({kind:'ls', ...d.data()})),
+    ...eodSnap.docs.map(d => ({kind:'eod', ...d.data()}))
+  ].sort((a,b) => (b.at?.toMillis?.()||0) - (a.at?.toMillis?.()||0));
+
+  if(!all.length){
+    body.innerHTML = todayEmptyState('Revision History', 'No publishes or edits today yet.');
+    return;
+  }
+  body.innerHTML = `<div class="rev-list">${all.map(r => `
+    <div class="rev-item">
+      <div class="rev-hdr">
+        <span class="rev-type ${r.kind}">${r.kind==='ls'?'Line Status':'EOD'}</span>
+        <span class="rev-by">${esc(r.by||'?')}</span>
+        <span class="rev-action">${esc(r.action||'published')}</span>
+        <span class="rev-time">${fmtTime(r.at)}</span>
+      </div>
+    </div>
+  `).join('')}</div>`;
+}
+
+// Empty-state placeholder shown when no published record exists yet.
+function todayEmptyState(label, sub){
+  return `
+    <div class="today-empty">
+      <div class="today-empty-ico">📭</div>
+      <div class="today-empty-title">No ${label} published today</div>
+      <div class="today-empty-sub">${sub || 'When someone hits Publish on the ' + label + ' form, it will appear here.'}</div>
+    </div>
+  `;
+}
+
+// Loads a published record back into the form so the publisher (or
+// anyone) can make corrections and republish. Closes the Today panel
+// and opens Reports on the appropriate sub-tab.
+function todayLoadIntoForm(kind){
+  if(kind==='ls'){
+    const pub = todayPublished.ls;
+    if(!pub) return;
+    const data = JSON.parse(pub.data);
+    Object.assign(lsState, data);
+    lsState.csvOp = null; // CSV file objects are not stored
+    lsState.csvBb = null;
+    closeToday();
+    openReports();
+    switchReportTab('ls');
+    showToast('Loaded into form. Make changes, then click Publish to update.');
+  } else if(kind==='eod'){
+    const pub = todayPublished.eod;
+    if(!pub) return;
+    const data = JSON.parse(pub.data);
+    Object.assign(eodState, data);
+    closeToday();
+    openReports();
+    switchReportTab('eod');
+    showToast('Loaded into form. Make changes, then click Publish to update.');
+  }
+}
+
+// Publishes the current Line Status form to the day's shared record.
+// If a published record already exists, this is treated as an edit
+// rather than a new publish, and the editor metadata is updated. A
+// revision row is appended in either case.
+async function lsPublish(){
+  const renderEl = document.getElementById('lsRender');
+  if(!renderEl) {
+    showToast('Open the Line Status form before publishing.');
+    return;
+  }
+  const key = todayKey();
+  const ref = db.collection('publishedReports').doc(`ls_${key}`);
+  const existing = await ref.get();
+  // Confirmation messaging differs based on whether this is a first publish
+  // or an edit, so the user understands the impact of their click.
+  const confirmMsg = existing.exists
+    ? 'Update the published Line Status? Everyone on the team will see your edits immediately under the Today tab.'
+    : 'Publish this Line Status? It will be visible to everyone on the team under the Today tab.';
+  if(!confirm(confirmMsg)) return;
+
+  const renderedHtml = renderEl.innerHTML;
+  const stateCopy = {...lsState};
+  // Don't store the CSV file object handles in the published payload
+  delete stateCopy.csvOp;
+  delete stateCopy.csvBb;
+  const data = JSON.stringify(stateCopy);
+
+  const now = firebase.firestore.FieldValue.serverTimestamp();
+  if(existing.exists){
+    // Edit path: increment count, update editor info, keep original publisher
+    await ref.update({
+      data,
+      renderedHtml,
+      lastEditedBy: user.name,
+      lastEditedAt: now,
+      editCount: firebase.firestore.FieldValue.increment(1)
+    });
+    await ref.collection('revisions').add({
+      by: user.name,
+      action: 'edited',
+      at: now
+    });
+    showToast('Line Status updated.');
+  } else {
+    // First publish today
+    await ref.set({
+      data,
+      renderedHtml,
+      publishedBy: user.name,
+      publishedAt: now,
+      lastEditedBy: user.name,
+      lastEditedAt: now,
+      editCount: 1,
+      dateKey: key
+    });
+    await ref.collection('revisions').add({
+      by: user.name,
+      action: 'published',
+      at: now
+    });
+    showToast('Line Status published. Visible to all under the Today tab.');
+  }
+}
+
+// Same as lsPublish but for the EOD form. Kept as a separate function
+// rather than parameterized because the form state objects and DOM
+// elements are different; sharing logic via a wrapper would obscure
+// more than it would save.
+async function eodPublish(){
+  const renderEl = document.getElementById('eodRender');
+  if(!renderEl) {
+    showToast('Open the EOD form before publishing.');
+    return;
+  }
+  const key = todayKey();
+  const ref = db.collection('publishedReports').doc(`eod_${key}`);
+  const existing = await ref.get();
+  const confirmMsg = existing.exists
+    ? 'Update the published EOD? Everyone on the team will see your edits immediately under the Today tab.'
+    : 'Publish this EOD? It will be visible to everyone on the team under the Today tab.';
+  if(!confirm(confirmMsg)) return;
+
+  const renderedHtml = renderEl.innerHTML;
+  const data = JSON.stringify(eodState);
+
+  const now = firebase.firestore.FieldValue.serverTimestamp();
+  if(existing.exists){
+    await ref.update({
+      data,
+      renderedHtml,
+      lastEditedBy: user.name,
+      lastEditedAt: now,
+      editCount: firebase.firestore.FieldValue.increment(1)
+    });
+    await ref.collection('revisions').add({
+      by: user.name,
+      action: 'edited',
+      at: now
+    });
+    showToast('EOD updated.');
+  } else {
+    await ref.set({
+      data,
+      renderedHtml,
+      publishedBy: user.name,
+      publishedAt: now,
+      lastEditedBy: user.name,
+      lastEditedAt: now,
+      editCount: 1,
+      dateKey: key
+    });
+    await ref.collection('revisions').add({
+      by: user.name,
+      action: 'published',
+      at: now
+    });
+    showToast('EOD published. Visible to all under the Today tab.');
+  }
 }
 
 // ── BOOT ──────────────────────────────────────────────────────
