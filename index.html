@@ -84,7 +84,7 @@
     .btn-sound.muted{opacity:.5}
     .btn-new{background:#3b82f6;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:-.1px}
     .btn-new:hover{background:#2563eb}
-    .hamburger{background:transparent;border:none;color:#fff;font-size:22px;cursor:pointer;padding:0 4px;display:none}
+    .hamburger{background:transparent;border:none;color:#fff;cursor:pointer;padding:0 4px;display:none;align-items:center;justify-content:center;line-height:0}
     .btn-nb:hover{background:rgba(255,255,255,.1)}
 
     /* ── FILTER BAR ── */
@@ -104,8 +104,9 @@
     .search-wrap{position:relative;margin-left:auto}
     .search-input{font-size:12px;padding:5px 10px 5px 28px;border:1.5px solid var(--border);border-radius:20px;background:var(--input-bg);color:var(--text);outline:none;width:200px;transition:all .15s}
     .search-input:focus{border-color:#3b82f6;width:250px}
-    .search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--muted);pointer-events:none}
-    .card-time{font-size:10px;color:var(--muted);margin-top:5px;font-style:italic}
+    .search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;display:flex;align-items:center;line-height:0}
+    .card-time{font-size:10px;color:var(--muted);margin-top:5px;font-style:italic;display:flex;align-items:center;gap:4px}
+    .card-time svg{flex-shrink:0}
     .card-time.warn{color:#dc2626;font-weight:600;font-style:normal}
     .history-toggle{font-size:12px;color:#3b82f6;cursor:pointer;padding:6px 0;user-select:none;font-weight:500;display:flex;align-items:center;gap:4px}
     .history-toggle:hover{text-decoration:underline}
@@ -187,7 +188,8 @@
     .card-bot{display:flex;align-items:center;gap:5px}
     .a-chip{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px}
     .a-dot{width:18px;height:18px;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-    .cc{margin-left:auto;font-size:11px;color:var(--muted)}
+    .cc{margin-left:auto;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:3px}
+    .cc svg{flex-shrink:0}
 
     /* ── OVERLAYS ── */
     .overlay{position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -237,7 +239,13 @@
 
     /* ── SETUP ── */
     .setup-modal{max-width:400px;text-align:center}
-    .setup-icon{font-size:46px;margin-bottom:14px}
+    .setup-icon{font-size:46px;margin-bottom:14px;display:flex;align-items:center;justify-content:center;color:#3b82f6}
+    .setup-icon svg{display:block}
+    /* Godzilla button keeps its emoji as-is (it's a playful brand mark
+       intentionally distinct from the rest of the icon set), but
+       sized down a notch and desaturated slightly to fit better
+       alongside the new monochrome SVG icons. */
+    .godzilla-btn{font-size:13px;filter:saturate(0.85)}
     .setup-title{font-size:21px;font-weight:800;margin-bottom:6px}
     .setup-sub{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.6}
     .roles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:14px}
@@ -253,16 +261,16 @@
     .credit{position:fixed;bottom:10px;right:14px;font-size:11px;color:#94a3b8;pointer-events:none;user-select:none;z-index:50}
 
     /* ── BUNCH 4: HAMBURGER MENU & MOBILE ── */
-    .btn-icon{background:transparent;border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.85);padding:5px 9px;border-radius:6px;font-size:14px;cursor:pointer;line-height:1}
-    .btn-icon:hover{background:rgba(255,255,255,.1);color:#fff}
-    .btn-icon.active{background:#3b82f6;border-color:#3b82f6;color:#fff}
-    .hamburger{display:none;background:transparent;border:1px solid rgba(255,255,255,.18);color:#fff;padding:6px 10px;border-radius:6px;font-size:16px;cursor:pointer;line-height:1}
+    .hamburger{display:none;background:transparent;border:1px solid rgba(255,255,255,.18);color:#fff;padding:6px 10px;border-radius:6px;cursor:pointer;line-height:0;align-items:center;justify-content:center}
+    .hamburger svg{display:block}
     .ham-menu{position:absolute;top:54px;right:14px;background:var(--card-bg);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-md);min-width:180px;display:none;z-index:150;overflow:hidden}
     .ham-menu.open{display:block}
     .ham-item{padding:11px 16px;font-size:14px;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
     .ham-item:last-child{border-bottom:none}
     .ham-item:hover{background:var(--hover-bg)}
-    .ham-item .ham-ico{font-size:16px;width:20px;text-align:center}
+    .ham-item .ham-ico{font-size:16px;width:20px;text-align:center;display:inline-flex;align-items:center;justify-content:center;color:var(--muted)}
+    .ham-item .ham-ico svg{display:block}
+    .ham-item:hover .ham-ico{color:var(--text)}
 
     @media (max-width: 768px) {
       /* Mobile: keep tier 1 (logo + board + hamburger) visible. Hide tier 2
@@ -461,7 +469,8 @@
     .today-meta-actions button:hover{border-color:#3b82f6;color:#3b82f6}
     .today-meta-actions button.withdraw:hover{border-color:var(--critical);color:var(--critical)}
     .today-empty{padding:50px 20px;text-align:center;color:var(--muted)}
-    .today-empty-ico{font-size:42px;margin-bottom:10px;opacity:0.5}
+    .today-empty-ico{margin-bottom:10px;opacity:0.5;color:var(--muted);display:flex;align-items:center;justify-content:center}
+    .today-empty-ico svg{display:block}
     .today-empty-title{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text)}
     .today-empty-sub{font-size:12px}
 
@@ -495,7 +504,7 @@
 <!-- ── SETUP OVERLAY ── -->
 <div class="overlay" id="setupOverlay">
   <div class="modal setup-modal">
-    <div class="setup-icon">🔬</div>
+    <div class="setup-icon" id="setupIcon"></div>
     <div class="setup-title">Welcome to LabTrack</div>
     <div class="setup-sub">Enter your name once. It'll be saved to this device so you never have to type it again.</div>
     <div class="fg" style="text-align:left">
@@ -645,15 +654,15 @@
     </div>
     <div class="hdr-right">
       <button class="btn-tool primary desktop-only" id="hdrTodayBtn" onclick="openToday()" title="Today's published reports and live status">Today</button>
-      <button class="btn-icon desktop-only" id="themeBtn" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
-      <button class="btn-icon desktop-only" id="godzillaBtn" onclick="toggleGodzilla()" title="Godzilla mode (alternate alert sound)">🦖</button>
-      <button class="btn-sound desktop-only" id="soundBtn" onclick="toggleSound()" title="Toggle alert sounds">🔊</button>
+      <button class="btn-icon desktop-only" id="themeBtn" onclick="toggleTheme()" title="Toggle dark mode"></button>
+      <button class="btn-icon desktop-only godzilla-btn" id="godzillaBtn" onclick="toggleGodzilla()" title="Godzilla mode (alternate alert sound)">🦖</button>
+      <button class="btn-sound desktop-only" id="soundBtn" onclick="toggleSound()" title="Toggle alert sounds"></button>
       <div class="user-badge" onclick="resetUser()" title="Click to change name">
         <div class="avatar" id="userAvatar"></div>
         <span id="userName"></span>
       </div>
       <button class="btn-new" onclick="openNewIssue()">+ New Issue</button>
-      <button class="hamburger" onclick="toggleHamburger()" title="Menu">☰</button>
+      <button class="hamburger" onclick="toggleHamburger()" title="Menu" id="hamburgerBtn"></button>
     </div>
   </div>
 
@@ -674,16 +683,16 @@
 
 <!-- Hamburger menu (mobile) -->
 <div class="ham-menu" id="hamMenu">
-  <div class="ham-item" onclick="closeHam();openNewBoard()"><span class="ham-ico">＋</span>New Board</div>
-  <div class="ham-item" onclick="closeHam();deleteBoard()"><span class="ham-ico">×</span>Delete Board</div>
-  <div class="ham-item" onclick="closeHam();openToday()"><span class="ham-ico">📌</span>Today</div>
-  <div class="ham-item" onclick="closeHam();openReports()"><span class="ham-ico">📋</span>Reports</div>
-  <div class="ham-item" onclick="closeHam();openArchive()"><span class="ham-ico">📦</span>Archive</div>
-  <div class="ham-item" onclick="closeHam();openStats()"><span class="ham-ico">📊</span>Stats</div>
-  <div class="ham-item" onclick="closeHam();window.print()"><span class="ham-ico">🖨</span>Print</div>
-  <div class="ham-item" onclick="closeHam();toggleTheme()"><span class="ham-ico" id="hamThemeIco">🌙</span><span id="hamThemeLbl">Dark Mode</span></div>
-  <div class="ham-item" onclick="closeHam();toggleGodzilla()"><span class="ham-ico">🦖</span><span id="hamGodzillaLbl">Godzilla Mode</span></div>
-  <div class="ham-item" onclick="closeHam();toggleSound()"><span class="ham-ico" id="hamSoundIco">🔊</span><span id="hamSoundLbl">Alert Sounds</span></div>
+  <div class="ham-item" onclick="closeHam();openNewBoard()"><span class="ham-ico" data-icon="plus"></span>New Board</div>
+  <div class="ham-item" onclick="closeHam();deleteBoard()"><span class="ham-ico" data-icon="close"></span>Delete Board</div>
+  <div class="ham-item" onclick="closeHam();openToday()"><span class="ham-ico" data-icon="today"></span>Today</div>
+  <div class="ham-item" onclick="closeHam();openReports()"><span class="ham-ico" data-icon="clipboard"></span>Reports</div>
+  <div class="ham-item" onclick="closeHam();openArchive()"><span class="ham-ico" data-icon="archive"></span>Archive</div>
+  <div class="ham-item" onclick="closeHam();openStats()"><span class="ham-ico" data-icon="chart"></span>Stats</div>
+  <div class="ham-item" onclick="closeHam();window.print()"><span class="ham-ico" data-icon="printer"></span>Print</div>
+  <div class="ham-item" onclick="closeHam();toggleTheme()"><span class="ham-ico" id="hamThemeIco"></span><span id="hamThemeLbl">Dark Mode</span></div>
+  <div class="ham-item godzilla-ham" onclick="closeHam();toggleGodzilla()"><span class="ham-ico">🦖</span><span id="hamGodzillaLbl">Godzilla Mode</span></div>
+  <div class="ham-item" onclick="closeHam();toggleSound()"><span class="ham-ico" id="hamSoundIco"></span><span id="hamSoundLbl">Alert Sounds</span></div>
 </div>
 
 <!-- ── FILTER BAR ── -->
@@ -701,7 +710,7 @@
   <span class="chip" id="pMon" onclick="setPF('monitor')">Monitor</span>
   <span class="chip" id="pLow" onclick="setPF('low')">Low</span>
   <div class="search-wrap">
-    <span class="search-icon">🔍</span>
+    <span class="search-icon" data-icon="search"></span>
     <input class="search-input" id="searchInput" placeholder="Search issues, instruments..." oninput="onSearch(this.value)" />
   </div>
 </div>
@@ -935,6 +944,77 @@ function isAging(issue){
   return age > (AGE_WARN_MS[issue.priority]||AGE_WARN_MS.low);
 }
 
+// ── ICONS ─────────────────────────────────────────────────────
+// Inline SVG icon set used throughout the UI. All icons use
+// stroke="currentColor" and fill="none" so they automatically inherit
+// the text color of their parent element. This means the same icon
+// definition works correctly in both light and dark mode and on
+// colored backgrounds (header navy, toast white, etc.) without any
+// per-theme overrides.
+//
+// Icons are 16x16 by default (stroke-width:1.75) for body-text contexts;
+// override with inline style="width:Npx;height:Npx" where larger sizes
+// are needed (e.g. setup screen, empty states). Style was chosen to
+// match the Lucide icon library aesthetic: rounded line caps, balanced
+// negative space, single-stroke construction.
+const ICONS = {
+  // Sun: theme toggle when in dark mode (click to switch to light)
+  sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>',
+  // Moon: theme toggle when in light mode (click to switch to dark)
+  moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+  // Volume on: alert sounds enabled
+  volumeOn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>',
+  // Volume off: alert sounds muted
+  volumeOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/></svg>',
+  // Hamburger menu (mobile navigation drawer trigger)
+  menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>',
+  // Calendar with dot: Today panel (live shared report viewer)
+  today: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><circle cx="12" cy="16" r="1.2" fill="currentColor"/></svg>',
+  // Clipboard: Reports panel (Line Status and EOD forms)
+  clipboard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>',
+  // Archive box: Archive panel (resolved issues by week)
+  archive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>',
+  // Bar chart: Stats panel (rollup metrics dashboard)
+  chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20"/></svg>',
+  // Printer: print current board view
+  printer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>',
+  // Magnifying glass: search input (top of filter bar)
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  // Speech bubble: comment count badge on issue cards
+  comment: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  // Triangle warning: aging card glow indicator
+  warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  // Empty inbox: shown in Today panel when no report has been published
+  inbox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="42" height="42"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>',
+  // Microscope: setup overlay welcome icon (LabTrack identity)
+  microscope: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="48" height="48"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"/><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/></svg>',
+  // Plus / new: used in hamburger menu items for "New Board"
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  // X / close / delete: used in hamburger menu for "Delete Board"
+  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  // Bell: in-app mention notification (replaces 💬 in browser notification body)
+  bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>'
+};
+
+// Injects inline SVGs into all static placeholders that use the
+// data-icon attribute. Runs once at app boot and any time new markup
+// containing data-icon is added (e.g. when re-rendering panels).
+// Searches for [data-icon=KEY] and replaces innerHTML with ICONS[KEY].
+function injectStaticIcons(root){
+  const scope = root || document;
+  scope.querySelectorAll('[data-icon]').forEach(el => {
+    const key = el.getAttribute('data-icon');
+    if(ICONS[key]) el.innerHTML = ICONS[key];
+  });
+  // Setup screen, hamburger toggle, and the welcome microscope use
+  // dedicated IDs rather than data-icon since their content was set
+  // up in the original HTML; handle them explicitly.
+  const setupIco = scope.querySelector('#setupIcon');
+  if(setupIco && !setupIco.innerHTML.trim()) setupIco.innerHTML = ICONS.microscope;
+  const hamBtn = scope.querySelector('#hamburgerBtn');
+  if(hamBtn && !hamBtn.innerHTML.trim()) hamBtn.innerHTML = ICONS.menu;
+}
+
 // ── SOUND ─────────────────────────────────────────────────────
 // Web Audio API alert synthesis for high-priority issues. Uses a
 // synthesized "ding-dong" for Critical/Urgent events and a low-frequency
@@ -1081,13 +1161,13 @@ function toggleSound(){
 
 function updateSoundBtn(){
   const btn = document.getElementById('soundBtn');
-  const ico = soundEnabled ? '🔊' : '🔇';
+  const svg = soundEnabled ? ICONS.volumeOn : ICONS.volumeOff;
   if(btn){
-    btn.textContent = ico;
+    btn.innerHTML = svg;
     btn.classList.toggle('muted', !soundEnabled);
   }
   const hamIco = document.getElementById('hamSoundIco');
-  if(hamIco) hamIco.textContent = ico;
+  if(hamIco) hamIco.innerHTML = svg;
   const hamLbl = document.getElementById('hamSoundLbl');
   if(hamLbl) hamLbl.textContent = soundEnabled ? 'Mute Alerts' : 'Unmute Alerts';
 }
@@ -1099,10 +1179,13 @@ function updateSoundBtn(){
 function applyTheme(){
   const dark = localStorage.getItem('lt_theme') === 'dark';
   document.documentElement.classList.toggle('dark', dark);
+  // Show the sun icon in dark mode (clicking switches to light) and
+  // the moon in light mode (clicking switches to dark)
+  const svg = dark ? ICONS.sun : ICONS.moon;
   const btn = document.getElementById('themeBtn');
-  if(btn) btn.textContent = dark ? '☀️' : '🌙';
+  if(btn) btn.innerHTML = svg;
   const hamIco = document.getElementById('hamThemeIco');
-  if(hamIco) hamIco.textContent = dark ? '☀️' : '🌙';
+  if(hamIco) hamIco.innerHTML = svg;
   const hamLbl = document.getElementById('hamThemeLbl');
   if(hamLbl) hamLbl.textContent = dark ? 'Light Mode' : 'Dark Mode';
 }
@@ -1243,6 +1326,10 @@ function resetUser(){
 async function initApp(){
   document.getElementById('userName').textContent=user.name;
   document.getElementById('userAvatar').textContent=initials(user.name);
+  // Inject inline SVG icons into all static placeholders. This is a
+  // one-time pass at boot; dynamically-rendered elements (cards,
+  // hamburger menu items already in the DOM) are handled here too.
+  injectStaticIcons();
   updateSoundBtn();
   applyTheme();
   updateGodzillaBtn();
@@ -1525,9 +1612,9 @@ function renderCard(issue){
       ${issue.assignee
         ? `<div class="a-chip"><div class="a-dot">${ai}</div>${esc(issue.assignee)}</div>`
         : '<span style="font-size:11px;color:#94a3b8">Unassigned</span>'}
-      ${cc>0?`<div class="cc">💬 ${cc}</div>`:''}
+      ${cc>0?`<div class="cc">${ICONS.comment} ${cc}</div>`:''}
     </div>
-    ${age && issue.status!=='resolved' ? `<div class="card-time ${aging?'warn':''}">${aging?'⚠ ':''}Open ${age}</div>` : ''}
+    ${age && issue.status!=='resolved' ? `<div class="card-time ${aging?'warn':''}">${aging?ICONS.warning+' ':''}Open ${age}</div>` : ''}
   </div>`;
 }
 
@@ -4166,7 +4253,7 @@ async function renderTodayHistory(){
 function todayEmptyState(label, sub){
   return `
     <div class="today-empty">
-      <div class="today-empty-ico">📭</div>
+      <div class="today-empty-ico">${ICONS.inbox}</div>
       <div class="today-empty-title">No ${label} published today</div>
       <div class="today-empty-sub">${sub || 'When someone hits Publish on the ' + label + ' form, it will appear here.'}</div>
     </div>
@@ -4414,6 +4501,11 @@ async function purgePublishedReportsDaily(){
 // previously. All async work after this point is event-driven.
 // Apply theme before anything else so dark mode persists across reloads (no flash of light)
 if(localStorage.getItem('lt_theme') === 'dark') document.documentElement.classList.add('dark');
+
+// Inject all static SVG icons before any user interaction. This covers
+// the setup screen (in case user is brand-new) and the main app
+// header/hamburger before initApp() runs.
+injectStaticIcons();
 
 const saved=localStorage.getItem('lt_user');
 if(saved){
