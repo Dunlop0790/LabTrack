@@ -73,6 +73,24 @@
     /* Tier 2 buttons: lighter weight, more compact */
     .hdr-tier2 .btn-tool{font-weight:500;font-size:12px;padding:5px 11px}
     .btn-tool.active{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.4)}
+
+    /* ── DEPARTMENT DROPDOWNS (tier 2) ──
+       A trigger button that opens a menu of related items below it.
+       The menu is absolute-positioned and pinned to the trigger via the
+       relative-positioned wrapper. Items can be either internal panels
+       (onclick) or external links (href). Same look for both. */
+    .dept-dropdown{position:relative}
+    .dept-trigger{display:inline-flex;align-items:center;gap:4px}
+    .dept-chev{transition:transform .15s ease;opacity:.7}
+    .dept-dropdown.open .dept-chev{transform:rotate(180deg)}
+    .dept-dropdown.open .dept-trigger{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.4)}
+    .dept-menu{position:absolute;top:calc(100% + 6px);left:0;min-width:170px;background:var(--card-bg);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-md);overflow:hidden;display:none;z-index:140}
+    .dept-dropdown.open .dept-menu{display:block}
+    .dept-item{display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;text-decoration:none;border-bottom:1px solid var(--border);font-family:inherit;background:transparent}
+    .dept-item:last-child{border-bottom:none}
+    .dept-item:hover{background:var(--hover-bg);color:#3b82f6}
+    .dept-item .dept-ico{display:inline-flex;align-items:center;justify-content:center;color:var(--muted);width:16px;height:16px;flex-shrink:0}
+    .dept-item:hover .dept-ico{color:#3b82f6}
     .user-badge{display:inline-flex;align-items:center;gap:7px;cursor:pointer;padding:3px 10px 3px 4px;border-radius:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);font-size:13px;font-weight:500}
     .user-badge:hover{background:rgba(255,255,255,.14)}
     .avatar{width:24px;height:24px;border-radius:50%;background:#3b82f6;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
@@ -268,6 +286,11 @@
     .ham-item{padding:11px 16px;font-size:14px;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
     .ham-item:last-child{border-bottom:none}
     .ham-item:hover{background:var(--hover-bg)}
+    /* Department-grouped items in the hamburger menu: a small uppercase
+       header above a set of indented items. Mirrors the visual grouping
+       of department dropdowns on desktop. */
+    .ham-section{padding:10px 16px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);border-bottom:1px solid var(--border)}
+    .ham-item.ham-sub{padding-left:28px}
     .ham-item .ham-ico{font-size:16px;width:20px;text-align:center;display:inline-flex;align-items:center;justify-content:center;color:var(--muted)}
     .ham-item .ham-ico svg{display:block}
     .ham-item:hover .ham-ico{color:var(--text)}
@@ -666,13 +689,31 @@
     </div>
   </div>
 
-  <!-- Tier 2: tools and panels. These open overlays rather than navigating
-       away. The active state on each button reflects which panel (if any)
-       is currently open, so the header remains a navigation indicator
-       even while a panel is on top. -->
+  <!-- Tier 2: tools and panels. Department dropdowns (e.g. ALO) group
+       related tools together; flat buttons stay for general utilities.
+       Future departments can add their own dropdowns alongside ALO. -->
   <div class="hdr-tier2">
     <div class="hdr-right" style="margin-left:0">
-      <button class="btn-tool desktop-only" id="hdrReportsBtn" onclick="openReports()" title="Line Status & EOD reports">Reports</button>
+      <!-- ALO department dropdown -->
+      <div class="dept-dropdown desktop-only" data-dropdown="alo">
+        <button class="btn-tool dept-trigger" id="hdrAloBtn" onclick="toggleDeptDropdown('alo')" title="ALO tools and links">
+          ALO
+          <svg class="dept-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="dept-menu" id="deptMenuAlo">
+          <div class="dept-item" onclick="closeDeptDropdowns();openReports()">
+            <span class="dept-ico" data-icon="clipboard"></span>Reports
+          </div>
+          <!-- External links: href values to be filled in by Corey when ready -->
+          <a class="dept-item" href="10.187.7.16" target="_blank" rel="noopener" onclick="closeDeptDropdowns()">
+            <span class="dept-ico" data-icon="link"></span>FlexLab
+          </a>
+          <a class="dept-item" href="das.davita.com" target="_blank" rel="noopener" onclick="closeDeptDropdowns()">
+            <span class="dept-ico" data-icon="link"></span>DAS
+          </a>
+        </div>
+      </div>
+      <!-- Flat utility buttons -->
       <button class="btn-tool desktop-only" id="hdrArchiveBtn" onclick="openArchive()" title="View archived issues">Archive</button>
       <button class="btn-tool desktop-only" id="hdrStatsBtn" onclick="openStats()" title="View statistics">Stats</button>
       <button class="btn-tool desktop-only" onclick="window.print()" title="Print current board">Print</button>
@@ -686,7 +727,12 @@
   <div class="ham-item" onclick="closeHam();openNewBoard()"><span class="ham-ico" data-icon="plus"></span>New Board</div>
   <div class="ham-item" onclick="closeHam();deleteBoard()"><span class="ham-ico" data-icon="close"></span>Delete Board</div>
   <div class="ham-item" onclick="closeHam();openToday()"><span class="ham-ico" data-icon="today"></span>Today</div>
-  <div class="ham-item" onclick="closeHam();openReports()"><span class="ham-ico" data-icon="clipboard"></span>Reports</div>
+  <!-- ALO group on mobile: rendered as section header + indented items.
+       External links use anchor tags so they work as native links on tap. -->
+  <div class="ham-section">ALO</div>
+  <div class="ham-item ham-sub" onclick="closeHam();openReports()"><span class="ham-ico" data-icon="clipboard"></span>Reports</div>
+  <a class="ham-item ham-sub" href="10.187.7.16" target="_blank" rel="noopener" onclick="closeHam()"><span class="ham-ico" data-icon="link"></span>FlexLab</a>
+  <a class="ham-item ham-sub" href="das.davita.com" target="_blank" rel="noopener" onclick="closeHam()"><span class="ham-ico" data-icon="link"></span>DAS</a>
   <div class="ham-item" onclick="closeHam();openArchive()"><span class="ham-ico" data-icon="archive"></span>Archive</div>
   <div class="ham-item" onclick="closeHam();openStats()"><span class="ham-ico" data-icon="chart"></span>Stats</div>
   <div class="ham-item" onclick="closeHam();window.print()"><span class="ham-ico" data-icon="printer"></span>Print</div>
@@ -993,6 +1039,8 @@ const ICONS = {
   // X / close / delete: used in hamburger menu for "Delete Board"
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
   // Bell: in-app mention notification (replaces 💬 in browser notification body)
+  // Chain link: external links in department dropdowns (FlexLab, DAS, etc.)
+  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>'
 };
 
@@ -1235,6 +1283,34 @@ function closeHam(){
   if(menu) menu.classList.remove('open');
 }
 
+// Department dropdown toggle. Multiple departments can be added over
+// time (e.g. ALO, Siemens, Leads); only one is open at a time. The
+// trigger button and menu share a parent .dept-dropdown wrapper that
+// gets the .open class to control visibility and chevron rotation.
+function toggleDeptDropdown(deptKey){
+  const wrapper = document.querySelector(`.dept-dropdown[data-dropdown="${deptKey}"]`);
+  if(!wrapper) return;
+  const wasOpen = wrapper.classList.contains('open');
+  // Close all department dropdowns first so opening another one auto-closes the previous
+  closeDeptDropdowns();
+  // If the clicked dropdown was closed, open it. (If it was already
+  // open, the closeAll call above has already closed it, which is the
+  // intended toggle-off behavior.)
+  if(!wasOpen) wrapper.classList.add('open');
+}
+
+function closeDeptDropdowns(){
+  document.querySelectorAll('.dept-dropdown.open').forEach(d => d.classList.remove('open'));
+}
+
+// Close any open department dropdown when clicking outside it. Same
+// pattern as the hamburger menu; runs in the same global click handler
+// space but inspects different DOM ancestors.
+document.addEventListener('click', (e)=>{
+  if(e.target.closest('.dept-dropdown')) return;
+  closeDeptDropdowns();
+});
+
 // Close hamburger when clicking outside
 document.addEventListener('click', (e)=>{
   const menu = document.getElementById('hamMenu');
@@ -1254,7 +1330,10 @@ function updateHeaderActiveStates(){
     if(btn) btn.classList.toggle('active', open);
   };
   setActive('hdrTodayBtn', isOpen('todayPanel'));
-  setActive('hdrReportsBtn', isOpen('reportsPanel'));
+  // Reports lives inside the ALO dropdown now; highlight the dropdown
+  // trigger when Reports is the active panel so the user still has a
+  // clear "you are here" signal at the tier-2 level.
+  setActive('hdrAloBtn', isOpen('reportsPanel'));
   setActive('hdrArchiveBtn', isOpen('archivePanel'));
   setActive('hdrStatsBtn', isOpen('statsPanel'));
 }
@@ -1492,18 +1571,25 @@ async function deleteBoard(){
   const msg=`Delete board "${board.title}"?\n\nThis will permanently delete the board and all ${issueCount} issue${issueCount===1?'':'s'} on it. This cannot be undone.`;
   if(!confirm(msg)) return;
 
-  // Delete all issues on this board
-  if(issues.length){
-    const deletes=issues.map(i=>db.collection('issues').doc(i.id).delete());
-    await Promise.all(deletes);
-  }
-  // Delete the board itself
-  await db.collection('boards').doc(boardId).delete();
+  try {
+    // Delete all issues on this board
+    if(issues.length){
+      const deletes=issues.map(i=>db.collection('issues').doc(i.id).delete());
+      await Promise.all(deletes);
+    }
+    // Delete the board itself
+    await db.collection('boards').doc(boardId).delete();
 
-  // Stop listening, reload boards, switch to first remaining
-  if(issueSub){issueSub();issueSub=null}
-  await loadBoards();
-  showToast('Board deleted.');
+    // Stop listening, reload boards, switch to first remaining
+    if(issueSub){issueSub();issueSub=null}
+    await loadBoards();
+    showToast('Board deleted.');
+  } catch(e){
+    // Most commonly this is a Firestore permission error (e.g. security
+    // rules denying the delete). Surface it instead of failing silently.
+    console.error('Board delete failed:', e);
+    alert(`Couldn't delete the board.\n\n${e.message || e}\n\nIf this is a permission error, check the Firestore rules for the 'boards' collection.`);
+  }
 }
 
 // ── ISSUES REALTIME ───────────────────────────────────────────
