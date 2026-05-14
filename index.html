@@ -704,8 +704,11 @@
           <div class="dept-item" onclick="closeDeptDropdowns();openReports()">
             <span class="dept-ico" data-icon="clipboard"></span>Reports
           </div>
-          <!-- External links -->
-          <a class="dept-item" href="https://das.davita.com" target="_blank" rel="noopener" onclick="closeDeptDropdowns()">
+          <!-- External links: href values to be filled in by Corey when ready -->
+          <a class="dept-item" href="#" target="_blank" rel="noopener" onclick="closeDeptDropdowns()">
+            <span class="dept-ico" data-icon="link"></span>FlexLab
+          </a>
+          <a class="dept-item" href="#" target="_blank" rel="noopener" onclick="closeDeptDropdowns()">
             <span class="dept-ico" data-icon="link"></span>DAS
           </a>
         </div>
@@ -728,7 +731,8 @@
        External links use anchor tags so they work as native links on tap. -->
   <div class="ham-section">ALO</div>
   <div class="ham-item ham-sub" onclick="closeHam();openReports()"><span class="ham-ico" data-icon="clipboard"></span>Reports</div>
-  <a class="ham-item ham-sub" href="https://das.davita.com" target="_blank" rel="noopener" onclick="closeHam()"><span class="ham-ico" data-icon="link"></span>DAS</a>
+  <a class="ham-item ham-sub" href="#" target="_blank" rel="noopener" onclick="closeHam()"><span class="ham-ico" data-icon="link"></span>FlexLab</a>
+  <a class="ham-item ham-sub" href="#" target="_blank" rel="noopener" onclick="closeHam()"><span class="ham-ico" data-icon="link"></span>DAS</a>
   <div class="ham-item" onclick="closeHam();openArchive()"><span class="ham-ico" data-icon="archive"></span>Archive</div>
   <div class="ham-item" onclick="closeHam();openStats()"><span class="ham-ico" data-icon="chart"></span>Stats</div>
   <div class="ham-item" onclick="closeHam();window.print()"><span class="ham-ico" data-icon="printer"></span>Print</div>
@@ -2769,6 +2773,64 @@ function renderLineStatus(){
         </div>
 
         <div class="ls-section">
+          <div class="ls-sec-title">Unpacking / Shipments</div>
+          <table class="ls-unpack-tbl">
+            <thead>
+              <tr><th rowspan="2" style="width:90px">Unpacking</th><th>Ongoing</th><th>Completed</th></tr>
+              <tr>
+                <td><div class="ls-x-cell ${lsState.unpacking.ongoing?'checked':''}" onclick="lsToggleUnpack('ongoing')">${lsState.unpacking.ongoing?'X':''}</div></td>
+                <td><div class="ls-x-cell ${lsState.unpacking.completed?'checked':''}" onclick="lsToggleUnpack('completed')">${lsState.unpacking.completed?'X':''}</div></td>
+              </tr>
+              <tr><th style="width:90px">Line Haul</th><th>FLX</th><th>FedEx</th><th>UPS</th><th>WC</th></tr>
+              <tr>
+                <td></td>
+                <td><div class="ls-x-cell ${lsState.unpacking.lh_flx?'checked':''}" onclick="lsToggleUnpack('lh_flx')">${lsState.unpacking.lh_flx?'X':''}</div></td>
+                <td><div class="ls-x-cell ${lsState.unpacking.lh_fedex?'checked':''}" onclick="lsToggleUnpack('lh_fedex')">${lsState.unpacking.lh_fedex?'X':''}</div></td>
+                <td><div class="ls-x-cell ${lsState.unpacking.lh_ups?'checked':''}" onclick="lsToggleUnpack('lh_ups')">${lsState.unpacking.lh_ups?'X':''}</div></td>
+                <td><div class="ls-x-cell ${lsState.unpacking.lh_wc?'checked':''}" onclick="lsToggleUnpack('lh_wc')">${lsState.unpacking.lh_wc?'X':''}</div></td>
+              </tr>
+            </thead>
+          </table>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px">
+            BB / OP Notes
+            <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <select class="ls-mini" style="font-size:11px" onchange="lsSourceBoard=this.value||null">
+                <option value="">Current board</option>
+                ${boards.map(b=>`<option value="${b.id}" ${lsSourceBoard===b.id?'selected':''}>${esc(b.title)}</option>`).join('')}
+              </select>
+              <button class="ls-add-btn" style="font-size:11px;padding:3px 9px" onclick="lsRefreshNotes()">Refresh from Board</button>
+            </div>
+          </div>
+          <div class="ls-cell-hdr bb" style="margin-top:5px">BB</div>
+          <textarea class="ls-textarea" placeholder="One issue per line (will render as bullets)" oninput="lsUpdate('bbNotes',this.value)">${esc(lsState.bbNotes)}</textarea>
+          <div class="ls-cell-hdr op" style="margin-top:8px">OP</div>
+          <textarea class="ls-textarea" placeholder="One issue per line (will render as bullets)" oninput="lsUpdate('opNotes',this.value)">${esc(lsState.opNotes)}</textarea>
+        </div>
+
+        <div class="ls-section">
+          <div class="ls-sec-title">Startup Times</div>
+          <table class="ls-startup-tbl">
+            <thead>
+              <tr><th>Dept/Module</th><th style="color:var(--bb)">BB</th><th style="color:var(--op)">OP</th><th>Full</th><th>Partial</th></tr>
+            </thead>
+            <tbody>
+              ${lsState.startup.map((r,i)=>`
+                <tr>
+                  <td style="text-align:left;font-weight:600">${esc(r.dept)}:</td>
+                  <td><input value="${esc(r.bb)}" placeholder="--:--" oninput="lsUpdateStartup(${i},'bb',this.value)" /></td>
+                  <td><input value="${esc(r.op)}" placeholder="--:--" oninput="lsUpdateStartup(${i},'op',this.value)" /></td>
+                  <td><div class="ls-x-cell ${r.full?'checked':''}" onclick="lsToggleStartup(${i},'full')">${r.full?'X':''}</div></td>
+                  <td><div class="ls-x-cell ${r.partial?'checked':''}" onclick="lsToggleStartup(${i},'partial')">${r.partial?'X':''}</div></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="ls-section">
           <div class="ls-sec-title">Buckets to Load</div>
           <div class="ls-row">
             <select class="ls-mini w70" onchange="lsUpdate('bucketCount',this.value)">
@@ -2862,64 +2924,6 @@ function renderLineStatus(){
               </div>
             `).join('')}
           </div>
-        </div>
-
-        <div class="ls-section">
-          <div class="ls-sec-title">Startup Times</div>
-          <table class="ls-startup-tbl">
-            <thead>
-              <tr><th>Dept/Module</th><th style="color:var(--bb)">BB</th><th style="color:var(--op)">OP</th><th>Full</th><th>Partial</th></tr>
-            </thead>
-            <tbody>
-              ${lsState.startup.map((r,i)=>`
-                <tr>
-                  <td style="text-align:left;font-weight:600">${esc(r.dept)}:</td>
-                  <td><input value="${esc(r.bb)}" placeholder="--:--" oninput="lsUpdateStartup(${i},'bb',this.value)" /></td>
-                  <td><input value="${esc(r.op)}" placeholder="--:--" oninput="lsUpdateStartup(${i},'op',this.value)" /></td>
-                  <td><div class="ls-x-cell ${r.full?'checked':''}" onclick="lsToggleStartup(${i},'full')">${r.full?'X':''}</div></td>
-                  <td><div class="ls-x-cell ${r.partial?'checked':''}" onclick="lsToggleStartup(${i},'partial')">${r.partial?'X':''}</div></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-
-        <div class="ls-section">
-          <div class="ls-sec-title">Unpacking / Shipments</div>
-          <table class="ls-unpack-tbl">
-            <thead>
-              <tr><th rowspan="2" style="width:90px">Unpacking</th><th>Ongoing</th><th>Completed</th></tr>
-              <tr>
-                <td><div class="ls-x-cell ${lsState.unpacking.ongoing?'checked':''}" onclick="lsToggleUnpack('ongoing')">${lsState.unpacking.ongoing?'X':''}</div></td>
-                <td><div class="ls-x-cell ${lsState.unpacking.completed?'checked':''}" onclick="lsToggleUnpack('completed')">${lsState.unpacking.completed?'X':''}</div></td>
-              </tr>
-              <tr><th style="width:90px">Line Haul</th><th>FLX</th><th>FedEx</th><th>UPS</th><th>WC</th></tr>
-              <tr>
-                <td></td>
-                <td><div class="ls-x-cell ${lsState.unpacking.lh_flx?'checked':''}" onclick="lsToggleUnpack('lh_flx')">${lsState.unpacking.lh_flx?'X':''}</div></td>
-                <td><div class="ls-x-cell ${lsState.unpacking.lh_fedex?'checked':''}" onclick="lsToggleUnpack('lh_fedex')">${lsState.unpacking.lh_fedex?'X':''}</div></td>
-                <td><div class="ls-x-cell ${lsState.unpacking.lh_ups?'checked':''}" onclick="lsToggleUnpack('lh_ups')">${lsState.unpacking.lh_ups?'X':''}</div></td>
-                <td><div class="ls-x-cell ${lsState.unpacking.lh_wc?'checked':''}" onclick="lsToggleUnpack('lh_wc')">${lsState.unpacking.lh_wc?'X':''}</div></td>
-              </tr>
-            </thead>
-          </table>
-        </div>
-
-        <div class="ls-section">
-          <div class="ls-sec-title" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px">
-            BB / OP Notes
-            <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-              <select class="ls-mini" style="font-size:11px" onchange="lsSourceBoard=this.value||null">
-                <option value="">Current board</option>
-                ${boards.map(b=>`<option value="${b.id}" ${lsSourceBoard===b.id?'selected':''}>${esc(b.title)}</option>`).join('')}
-              </select>
-              <button class="ls-add-btn" style="font-size:11px;padding:3px 9px" onclick="lsRefreshNotes()">Refresh from Board</button>
-            </div>
-          </div>
-          <div class="ls-cell-hdr bb" style="margin-top:5px">BB</div>
-          <textarea class="ls-textarea" placeholder="One issue per line (will render as bullets)" oninput="lsUpdate('bbNotes',this.value)">${esc(lsState.bbNotes)}</textarea>
-          <div class="ls-cell-hdr op" style="margin-top:8px">OP</div>
-          <textarea class="ls-textarea" placeholder="One issue per line (will render as bullets)" oninput="lsUpdate('opNotes',this.value)">${esc(lsState.opNotes)}</textarea>
         </div>
 
         <div class="ls-actions">
