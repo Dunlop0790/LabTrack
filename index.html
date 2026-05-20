@@ -253,6 +253,17 @@
     /* ── DETAIL ── */
     .dbody{display:grid;grid-template-columns:1fr 260px;gap:22px}
     .desc-box{font-size:14px;line-height:1.6;background:var(--panel-bg);padding:11px;border-radius:6px;margin-bottom:18px;min-height:56px;color:var(--text);white-space:pre-wrap}
+    /* Fix description box: green tint to make it visually distinct from
+       the issue description. Shown in both the live detail view and the
+       archive detail so anyone can look up how a past issue was resolved. */
+    .fix-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;margin-bottom:18px}
+    html.dark .fix-box{background:#052e16;border-color:#166534}
+    .fix-box-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#16a34a;margin-bottom:5px}
+    html.dark .fix-box-lbl{color:#4ade80}
+    .fix-box-text{font-size:13px;line-height:1.55;color:var(--text);white-space:pre-wrap}
+    .fix-box-meta{font-size:11px;color:var(--muted);margin-top:5px}
+    .fix-box-edit{font-size:11px;color:#3b82f6;cursor:pointer;margin-left:8px;font-weight:600}
+    .fix-box-edit:hover{text-decoration:underline}
     .sec-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:9px}
     .clist{display:flex;flex-direction:column;gap:8px;margin-bottom:11px;max-height:210px;overflow-y:auto}
     .ci{background:var(--panel-bg);border-radius:6px;padding:9px 11px}
@@ -1764,7 +1775,7 @@ function renderBoard(){
     if(tFilter!=='all' && i.track!==tFilter) return false;
     if(pFilter!=='all' && i.priority!==pFilter) return false;
     if(term){
-      const hay = `${i.title||''} ${i.description||''} ${i.instrumentType||''} ${i.unitNumber||''} ${i.assignee||''} ${i.createdBy||''}`.toLowerCase();
+      const hay = `${i.title||''} ${i.description||''} ${i.instrumentType||''} ${i.unitNumber||''} ${i.assignee||''} ${i.createdBy||''} ${i.fixDescription||''}`.toLowerCase();
       if(!hay.includes(term)) return false;
     }
     return true;
@@ -1948,6 +1959,24 @@ function buildDetailHTML(i){
       <div class="sec-lbl">Description</div>
       <div class="desc-box">${i.description ? esc(i.description) : '<span style="color:#94a3b8">No description.</span>'}</div>
 
+      ${i.fixDescription ? `
+      <div class="fix-box">
+        <div class="fix-box-lbl">How it was fixed</div>
+        <div class="fix-box-text">${esc(i.fixDescription)}</div>
+        <div class="fix-box-meta">
+          Fixed by ${esc(i.fixedBy||'?')} · ${fmtTime(i.fixedAt)}
+          <span class="fix-box-edit" onclick="editFixDescription('${i.id}','${esc(i.fixDescription)}')">Edit</span>
+        </div>
+      </div>
+      ` : i.status === 'resolved' ? `
+      <div class="fix-box" style="border-style:dashed;background:transparent;opacity:.7">
+        <div class="fix-box-lbl">How it was fixed</div>
+        <div class="fix-box-text" style="color:var(--muted)">No fix description recorded.
+          <span class="fix-box-edit" onclick="editFixDescription('${i.id}','')">Add one</span>
+        </div>
+      </div>
+      ` : ''}
+
       <div class="sec-lbl" style="margin-bottom:9px">Updates & Comments</div>
       <div class="clist" id="clist"><div style="color:#94a3b8;font-size:13px">Loading…</div></div>
       <div class="cinput-row" style="position:relative">
@@ -2020,6 +2049,28 @@ function closeDetail(){
   document.getElementById('detailOverlay').classList.add('hidden');
   if(detailSub){detailSub();detailSub=null}
   if(historySub){historySub();historySub=null}
+}
+
+// Allows amending or adding a fix description after the fact. Used from
+// both the "Edit" link on an existing fix box and the "Add one" prompt
+// on resolved issues that have no fix recorded.
+async function editFixDescription(issueId, current){
+  const newText = prompt('Describe how this issue was fixed:', current||'');
+  if(newText === null) return; // cancelled
+  const trimmed = newText.trim();
+  const update = {
+    fixDescription: trimmed || firebase.firestore.FieldValue.delete(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if(trimmed){
+    update.fixedBy = user.name;
+    update.fixedAt = firebase.firestore.FieldValue.serverTimestamp();
+  }
+  await db.collection('issues').doc(issueId).update(update);
+  if(trimmed){
+    await logActivity(issueId, 'fix', {text: trimmed, amended: true});
+  }
+  showToast(trimmed ? 'Fix description saved.' : 'Fix description removed.');
 }
 
 async function updateField(id, field, val){
@@ -2477,7 +2528,7 @@ function renderArchive(){
   if(bd) items = items.filter(a=>a.boardId===bd);
   if(term){
     items = items.filter(a=>{
-      const hay = `${a.title||''} ${a.description||''} ${a.instrumentType||''} ${a.unitNumber||''} ${a.assignee||''} ${a.createdBy||''}`.toLowerCase();
+      const hay = `${a.title||''} ${a.description||''} ${a.instrumentType||''} ${a.unitNumber||''} ${a.assignee||''} ${a.createdBy||''} ${a.fixDescription||''}`.toLowerCase();
       return hay.includes(term);
     });
   }
@@ -2545,6 +2596,19 @@ async function openArchiveDetail(archId){
       <div>
         <div class="sec-lbl">Description</div>
         <div class="desc-box">${a.description ? esc(a.description) : '<span style="color:#94a3b8">No description.</span>'}</div>
+
+        ${a.fixDescription ? `
+        <div class="fix-box">
+          <div class="fix-box-lbl">How it was fixed</div>
+          <div class="fix-box-text">${esc(a.fixDescription)}</div>
+          <div class="fix-box-meta">Fixed by ${esc(a.fixedBy||'?')} · ${fmtTime(a.fixedAt)}</div>
+        </div>
+        ` : `
+        <div class="fix-box" style="border-style:dashed;background:transparent;opacity:.6">
+          <div class="fix-box-lbl">How it was fixed</div>
+          <div class="fix-box-text" style="color:var(--muted)">No fix description was recorded for this issue.</div>
+        </div>
+        `}
 
         <div class="sec-lbl" style="margin-bottom:9px">Comments (${comments.length})</div>
         <div class="clist">
@@ -2733,7 +2797,7 @@ function exportCSV(source){
     if(bd) items = items.filter(a=>a.boardId===bd);
     if(term){
       items = items.filter(a=>{
-        const hay = `${a.title||''} ${a.description||''} ${a.instrumentType||''} ${a.unitNumber||''} ${a.assignee||''} ${a.createdBy||''}`.toLowerCase();
+        const hay = `${a.title||''} ${a.description||''} ${a.instrumentType||''} ${a.unitNumber||''} ${a.assignee||''} ${a.createdBy||''} ${a.fixDescription||''}`.toLowerCase();
         return hay.includes(term);
       });
     }
