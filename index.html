@@ -576,6 +576,34 @@
     .lsa-entry:hover{background:var(--hover-bg)}
     .lsa-entry-date{font-size:13px;font-weight:600}
     .lsa-entry-meta{font-size:11px;color:var(--muted);margin-top:2px}
+
+    /* ── SUGGESTIONS PANEL ──
+       Cards for each suggestion with author chip, timestamp, thumbs-up
+       count, and a close/reopen affordance for Leads. Closed suggestions
+       collapse into a muted section at the bottom. */
+    .sug-form{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:18px}
+    .sug-form-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px}
+    .sug-form textarea{width:100%;min-height:80px;resize:vertical;font-size:13px;font-family:'Inter',sans-serif;padding:9px 11px;border:1px solid var(--border);border-radius:6px;background:var(--card-bg);color:var(--text);box-sizing:border-box}
+    .sug-form textarea:focus{outline:none;border-color:#3b82f6}
+    .sug-form-row{display:flex;justify-content:flex-end;margin-top:8px}
+    .sug-list{display:flex;flex-direction:column;gap:10px}
+    .sug-card{background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:13px 15px}
+    .sug-card.closed{opacity:.55}
+    .sug-card-text{font-size:14px;line-height:1.55;margin-bottom:10px;white-space:pre-wrap}
+    .sug-card-footer{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .sug-author{font-size:11px;font-weight:600;color:var(--muted)}
+    .sug-time{font-size:11px;color:var(--muted)}
+    .sug-role{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:2px 7px;border-radius:10px;background:var(--code-bg);color:var(--muted)}
+    .sug-thumbs{margin-left:auto;display:flex;align-items:center;gap:5px}
+    .sug-thumbs-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-size:12px;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:4px;font-family:inherit}
+    .sug-thumbs-btn:hover{border-color:#3b82f6;color:#3b82f6}
+    .sug-thumbs-btn.voted{background:#eff6ff;border-color:#3b82f6;color:#3b82f6;font-weight:600}
+    html.dark .sug-thumbs-btn.voted{background:#1e3a5f}
+    .sug-close-btn{font-size:11px;color:var(--muted);cursor:pointer;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:transparent;font-family:inherit}
+    .sug-close-btn:hover{border-color:var(--critical);color:var(--critical)}
+    .sug-close-btn.reopen:hover{border-color:#10b981;color:#10b981}
+    .sug-closed-hdr{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+    .sug-empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px}
   </style>
 </head>
 <body>
@@ -771,6 +799,7 @@
       <!-- Flat utility buttons -->
       <button class="btn-tool desktop-only" id="hdrArchiveBtn" onclick="openArchive()" title="View archived issues">Archive</button>
       <button class="btn-tool desktop-only" id="hdrStatsBtn" onclick="openStats()" title="View statistics">Stats</button>
+      <button class="btn-tool desktop-only" id="hdrSuggestBtn" onclick="openSuggestions()" title="Team suggestions and feature requests">Suggestions</button>
       <button class="btn-tool desktop-only" onclick="window.print()" title="Print current board">Print</button>
     </div>
   </div>
@@ -789,6 +818,7 @@
   <a class="ham-item ham-sub" href="http://das.davita.com" target="_blank" rel="noopener" onclick="closeHam()"><span class="ham-ico" data-icon="link"></span>DAS</a>
   <div class="ham-item" onclick="closeHam();openArchive()"><span class="ham-ico" data-icon="archive"></span>Archive</div>
   <div class="ham-item" onclick="closeHam();openStats()"><span class="ham-ico" data-icon="chart"></span>Stats</div>
+  <div class="ham-item" onclick="closeHam();openSuggestions()"><span class="ham-ico" data-icon="bell"></span>Suggestions</div>
   <div class="ham-item" onclick="closeHam();window.print()"><span class="ham-ico" data-icon="printer"></span>Print</div>
   <div class="ham-item" onclick="closeHam();toggleTheme()"><span class="ham-ico" id="hamThemeIco"></span><span id="hamThemeLbl">Dark Mode</span></div>
   <div class="ham-item godzilla-ham" onclick="closeHam();toggleGodzilla()"><span class="ham-ico">🦖</span><span id="hamGodzillaLbl">Godzilla Mode</span></div>
@@ -896,6 +926,22 @@
       <button class="mclose" style="margin-left:auto" onclick="closeToday()">×</button>
     </div>
     <div class="panel-body" id="todayBody"></div>
+  </div>
+</div>
+
+<!-- ── SUGGESTIONS PANEL ──
+     A lightweight channel for the team to post feature requests,
+     workflow improvements, or general feedback. Anyone signed in can
+     post. Thumbs-up counts let ideas surface organically. Leads can
+     mark items closed once acted on or declined.
+-->
+<div class="panel-overlay" id="suggestPanel">
+  <div class="panel" style="max-width:700px">
+    <div class="panel-hdr">
+      <div class="panel-title">Suggestions</div>
+      <button class="mclose" style="margin-left:auto" onclick="closeSuggestions()">×</button>
+    </div>
+    <div class="panel-body" id="suggestBody"></div>
   </div>
 </div>
 
@@ -1420,12 +1466,10 @@ function updateHeaderActiveStates(){
     if(btn) btn.classList.toggle('active', open);
   };
   setActive('hdrTodayBtn', isOpen('todayPanel'));
-  // Reports lives inside the ALO dropdown now; highlight the dropdown
-  // trigger when Reports is the active panel so the user still has a
-  // clear "you are here" signal at the tier-2 level.
   setActive('hdrAloBtn', isOpen('reportsPanel'));
   setActive('hdrArchiveBtn', isOpen('archivePanel'));
   setActive('hdrStatsBtn', isOpen('statsPanel'));
+  setActive('hdrSuggestBtn', isOpen('suggestPanel'));
 }
 
 // ── ACTIVITY LOG ──────────────────────────────────────────────
@@ -4922,6 +4966,147 @@ async function purgePublishedReportsDaily(){
   } catch(e){
     console.warn('Published report purge failed:', e);
   }
+}
+
+// ── SUGGESTIONS ───────────────────────────────────────────────
+// A lightweight team feedback channel. Anyone signed in can post a
+// suggestion, thumbs-up others' ideas, and see what the team is
+// thinking. Leads can mark items closed. Firestore collection:
+// suggestions/{id} with fields: text, author, role, createdAt,
+// status ('open'|'closed'), closedBy, closedAt, thumbs (string[]).
+
+let suggestSub = null;
+
+function openSuggestions(){
+  document.getElementById('suggestPanel').classList.add('open');
+  updateHeaderActiveStates();
+  renderSuggestions();
+}
+
+function closeSuggestions(){
+  document.getElementById('suggestPanel').classList.remove('open');
+  if(suggestSub){ suggestSub(); suggestSub = null; }
+  updateHeaderActiveStates();
+}
+
+function renderSuggestions(){
+  const body = document.getElementById('suggestBody');
+  body.innerHTML = `
+    <div class="sug-form">
+      <div class="sug-form-lbl">Post a suggestion</div>
+      <textarea id="sugText" maxlength="600" placeholder="Feature requests, workflow ideas, things that could work better..."></textarea>
+      <div class="sug-form-row">
+        <button class="btn btn-p" style="font-size:13px;padding:7px 16px" onclick="submitSuggestion()">Post</button>
+      </div>
+    </div>
+    <div id="sugList"><div style="color:var(--muted);font-style:italic;font-size:13px;padding:10px 0">Loading...</div></div>
+  `;
+
+  // Real-time subscription so new suggestions and votes appear live.
+  // Ordered by creation time descending so newest are at the top.
+  if(suggestSub){ suggestSub(); suggestSub = null; }
+  suggestSub = db.collection('suggestions')
+    .orderBy('createdAt','desc')
+    .onSnapshot(snap => {
+      const items = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      populateSuggestList(items);
+    });
+}
+
+function populateSuggestList(items){
+  const list = document.getElementById('sugList');
+  if(!list) return;
+
+  const open = items.filter(s => s.status !== 'closed');
+  const closed = items.filter(s => s.status === 'closed');
+
+  // Leads can close/reopen; everyone can see the button but only
+  // Leads and ALOs get the action. Guests are blocked at the write gate.
+  const canClose = ['Lead','ALO'].includes(user?.role);
+
+  function cardHTML(s){
+    const thumbs = Array.isArray(s.thumbs) ? s.thumbs : [];
+    const voted = thumbs.includes(user?.name);
+    const isClosed = s.status === 'closed';
+    return `
+      <div class="sug-card${isClosed?' closed':''}" id="sugCard_${s.id}">
+        <div class="sug-card-text">${esc(s.text||'')}</div>
+        <div class="sug-card-footer">
+          <span class="sug-author">${esc(s.author||'?')}</span>
+          <span class="sug-role">${esc(s.role||'')}</span>
+          <span class="sug-time">${fmtTime(s.createdAt)}</span>
+          <div class="sug-thumbs">
+            <button class="sug-thumbs-btn${voted?' voted':''}" onclick="toggleSuggestThumb('${s.id}','${esc(user?.name||'')}',${voted})">
+              👍 ${thumbs.length || 0}
+            </button>
+            ${canClose ? `<button class="sug-close-btn${isClosed?' reopen':''}" onclick="setSuggestClosed('${s.id}',${!isClosed})">${isClosed?'Reopen':'Close'}</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  let html = '';
+  if(!open.length && !closed.length){
+    html = '<div class="sug-empty">No suggestions yet. Be the first to post one.</div>';
+  } else {
+    if(open.length){
+      html += `<div class="sug-list">${open.map(cardHTML).join('')}</div>`;
+    } else {
+      html += '<div class="sug-empty" style="padding:20px 0">No open suggestions.</div>';
+    }
+    if(closed.length){
+      html += `<div class="sug-closed-hdr">Closed (${closed.length})</div>`;
+      html += `<div class="sug-list">${closed.map(cardHTML).join('')}</div>`;
+    }
+  }
+  list.innerHTML = html;
+}
+
+async function submitSuggestion(){
+  if(!requireIdentity('post suggestions')) return;
+  const text = document.getElementById('sugText')?.value.trim();
+  if(!text){ showToast('Type something first.'); return; }
+  if(text.length > 600){ showToast('Keep it under 600 characters.'); return; }
+
+  await db.collection('suggestions').add({
+    text,
+    author: user.name,
+    role: user.role,
+    status: 'open',
+    thumbs: [],
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  const ta = document.getElementById('sugText');
+  if(ta) ta.value = '';
+  showToast('Suggestion posted.');
+}
+
+// Toggles the current user's thumbs-up on a suggestion.
+// Adds the user's name to the thumbs array if not already present,
+// or removes it if they are (toggle behavior).
+async function toggleSuggestThumb(suggId, userName, currentlyVoted){
+  if(!requireIdentity('vote on suggestions')) return;
+  const ref = db.collection('suggestions').doc(suggId);
+  if(currentlyVoted){
+    await ref.update({
+      thumbs: firebase.firestore.FieldValue.arrayRemove(userName)
+    });
+  } else {
+    await ref.update({
+      thumbs: firebase.firestore.FieldValue.arrayUnion(userName)
+    });
+  }
+}
+
+// Closes or reopens a suggestion. Only Leads and ALOs reach this via
+// the UI; the button is hidden for Siemens and Guest users.
+async function setSuggestClosed(suggId, close){
+  if(!requireIdentity('close suggestions')) return;
+  const update = close
+    ? { status:'closed', closedBy:user.name, closedAt:firebase.firestore.FieldValue.serverTimestamp() }
+    : { status:'open', closedBy:firebase.firestore.FieldValue.delete(), closedAt:firebase.firestore.FieldValue.delete() };
+  await db.collection('suggestions').doc(suggId).update(update);
 }
 
 // ── LS ARCHIVE (Bunch 7) ──────────────────────────────────────
