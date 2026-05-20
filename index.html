@@ -3706,8 +3706,8 @@ function renderLsHTML(){
     html += `<table width="375" cellpadding="0" cellspacing="0" style="${T_RESET}width:375px;">` +
       `<thead><tr>` +
       th(160, TH_WHITE+'text-align:left;', 'Departments/Module') +
-      th(55,  TH_WHITE+C_BB, 'BB') +
-      th(55,  TH_WHITE+C_OP, 'OP') +
+      th(55,  TH_BASE+YELLOW+'color:#000;', 'BB') +
+      th(55,  TH_BASE+RED+'color:#000;', 'OP') +
       th(50,  TH_WHITE, 'Full') +
       th(55,  TH_WHITE, 'Partial') +
       `</tr></thead><tbody>`;
@@ -3742,8 +3742,8 @@ function renderLsHTML(){
     html += SECH("Pending Buckets to Relabel:");
     html += `<table width="120" cellpadding="0" cellspacing="0" style="${T_RESET}width:120px;">` +
       `<thead><tr>` +
-      th(60, TH_WHITE+C_BB, 'BB') +
-      th(60, TH_WHITE+C_OP, 'OP') +
+      th(60, TH_BASE+YELLOW+'color:#000;', 'BB') +
+      th(60, TH_BASE+RED+'color:#000;', 'OP') +
       `</tr></thead><tbody><tr>` +
       td(60, TD_BASE, esc(lsState.relabelBb)) +
       td(60, TD_BASE, esc(lsState.relabelOp)) +
@@ -3757,10 +3757,10 @@ function renderLsHTML(){
     html += SECH("OOS Analyzers:");
     html += `<table width="440" cellpadding="0" cellspacing="0" style="${T_RESET}width:440px;">` +
       `<thead><tr>` +
-      th(65,  TH_WHITE+C_BB+'text-align:left;', 'BB') +
-      th(155, TH_WHITE+C_BB+'text-align:left;', '') +
-      th(65,  TH_WHITE+C_OP+'text-align:left;', 'OP') +
-      th(155, TH_WHITE+C_OP+'text-align:left;', '') +
+      th(65,  TH_BASE+YELLOW+'color:#000;text-align:left;', 'BB') +
+      th(155, TH_BASE+YELLOW+'color:#000;text-align:left;', '') +
+      th(65,  TH_BASE+RED+'color:#000;text-align:left;', 'OP') +
+      th(155, TH_BASE+RED+'color:#000;text-align:left;', '') +
       `</tr></thead><tbody>`;
     ['hemo','special','auto'].forEach(d=>{
       const lbl = d==='hemo'?'HEMO':d==='special'?'SPECIAL':'AUTO';
@@ -3781,9 +3781,9 @@ function renderLsHTML(){
     html += SECH("Overloads/Buffer Status:");
     html += `<table width="330" cellpadding="0" cellspacing="0" style="${T_RESET}width:330px;">` +
       `<thead><tr>` +
-      th(65,  TH_WHITE+C_BB+'text-align:left;', 'BB') +
+      th(65,  TH_BASE+YELLOW+'color:#000;text-align:left;', 'BB') +
       th(100, TH_WHITE, '') +
-      th(65,  TH_WHITE+C_OP+'text-align:left;', 'OP') +
+      th(65,  TH_BASE+RED+'color:#000;text-align:left;', 'OP') +
       th(100, TH_WHITE, '') +
       `</tr></thead><tbody>`;
     ['hemo','special','auto'].forEach(d=>{
@@ -3808,9 +3808,9 @@ function renderLsHTML(){
     html += SECH("BIM Read Rates:");
     html += `<table width="260" cellpadding="0" cellspacing="0" style="${T_RESET}width:260px;">` +
       `<thead><tr>` +
-      th(55,  TH_WHITE+C_BB, 'BB') +
+      th(55,  TH_BASE+YELLOW+'color:#000;', 'BB') +
       th(75,  TH_WHITE, '% Success') +
-      th(55,  TH_WHITE+C_OP, 'OP') +
+      th(55,  TH_BASE+RED+'color:#000;', 'OP') +
       th(75,  TH_WHITE, '% Success') +
       `</tr></thead><tbody>`;
     const labels = ['1','2','3','4','5','6','7','8','IOM 1','IOM 2'];
