@@ -561,6 +561,25 @@
     .ls-final-toggle{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;user-select:none}
     .ls-final-toggle input{cursor:pointer;width:14px;height:14px;accent-color:#d97706}
 
+    /* ── LINE STATUS INTERACTIVE PREVIEW TABLE ──
+       The live preview top table has extra controls that do not appear
+       in the copy output: a delete button per row and a ROM Samples input.
+       The delete button is hidden by default and appears on row hover. */
+    .ls-preview-tbl{border-collapse:collapse;width:100%;font-size:12px;font-family:'Inter',sans-serif;margin-bottom:10px}
+    .ls-preview-tbl th,.ls-preview-tbl td{border:1px solid var(--border);padding:4px 7px;text-align:center;vertical-align:middle}
+    .ls-preview-tbl thead th{font-weight:600;background:var(--code-bg)}
+    .ls-preview-tbl .lsp-time{background:#ADD8E6;font-weight:700;color:#000}
+    .ls-preview-tbl .lsp-bb{background:#FFDE2A;color:#000}
+    .ls-preview-tbl .lsp-op{background:#FF5B5B;color:#000}
+    .ls-preview-tbl .lsp-rom-hdr{background:var(--code-bg);min-width:140px}
+    .ls-preview-tbl .lsp-rom-cell{min-width:140px;padding:2px 5px}
+    .ls-preview-tbl .lsp-del-col{width:24px;border:none;background:transparent;padding:0}
+    .lsp-del-btn{display:none;width:20px;height:20px;border-radius:4px;border:1px solid var(--border);background:var(--card-bg);color:var(--critical);font-size:14px;line-height:1;cursor:pointer;padding:0;font-weight:700}
+    .lsp-row:hover .lsp-del-btn{display:inline-flex;align-items:center;justify-content:center}
+    .lsp-del-btn:hover{background:var(--critical);color:#fff;border-color:var(--critical)}
+    .lsp-rom-input{width:100%;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:11px;background:var(--input-bg);color:var(--text);font-family:inherit}
+    .lsp-rom-input:focus{outline:none;border-color:#3b82f6}
+
     /* ── LS ARCHIVE VIEWER ──
        Month/week accordion for the permanent Line Status archive.
        Months start collapsed; the most recent one auto-opens on load. */
@@ -3062,7 +3081,9 @@ let lsState = {
   unpacking: {ongoing:false, completed:false, lh_flx:false, lh_fedex:false, lh_ups:false, lh_wc:false},
   bbNotes: '',
   opNotes: '',
-  isFinal: false
+  isFinal: false,
+  deletedSlots: [],
+  romNotes: {}
 };
 
 let currentReportTab = 'ls';
@@ -3392,9 +3413,77 @@ function lsRefreshNotes(){
 // active textarea or select element, interrupting the user mid-typing.
 // Field-level updates therefore call refreshPreview() while toggle
 // interactions (X buttons, etc.) call the full renderLineStatus().
+// Deletes a single time slot from the final table in the preview.
+function lsDeleteSlot(time){
+  if(!lsState.deletedSlots) lsState.deletedSlots = [];
+  lsState.deletedSlots.push(time);
+  refreshPreview();
+}
+
+// Sets the ROM note for a specific time slot.
+function lsSetRom(time, val){
+  if(!lsState.romNotes) lsState.romNotes = {};
+  lsState.romNotes[time] = val;
+  // No full re-render: the input is live in the DOM already.
+}
+
+// Refreshes only the live preview pane without re-rendering the full
+// form. This is important because re-rendering the form would blur any
+// active textarea or select element, interrupting the user mid-typing.
+// Field-level updates therefore call refreshPreview() while toggle
+// interactions (X buttons, etc.) call the full renderLineStatus().
 function refreshPreview(){
   const el = document.getElementById('lsRender');
-  if(el) el.innerHTML = renderLsHTML();
+  if(!el) return;
+  const final = lsBuildFinalTable();
+  const deleted = new Set(lsState.deletedSlots || []);
+  const fmt = n => typeof n === 'number' ? n.toLocaleString() : (n||'');
+
+  if(!final){
+    // No CSV data yet: fall back to full copy render (shows the placeholder text)
+    el.innerHTML = renderLsHTML();
+    return;
+  }
+
+  // Render the interactive top table, then append the rest of the
+  // sections from renderLsHTML() by stripping the first table out of it.
+  // This avoids any shared-function complexity: lsCopy() always calls
+  // renderLsHTML() directly; the preview adds controls on top.
+  let tableHtml = `<table class="ls-preview-tbl"><thead><tr>
+    <th class="lsp-del-col"></th>
+    <th class="lsp-time">Time</th>
+    <th class="lsp-bb">BB Total</th>
+    <th class="lsp-op">OP Total</th>
+    <th>Hourly Total</th>
+    <th>Running Total</th>
+    <th>Proj. Remaining</th>
+    <th>Projected</th>
+    <th class="lsp-rom-hdr">ROM Samples</th>
+  </tr></thead><tbody>`;
+
+  final.forEach(r => {
+    if(deleted.has(r.time)) return;
+    const rom = (lsState.romNotes||{})[r.time] || '';
+    tableHtml += `<tr class="lsp-row">
+      <td class="lsp-del-col"><button class="lsp-del-btn" onclick="lsDeleteSlot('${r.time.replace(/'/g,"\\'")}')">×</button></td>
+      <td class="lsp-time"><b>${esc(r.time)}</b></td>
+      <td class="lsp-bb">${fmt(r.bb)}</td>
+      <td class="lsp-op">${fmt(r.op)}</td>
+      <td>${fmt(r.hourly)}</td>
+      <td>${fmt(r.running)}</td>
+      <td>${fmt(r.remaining)}</td>
+      <td>${fmt(r.projected)}</td>
+      <td class="lsp-rom-cell"><input class="lsp-rom-input" type="text" value="${esc(rom)}" placeholder="ROM Samples..." oninput="lsSetRom('${r.time.replace(/'/g,"\\'")}',this.value)"></td>
+    </tr>`;
+  });
+
+  tableHtml += `</tbody></table>`;
+
+  // Strip the copy-ready top table from renderLsHTML() output and append
+  // everything after it (notes, startup, buckets, etc.)
+  const copyHtml = renderLsHTML();
+  const afterTable = copyHtml.replace(/^[\s\S]*?<\/table>/, '').replace(/^<div[^>]*>&nbsp;<\/div>/, '');
+  el.innerHTML = tableHtml + afterTable;
 }
 
 function lsClear(){
@@ -3418,7 +3507,10 @@ function lsClear(){
       {dept:'CHE Atellicas', bb:'', op:'', full:false, partial:false}
     ],
     unpacking: {ongoing:false, completed:false, lh_flx:false, lh_fedex:false, lh_ups:false, lh_wc:false},
-    bbNotes:'', opNotes:''
+    bbNotes:'', opNotes:'',
+    isFinal: false,
+    deletedSlots: [],
+    romNotes: {}
   };
   renderLineStatus();
   showToast('Line Status cleared.');
@@ -3631,9 +3723,14 @@ function renderLsHTML(){
 
   let html = '';
 
-  // Final table: 7 columns × 64px = 448px total
+  // Final table: 7 core columns × 64px = 448px, plus optional ROM column (100px)
   if(final){
-    html += `<table width="448" cellpadding="0" cellspacing="0" style="${T_RESET}width:448px;">` +
+    const deleted = new Set(lsState.deletedSlots || []);
+    const romNotes = lsState.romNotes || {};
+    const visibleRows = final.filter(r => !deleted.has(r.time));
+    const hasRom = visibleRows.some(r => romNotes[r.time]);
+    const totalW = hasRom ? 548 : 448;
+    html += `<table width="${totalW}" cellpadding="0" cellspacing="0" style="${T_RESET}width:${totalW}px;">` +
       `<thead><tr>` +
       th(64, TH_BASE+BLUE,   'Time') +
       th(64, TH_BASE+YELLOW, 'BB Total') +
@@ -3642,8 +3739,10 @@ function renderLsHTML(){
       th(64, TH_BASE+BLUE,   'Running Total') +
       th(64, TH_BASE+BLUE,   'Projected Remaining') +
       th(64, TH_BASE+BLUE,   'Projected') +
+      (hasRom ? th(100, TH_BASE+BLUE, 'ROM Samples') : '') +
       `</tr></thead><tbody>`;
-    final.forEach(r=>{
+    visibleRows.forEach(r=>{
+      const rom = romNotes[r.time] || '';
       html += `<tr>` +
         td(64, TD_BASE+BLUE+'font-weight:bold;', `<b>${esc(r.time)}</b>`) +
         td(64, TD_BASE, fmt(r.bb)) +
@@ -3652,6 +3751,7 @@ function renderLsHTML(){
         td(64, TD_BASE, fmt(r.running)) +
         td(64, TD_BASE, fmt(r.remaining)) +
         td(64, TD_BASE, fmt(r.projected)) +
+        (hasRom ? td(100, TD_BASE+'text-align:left;', esc(rom)) : '') +
       `</tr>`;
     });
     html += `</tbody></table>`;
@@ -3843,13 +3943,11 @@ function noteLines(text){
 
 // Copy preview HTML to clipboard as rich content (so it pastes into email clients formatted)
 async function lsCopy(){
-  const el = document.getElementById('lsRender');
-  if(!el) return;
   try {
-    // Wrap the rendered body in a Word-flavored HTML document.
-    // Including the Microsoft Office XML namespaces (xmlns:o, xmlns:w) and the
-    // ProgId meta tag makes Outlook treat the paste as if it came from Word,
-    // which uses a more permissive sanitizer than for generic web HTML.
+    // Use renderLsHTML() directly so the clean copy-ready output is used
+    // rather than the preview innerHTML which contains interactive controls
+    // (delete buttons, ROM inputs) that should not appear in the email.
+    const bodyHtml = renderLsHTML();
     const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -3857,8 +3955,8 @@ async function lsCopy(){
 <meta name="Generator" content="Microsoft Word 15">
 <meta name="Originator" content="Microsoft Word 15">
 </head>
-<body>${el.innerHTML}</body></html>`;
-    const text = el.innerText;
+<body>${bodyHtml}</body></html>`;
+    const text = bodyHtml.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
     if(navigator.clipboard?.write){
       const blob = new Blob([html], {type:'text/html'});
       const textBlob = new Blob([text], {type:'text/plain'});
@@ -4737,11 +4835,6 @@ function lsArchiveDayKey(){
 }
 
 async function lsPublish(){
-  const renderEl = document.getElementById('lsRender');
-  if(!renderEl) {
-    showToast('Open the Line Status form before publishing.');
-    return;
-  }
   const key = todayKey();
   const ref = db.collection('publishedReports').doc(`ls_${key}`);
   const existing = await ref.get();
@@ -4751,7 +4844,9 @@ async function lsPublish(){
     : `Publish this Line Status?${isFinal ? ' Since Final is checked, it will also be saved permanently to the LS Archive.' : ''} It will be visible to everyone on the team under the Today tab.`;
   if(!confirm(confirmMsg)) return;
 
-  const renderedHtml = renderEl.innerHTML;
+  // Use renderLsHTML() directly so the clean copy-ready output is stored,
+  // not the interactive preview HTML which contains delete buttons and inputs.
+  const renderedHtml = renderLsHTML();
   const stateCopy = {...lsState};
   delete stateCopy.csvOp;
   delete stateCopy.csvBb;
