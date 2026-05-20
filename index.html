@@ -549,6 +549,33 @@
        Same shape and weight as the other action buttons for consistency. */
     .btn-publish{background:#10b981;color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
     .btn-publish:hover{background:#059669}
+    /* Final variant: amber color to signal this is a meaningful permanent action */
+    .btn-publish-final{background:#d97706}
+    .btn-publish-final:hover{background:#b45309}
+    /* Final toggle: inline checkbox + label that sits between Copy and Publish */
+    .ls-final-toggle{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;user-select:none}
+    .ls-final-toggle input{cursor:pointer;width:14px;height:14px;accent-color:#d97706}
+
+    /* ── LS ARCHIVE VIEWER ──
+       Month/week accordion for the permanent Line Status archive.
+       Months start collapsed; the most recent one auto-opens on load. */
+    .lsa-list{display:flex;flex-direction:column;gap:8px}
+    .lsa-month{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+    .lsa-month-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;font-size:14px;font-weight:600;cursor:pointer;background:var(--code-bg);user-select:none}
+    .lsa-month-hdr:hover{background:var(--hover-bg)}
+    .lsa-count{font-size:11px;font-weight:500;color:var(--muted);margin-left:auto}
+    .lsa-chev{font-size:12px;color:var(--muted);transition:transform .15s}
+    .lsa-month-body{display:none;padding:10px 14px;display:none;flex-direction:column;gap:8px}
+    .lsa-month.open .lsa-month-body{display:flex}
+    .lsa-month.open .lsa-chev{transform:rotate(180deg)}
+    .lsa-week{border:1px solid var(--border);border-radius:6px;overflow:hidden}
+    .lsa-week-hdr{padding:8px 12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);background:var(--panel-bg);border-bottom:1px solid var(--border)}
+    .lsa-week-body{display:flex;flex-direction:column;gap:0}
+    .lsa-entry{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s}
+    .lsa-entry:last-child{border-bottom:none}
+    .lsa-entry:hover{background:var(--hover-bg)}
+    .lsa-entry-date{font-size:13px;font-weight:600}
+    .lsa-entry-meta{font-size:11px;color:var(--muted);margin-top:2px}
   </style>
 </head>
 <body>
@@ -841,6 +868,7 @@
         <div class="reports-tab active" id="rTabLs" onclick="switchReportTab('ls')">Line Status</div>
         <div class="reports-tab" id="rTabSnap" onclick="switchReportTab('snap')">Saved Snapshots</div>
         <div class="reports-tab" id="rTabEod" onclick="switchReportTab('eod')">EOD</div>
+        <div class="reports-tab" id="rTabLsArch" onclick="switchReportTab('lsarch')">LS Archive</div>
       </div>
       <button class="mclose" style="margin-left:auto" onclick="closeReports()">×</button>
     </div>
@@ -928,6 +956,7 @@ const db = firebase.firestore();
 //     roster         : team member names and roles
 //     meta           : internal maintenance timestamps
 //     lsSnapshots    : saved Line Status and EOD report drafts
+//     lsArchive      : permanent final Line Status records (one per day, keyed YYYY-MM-DD with 05:30 EST day rollover)
 //
 //   Operation types used:
 //     .collection(name).add(data)            : create document
@@ -2970,7 +2999,8 @@ let lsState = {
   ],
   unpacking: {ongoing:false, completed:false, lh_flx:false, lh_fedex:false, lh_ups:false, lh_wc:false},
   bbNotes: '',
-  opNotes: ''
+  opNotes: '',
+  isFinal: false
 };
 
 let currentReportTab = 'ls';
@@ -2996,9 +3026,11 @@ function switchReportTab(tab){
   document.getElementById('rTabLs').classList.toggle('active', tab==='ls');
   document.getElementById('rTabSnap').classList.toggle('active', tab==='snap');
   document.getElementById('rTabEod').classList.toggle('active', tab==='eod');
+  document.getElementById('rTabLsArch').classList.toggle('active', tab==='lsarch');
   if(tab==='ls') renderLineStatus();
   else if(tab==='snap') renderSnapshots();
   else if(tab==='eod') renderEOD();
+  else if(tab==='lsarch') renderLsArchive();
 }
 
 function formatTodayLong(){
@@ -3197,10 +3229,16 @@ function renderLineStatus(){
             <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
             <span class="tt-box">Copies the formatted report so you can paste it directly into an Outlook email. Tables and layout are preserved on paste.</span>
           </span>
+          <label class="ls-final-toggle" title="Mark this as the last Line Status of the shift. Final line statuses are stored permanently in the LS Archive tab.">
+            <input type="checkbox" id="lsFinalCheck" ${lsState.isFinal?'checked':''} onchange="lsUpdate('isFinal',this.checked)">
+            Final
+          </label>
           <span class="tt-wrap tt-flip">
-            <button class="btn-publish" onclick="lsPublish()" title="Publish this report so the team can view it under the Today tab">Publish</button>
+            <button class="btn-publish ${lsState.isFinal?'btn-publish-final':''}" onclick="lsPublish()" title="Publish this report so the team can view it under the Today tab">
+              ${lsState.isFinal ? 'Publish Final' : 'Publish'}
+            </button>
             <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
-            <span class="tt-box">Posts the current report to the Today tab where the whole team can see it in real time. Anyone can edit and republish to correct information without sending a follow-up email.</span>
+            <span class="tt-box">Posts the current report to the Today tab where the whole team can see it in real time. If Final is checked, it is also saved permanently to the LS Archive.</span>
           </span>
         </div>
       </div>
@@ -4661,6 +4699,28 @@ function todayLoadIntoForm(kind){
 // If a published record already exists, this is treated as an edit
 // rather than a new publish, and the editor metadata is updated. A
 // revision row is appended in either case.
+// Returns the YYYY-MM-DD date key to attribute this Line Status to,
+// using a 05:30 EST cutoff. A report published at or before 05:30 EST
+// is attributed to the previous calendar day because late-shift final
+// line statuses are often sent just after midnight but still belong
+// operationally to the previous day (e.g. a Saturday final sent at
+// 02:30 Sunday should be filed under Saturday).
+function lsArchiveDayKey(){
+  const now = new Date();
+  const estOffset = 5 * 60 * 60 * 1000;
+  const est = new Date(now.getTime() - estOffset);
+  const hours = est.getUTCHours();
+  const minutes = est.getUTCMinutes();
+  // Before 05:30 EST: attribute to previous calendar day
+  if(hours < 5 || (hours === 5 && minutes < 30)){
+    est.setUTCDate(est.getUTCDate() - 1);
+  }
+  const y = est.getUTCFullYear();
+  const m = String(est.getUTCMonth() + 1).padStart(2,'0');
+  const d = String(est.getUTCDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+
 async function lsPublish(){
   const renderEl = document.getElementById('lsRender');
   if(!renderEl) {
@@ -4670,54 +4730,54 @@ async function lsPublish(){
   const key = todayKey();
   const ref = db.collection('publishedReports').doc(`ls_${key}`);
   const existing = await ref.get();
-  // Confirmation messaging differs based on whether this is a first publish
-  // or an edit, so the user understands the impact of their click.
+  const isFinal = lsState.isFinal === true;
   const confirmMsg = existing.exists
-    ? 'Update the published Line Status? Everyone on the team will see your edits immediately under the Today tab.'
-    : 'Publish this Line Status? It will be visible to everyone on the team under the Today tab.';
+    ? `Update the published Line Status?${isFinal ? ' This will also save it permanently to the LS Archive as the final report for the day.' : ''} Everyone on the team will see your edits immediately under the Today tab.`
+    : `Publish this Line Status?${isFinal ? ' Since Final is checked, it will also be saved permanently to the LS Archive.' : ''} It will be visible to everyone on the team under the Today tab.`;
   if(!confirm(confirmMsg)) return;
 
   const renderedHtml = renderEl.innerHTML;
   const stateCopy = {...lsState};
-  // Don't store the CSV file object handles in the published payload
   delete stateCopy.csvOp;
   delete stateCopy.csvBb;
   const data = JSON.stringify(stateCopy);
-
   const now = firebase.firestore.FieldValue.serverTimestamp();
+
   if(existing.exists){
-    // Edit path: increment count, update editor info, keep original publisher
     await ref.update({
-      data,
-      renderedHtml,
+      data, renderedHtml,
       lastEditedBy: user.name,
       lastEditedAt: now,
+      isFinal,
       editCount: firebase.firestore.FieldValue.increment(1)
     });
-    await ref.collection('revisions').add({
-      by: user.name,
-      action: 'edited',
-      at: now
-    });
-    showToast('Line Status updated.');
+    await ref.collection('revisions').add({by:user.name, action: isFinal ? 'edited (final)' : 'edited', at:now});
+    showToast(isFinal ? 'Line Status updated and saved to archive.' : 'Line Status updated.');
   } else {
-    // First publish today
     await ref.set({
-      data,
+      data, renderedHtml,
+      publishedBy: user.name, publishedAt: now,
+      lastEditedBy: user.name, lastEditedAt: now,
+      isFinal, editCount: 1, dateKey: key
+    });
+    await ref.collection('revisions').add({by:user.name, action: isFinal ? 'published (final)' : 'published', at:now});
+    showToast(isFinal ? 'Line Status published and saved to archive.' : 'Line Status published. Visible to all under the Today tab.');
+  }
+
+  // If marked Final, write to the permanent lsArchive collection.
+  // Uses the day key with 05:30 EST cutoff so late-shift finals are
+  // attributed to the correct calendar day.
+  if(isFinal){
+    const archKey = lsArchiveDayKey();
+    await db.collection('lsArchive').doc(archKey).set({
       renderedHtml,
+      data,
+      date: archKey,
       publishedBy: user.name,
       publishedAt: now,
-      lastEditedBy: user.name,
-      lastEditedAt: now,
-      editCount: 1,
-      dateKey: key
+      // Month key for grouping in the archive viewer (YYYY-MM)
+      monthKey: archKey.slice(0, 7)
     });
-    await ref.collection('revisions').add({
-      by: user.name,
-      action: 'published',
-      at: now
-    });
-    showToast('Line Status published. Visible to all under the Today tab.');
   }
 }
 
@@ -4862,6 +4922,138 @@ async function purgePublishedReportsDaily(){
   } catch(e){
     console.warn('Published report purge failed:', e);
   }
+}
+
+// ── LS ARCHIVE (Bunch 7) ──────────────────────────────────────
+// Viewer for permanent final Line Status records. Organized by month
+// then by week (Sunday to Saturday) so the team can quickly find a
+// specific shift's final report. Only Line Statuses published with
+// the Final toggle are stored here.
+//
+// Day attribution uses the 05:30 EST cutoff: a final sent at 02:30
+// Sunday is stored under Saturday's date key so it sits in the right
+// shift's week bucket.
+
+async function renderLsArchive(){
+  const body = document.getElementById('reportsBody');
+  body.innerHTML = '<div style="color:var(--muted);font-style:italic;padding:30px;text-align:center">Loading archive...</div>';
+
+  const snap = await db.collection('lsArchive').orderBy('date','desc').get();
+  const entries = snap.docs.map(d => ({id:d.id, ...d.data()}));
+
+  if(!entries.length){
+    body.innerHTML = `
+      <div style="padding:40px;text-align:center;color:var(--muted)">
+        <div style="font-size:36px;margin-bottom:12px;opacity:.5">${ICONS.archive}</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:6px">No final line statuses yet</div>
+        <div style="font-size:13px">When you publish a Line Status with the Final checkbox checked, it will appear here.</div>
+      </div>
+    `;
+    return;
+  }
+
+  // Group by month (YYYY-MM) then by week (Sunday-Saturday range)
+  const byMonth = {};
+  entries.forEach(e => {
+    const month = e.monthKey || e.date.slice(0,7);
+    if(!byMonth[month]) byMonth[month] = [];
+    byMonth[month].push(e);
+  });
+
+  // Week range label: given a YYYY-MM-DD date string, return the
+  // Sunday-Saturday range that contains it.
+  function weekRange(dateStr){
+    const d = new Date(dateStr + 'T12:00:00Z');
+    const dow = d.getUTCDay(); // 0=Sun
+    const sun = new Date(d);
+    sun.setUTCDate(d.getUTCDate() - dow);
+    const sat = new Date(sun);
+    sat.setUTCDate(sun.getUTCDate() + 6);
+    const fmt = dt => dt.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'});
+    return `${fmt(sun)} - ${fmt(sat)}`;
+  }
+
+  function monthLabel(ym){
+    const [y, m] = ym.split('-');
+    return new Date(`${y}-${m}-15`).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  }
+
+  function dayLabel(dateStr){
+    const d = new Date(dateStr + 'T12:00:00Z');
+    return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:'UTC'});
+  }
+
+  // Build accordion: months expanded by default, weeks collapsed
+  let html = '<div class="lsa-list">';
+  Object.keys(byMonth).sort().reverse().forEach(month => {
+    const monthEntries = byMonth[month];
+    // Group by week within the month
+    const byWeek = {};
+    monthEntries.forEach(e => {
+      const wr = weekRange(e.date);
+      if(!byWeek[wr]) byWeek[wr] = [];
+      byWeek[wr].push(e);
+    });
+
+    html += `
+      <div class="lsa-month">
+        <div class="lsa-month-hdr" onclick="this.parentElement.classList.toggle('open')">
+          <span>${monthLabel(month)}</span>
+          <span class="lsa-count">${monthEntries.length} final${monthEntries.length===1?'':'s'}</span>
+          <span class="lsa-chev">▾</span>
+        </div>
+        <div class="lsa-month-body">
+    `;
+
+    Object.keys(byWeek).forEach(week => {
+      const weekEntries = byWeek[week];
+      html += `
+        <div class="lsa-week">
+          <div class="lsa-week-hdr">${week}</div>
+          <div class="lsa-week-body">
+            ${weekEntries.map(e => `
+              <div class="lsa-entry" onclick="openLsArchiveEntry('${e.id}')">
+                <div class="lsa-entry-date">${dayLabel(e.date)}</div>
+                <div class="lsa-entry-meta">Published by ${esc(e.publishedBy||'?')} · ${fmtTime(e.publishedAt)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    });
+
+    html += '</div></div>';
+  });
+  html += '</div>';
+
+  // Open the most recent month by default
+  body.innerHTML = html;
+  body.querySelector('.lsa-month')?.classList.add('open');
+}
+
+// Opens a single archived final Line Status in a full-screen overlay.
+// Renders the stored HTML read-only, same as the Today panel viewer.
+async function openLsArchiveEntry(dateKey){
+  const doc = await db.collection('lsArchive').doc(dateKey).get();
+  if(!doc.exists){ showToast('Entry not found.'); return; }
+  const entry = doc.data();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'panel-overlay open';
+  overlay.style.zIndex = '250';
+  overlay.innerHTML = `
+    <div class="panel" style="max-width:1100px">
+      <div class="panel-hdr">
+        <div class="panel-title">Final Line Status</div>
+        <div style="font-size:13px;color:var(--muted);margin-left:10px">${esc(dateKey)} · Published by ${esc(entry.publishedBy||'?')}</div>
+        <button class="mclose" style="margin-left:auto" onclick="this.closest('.panel-overlay').remove()">×</button>
+      </div>
+      <div class="panel-body">
+        <div class="ls-render">${entry.renderedHtml || '<i style="color:var(--muted)">No content stored.</i>'}</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
 }
 
 // ── BOOT ──────────────────────────────────────────────────────
