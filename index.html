@@ -3609,7 +3609,7 @@ function renderLsHTML(){
   const fmt = n => typeof n === 'number' ? n.toLocaleString() : (n || '');
 
   const T_RESET = 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;';
-  const TD_BASE = 'border:1px solid #000;padding:4px 7px;font-size:11px;font-family:Calibri,Arial,sans-serif;text-align:center;vertical-align:middle;white-space:nowrap;';
+  const TD_BASE = 'border:1px solid #000;padding:4px 7px;font-size:11px;font-family:Calibri,Arial,sans-serif;text-align:center;vertical-align:middle;';
   const TH_BASE = TD_BASE + 'font-weight:bold;';
   const TH_WHITE = TH_BASE + 'background:#FFFFFF;';
   const BLUE = 'background:#ADD8E6;';
@@ -3621,8 +3621,8 @@ function renderLsHTML(){
 
   // Helper: td/th with explicit width attribute AND inline style width so
   // Outlook honours it (colgroup/col is ignored by Outlook on paste).
-  const th = (w, style, content) => `<th width="${w}" style="${style}width:${w}px;">${content}</th>`;
-  const td = (w, style, content) => `<td width="${w}" style="${style}width:${w}px;">${content}</td>`;
+  const th = (w, style, content, extra) => `<th width="${w}"${extra||''} style="${style}width:${w}px;">${content}</th>`;
+  const td = (w, style, content, extra) => `<td width="${w}"${extra||''} style="${style}width:${w}px;">${content}</td>`;
 
   const SECH = (txt) => `<p style="${C_SEC}font-weight:bold;margin:8px 0 2px 0;font-family:Calibri,Arial,sans-serif;font-size:13px"><b>${txt}</b></p>`;
   const BBH  = (txt) => `<p style="${C_BB}font-weight:bold;margin:4px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px"><b>${txt}</b></p>`;
@@ -3660,22 +3660,19 @@ function renderLsHTML(){
     html += `<div style="font-style:italic;color:#777;font-size:11px;margin:10px 0;font-family:Calibri,Arial,sans-serif">Upload CSV files and enter projected to generate the table.</div>`;
   }
 
-  // Unpacking + Shipments: 5 columns, total 300px
+  // Unpacking + Shipments: 5 columns (100+50+50+50+50 = 300px)
   const unp = lsState.unpacking;
   const anyUnp = unp.ongoing || unp.completed || unp.lh_flx || unp.lh_fedex || unp.lh_ups || unp.lh_wc;
   if(anyUnp){
     html += SECH("UNPACKING/SHIPMENTS:");
     html += `<table width="300" cellpadding="0" cellspacing="0" style="${T_RESET}width:300px;">` +
       `<tr>` +
-        td(100, TD_BASE+'font-weight:bold;text-align:left;', '<b>Unpacking:</b>') +
-        th(50,  TH_WHITE, 'Ongoing') +
-        th(50,  TH_WHITE, '') +
-        th(50,  TH_WHITE, 'Completed') +
-        th(50,  TH_WHITE, '') +
+        `<td width="100" rowspan="2" style="${TD_BASE}font-weight:bold;text-align:left;width:100px;"><b>Unpacking:</b></td>` +
+        `<th width="100" colspan="2" style="${TH_WHITE}width:100px;">Ongoing</th>` +
+        `<th width="100" colspan="2" style="${TH_WHITE}width:100px;">Completed</th>` +
       `</tr><tr>` +
-        td(100, TD_BASE, '') +
-        td(100, TD_BASE, unp.ongoing?'X':'', ) +
-        td(100, TD_BASE, unp.completed?'X':'') +
+        `<td width="100" colspan="2" style="${TD_BASE}width:100px;">${unp.ongoing?'X':''}</td>` +
+        `<td width="100" colspan="2" style="${TD_BASE}width:100px;">${unp.completed?'X':''}</td>` +
       `</tr><tr>` +
         td(100, TD_BASE+'font-weight:bold;text-align:left;', '<b>Line Haul:</b>') +
         th(50,  TH_WHITE, 'FLX') +
