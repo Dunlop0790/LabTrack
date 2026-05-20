@@ -589,7 +589,7 @@
     </div>
     <div class="frow">
       <div class="fg">
-        <label class="flbl">Priority * ${tt('Critical: line is down or a major process is stopped. Urgent: line is running but degraded and needs attention soon. Monitor: something to keep an eye on, not blocking. Low: non-urgent, can be addressed when time allows.')}</label>
+        <label class="flbl" data-tooltip="Critical: line is down or a major process is stopped. Urgent: line is running but degraded and needs attention soon. Monitor: something to keep an eye on, not blocking. Low: non-urgent, can be addressed when time allows.">Priority *</label>
         <select class="fc" id="issuePriority">
           <option value="critical">● Critical</option>
           <option value="urgent">● Urgent</option>
@@ -636,7 +636,7 @@
       </div>
     </div>
     <div class="fg">
-      <label class="flbl">Assign To ${tt('Who is actively working this issue. You can leave this blank and assign later from the card. Start typing to search the team roster.')}</label>
+      <label class="flbl" data-tooltip="Who is actively working this issue. You can leave this blank and assign later from the card. Start typing to search the team roster.">Assign To</label>
       <div class="assign-wrap">
         <input class="fc" id="issueAssignee" placeholder="Type to search names…" autocomplete="off"
                oninput="showAssignDropdown('issueAssignee','issueAssignList',this.value)"
@@ -1094,9 +1094,19 @@ function injectStaticIcons(root){
     const key = el.getAttribute('data-icon');
     if(ICONS[key]) el.innerHTML = ICONS[key];
   });
-  // Setup screen, hamburger toggle, and the welcome microscope use
-  // dedicated IDs rather than data-icon since their content was set
-  // up in the original HTML; handle them explicitly.
+  // Inject tooltip bubbles into any element with a data-tooltip attribute.
+  // The attribute value becomes the tooltip text; the bubble is appended
+  // after the element's existing text content so labels read naturally.
+  scope.querySelectorAll('[data-tooltip]').forEach(el => {
+    // Skip if already injected (e.g. injectStaticIcons called twice)
+    if(el.querySelector('.tt-wrap')) return;
+    const text = el.getAttribute('data-tooltip');
+    if(!text) return;
+    const wrap = document.createElement('span');
+    wrap.className = 'tt-wrap';
+    wrap.innerHTML = `<button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button><span class="tt-box">${esc(text)}</span>`;
+    el.appendChild(wrap);
+  });
   const setupIco = scope.querySelector('#setupIcon');
   if(setupIco && !setupIco.innerHTML.trim()) setupIco.innerHTML = ICONS.microscope;
   const hamBtn = scope.querySelector('#hamburgerBtn');
