@@ -433,6 +433,7 @@
     .ls-row + .ls-row{margin-top:7px}
     .ls-mini{font-size:12px;padding:5px 9px;border:1.5px solid var(--border);border-radius:5px;background:var(--input-bg);color:var(--text);outline:none;width:auto}
     .ls-mini:focus{border-color:#3b82f6}
+    .ls-mini:focus{border-color:#3b82f6}
     .ls-mini.w70{width:70px}
     .ls-mini.w90{width:90px}
     .ls-lbl{font-size:12px;font-weight:600;color:var(--muted);min-width:80px}
@@ -2841,11 +2842,13 @@ function renderStats(){
     if(trackCounts[i.track]!==undefined) trackCounts[i.track]++;
   });
 
-  // Recurring problems: same instrument+title appearing 3+ times
+  // Recurring problems: same instrument (type + unit) appearing 3+ times.
+  // Title is intentionally excluded since the same physical problem is often
+  // logged with slightly different wording each time.
   const recurMap = {};
   all.forEach(i=>{
     if(!i.instrumentType) return;
-    const key = `${i.instrumentType} ${i.unitNumber||''} – ${(i.title||'').toLowerCase().trim()}`.trim();
+    const key = [i.instrumentType, i.unitNumber||''].filter(Boolean).join(' ');
     recurMap[key] = (recurMap[key]||0)+1;
   });
   const recurring = Object.entries(recurMap).filter(([k,v])=>v>=3).sort((a,b)=>b[1]-a[1]);
@@ -3155,27 +3158,23 @@ function renderLineStatus(){
               ${lsState.startup.map((r,i)=>`
                 <tr>
                   <td style="text-align:left;font-weight:600">${esc(r.dept)}:</td>
-                  <td><input value="${esc(r.bb)}" placeholder="--:--" oninput="lsUpdateStartup(${i},'bb',this.value)" /></td>
-                  <td><input value="${esc(r.op)}" placeholder="--:--" oninput="lsUpdateStartup(${i},'op',this.value)" /></td>
+                  <td><input class="ls-mini" list="dl_startupTime" value="${esc(r.bb)}" placeholder="--:--" oninput="lsUpdateStartup(${i},'bb',this.value)" autocomplete="off" /></td>
+                  <td><input class="ls-mini" list="dl_startupTime" value="${esc(r.op)}" placeholder="--:--" oninput="lsUpdateStartup(${i},'op',this.value)" autocomplete="off" /></td>
                   <td><div class="ls-x-cell ${r.full?'checked':''}" onclick="lsToggleStartup(${i},'full')">${r.full?'X':''}</div></td>
                   <td><div class="ls-x-cell ${r.partial?'checked':''}" onclick="lsToggleStartup(${i},'partial')">${r.partial?'X':''}</div></td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
+          <datalist id="dl_startupTime">${LS_TIME_SLOTS.map(t=>`<option value="${t}">`).join('')}</datalist>
         </div>
 
         <div class="ls-section">
           <div class="ls-sec-title">Buckets to Load</div>
           <div class="ls-row">
-            <select class="ls-mini w70" onchange="lsUpdate('bucketCount',this.value)">
-              ${optList(LS_BUCKET_COUNTS, lsState.bucketCount)}
-            </select>
+            ${comboInput('dl_bucketCount', LS_BUCKET_COUNTS, lsState.bucketCount, "lsUpdate('bucketCount',this.value)", 'w70')}
             <span>@</span>
-            <select class="ls-mini w90" onchange="lsUpdate('bucketTime',this.value)">
-              <option value="">--:--</option>
-              ${optList(LS_TIME_SLOTS, lsState.bucketTime)}
-            </select>
+            ${comboInput('dl_bucketTime', LS_TIME_SLOTS, lsState.bucketTime, "lsUpdate('bucketTime',this.value)", 'w90')}
           </div>
           <textarea class="ls-textarea" placeholder="Optional notes (e.g. '3 Buckets of sorted HEMO')" oninput="lsUpdate('bucketNotes',this.value)" style="margin-top:8px">${esc(lsState.bucketNotes)}</textarea>
         </div>
@@ -3185,17 +3184,11 @@ function renderLineStatus(){
           <div class="ls-grid ls-grid-2">
             <div class="ls-cell">
               <div class="ls-cell-hdr bb">BB</div>
-              <select class="ls-mini" onchange="lsUpdate('relabelBb',this.value)">
-                <option value="">--</option>
-                ${optList(LS_RELABEL_COUNTS, lsState.relabelBb)}
-              </select>
+              ${comboInput('dl_relabelBb', LS_RELABEL_COUNTS, lsState.relabelBb, "lsUpdate('relabelBb',this.value)")}
             </div>
             <div class="ls-cell">
               <div class="ls-cell-hdr op">OP</div>
-              <select class="ls-mini" onchange="lsUpdate('relabelOp',this.value)">
-                <option value="">--</option>
-                ${optList(LS_RELABEL_COUNTS, lsState.relabelOp)}
-              </select>
+              ${comboInput('dl_relabelOp', LS_RELABEL_COUNTS, lsState.relabelOp, "lsUpdate('relabelOp',this.value)")}
             </div>
           </div>
         </div>
@@ -3233,10 +3226,7 @@ function renderLineStatus(){
                 const key = `${t}_${d}`;
                 return `<div class="ls-cell">
                   <div style="font-size:10px;font-weight:700;color:var(--muted)">${d.toUpperCase()}</div>
-                  <select class="ls-mini" onchange="lsUpdateNested('overloads','${key}',this.value)">
-                    <option value="">--</option>
-                    ${LS_OVERLOAD_VALS.map(v=>`<option value="${v}" ${lsState.overloads[key]===v?'selected':''}>${v}</option>`).join('')}
-                  </select>
+                  ${comboInput('dl_ovl_'+key, LS_OVERLOAD_VALS, lsState.overloads[key]||'', "lsUpdateNested('overloads','"+key+"',this.value)")}
                 </div>`;
               }).join('')}
             </div>
@@ -3299,6 +3289,16 @@ function renderLineStatus(){
 // Helper: render <option> list
 function optList(arr, selected){
   return arr.map(v=>`<option value="${v}" ${String(selected)===String(v)?'selected':''}>${v}</option>`).join('');
+}
+
+// Renders an <input> + <datalist> combo so the user can either pick
+// from the list or type freely. The datalist filters as the user types.
+// listId must be unique per field instance. val is the current value.
+// onInput is the JS string to call on input (e.g. "lsUpdate('x',this.value)").
+// cls is an optional extra CSS class string.
+function comboInput(listId, options, val, onInput, cls){
+  const opts = options.map(o=>`<option value="${o}">`).join('');
+  return `<input class="ls-mini${cls?' '+cls:''}" list="${listId}" value="${esc(String(val??''))}" oninput="${onInput}" placeholder="--" autocomplete="off"><datalist id="${listId}">${opts}</datalist>`;
 }
 
 function renderOosTags(key){
@@ -4115,9 +4115,7 @@ function renderEOD(){
           </div>
           <div class="ls-row">
             <span class="ls-lbl">Sample Type(s):</span>
-            <select class="ls-mini" style="flex:1" onchange="eodUpdate('freezerSamplesType',this.value)">
-              ${EOD_DEPT_OPTIONS.map(o=>`<option value="${o}" ${eodState.freezerSamplesType===o?'selected':''}>${o}</option>`).join('')}
-            </select>
+            ${comboInput('dl_eodFreezerType', EOD_DEPT_OPTIONS, eodState.freezerSamplesType, "eodUpdate('freezerSamplesType',this.value)", '')}
           </div>
           <div style="font-size:11px;font-weight:700;color:var(--muted);margin-top:8px;margin-bottom:4px">Reason:</div>
           <div class="ls-row">
@@ -4144,34 +4142,24 @@ function renderEOD(){
           <div class="ls-grid ls-grid-2">
             <div class="ls-cell">
               <div class="ls-cell-hdr bb">BB Complete</div>
-              <select class="ls-mini" onchange="eodUpdate('lineSamplesBbComplete',this.value)">
-                ${optList(EOD_SAMPLE_COUNTS, eodState.lineSamplesBbComplete)}
-              </select>
+              <input class="ls-mini" type="text" inputmode="numeric" value="${esc(eodState.lineSamplesBbComplete)}" placeholder="N/A" oninput="eodUpdate('lineSamplesBbComplete',this.value)" />
             </div>
             <div class="ls-cell">
               <div class="ls-cell-hdr bb">BB Incomplete</div>
-              <select class="ls-mini" onchange="eodUpdate('lineSamplesBbIncomplete',this.value)">
-                ${optList(EOD_SAMPLE_COUNTS, eodState.lineSamplesBbIncomplete)}
-              </select>
+              <input class="ls-mini" type="text" inputmode="numeric" value="${esc(eodState.lineSamplesBbIncomplete)}" placeholder="N/A" oninput="eodUpdate('lineSamplesBbIncomplete',this.value)" />
             </div>
             <div class="ls-cell">
               <div class="ls-cell-hdr op">OP Complete</div>
-              <select class="ls-mini" onchange="eodUpdate('lineSamplesOpComplete',this.value)">
-                ${optList(EOD_SAMPLE_COUNTS, eodState.lineSamplesOpComplete)}
-              </select>
+              <input class="ls-mini" type="text" inputmode="numeric" value="${esc(eodState.lineSamplesOpComplete)}" placeholder="N/A" oninput="eodUpdate('lineSamplesOpComplete',this.value)" />
             </div>
             <div class="ls-cell">
               <div class="ls-cell-hdr op">OP Incomplete</div>
-              <select class="ls-mini" onchange="eodUpdate('lineSamplesOpIncomplete',this.value)">
-                ${optList(EOD_SAMPLE_COUNTS, eodState.lineSamplesOpIncomplete)}
-              </select>
+              <input class="ls-mini" type="text" inputmode="numeric" value="${esc(eodState.lineSamplesOpIncomplete)}" placeholder="N/A" oninput="eodUpdate('lineSamplesOpIncomplete',this.value)" />
             </div>
           </div>
           <div class="ls-row" style="margin-top:8px">
             <span class="ls-lbl">Departments on Line:</span>
-            <select class="ls-mini" style="flex:1" onchange="eodUpdate('lineSamplesDept',this.value)">
-              ${EOD_DEPT_OPTIONS.map(o=>`<option value="${o}" ${eodState.lineSamplesDept===o?'selected':''}>${o}</option>`).join('')}
-            </select>
+            ${comboInput('dl_eodLineDept', EOD_DEPT_OPTIONS, eodState.lineSamplesDept, "eodUpdate('lineSamplesDept',this.value)", '')}
           </div>
           <div style="font-size:11px;font-weight:700;color:var(--muted);margin-top:8px;margin-bottom:4px">Reason:</div>
           <div class="ls-row">
