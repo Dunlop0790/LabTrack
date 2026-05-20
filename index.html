@@ -1959,23 +1959,25 @@ function buildDetailHTML(i){
       <div class="sec-lbl">Description</div>
       <div class="desc-box">${i.description ? esc(i.description) : '<span style="color:#94a3b8">No description.</span>'}</div>
 
-      ${i.fixDescription ? `
-      <div class="fix-box">
-        <div class="fix-box-lbl">How it was fixed</div>
-        <div class="fix-box-text">${esc(i.fixDescription)}</div>
-        <div class="fix-box-meta">
-          Fixed by ${esc(i.fixedBy||'?')} · ${fmtTime(i.fixedAt)}
-          <span class="fix-box-edit" onclick="editFixDescription('${i.id}','${esc(i.fixDescription)}')">Edit</span>
+      <div id="fixContainer">
+        ${i.fixDescription ? `
+        <div class="fix-box">
+          <div class="fix-box-lbl">How it was fixed</div>
+          <div class="fix-box-text">${esc(i.fixDescription)}</div>
+          <div class="fix-box-meta">
+            Fixed by ${esc(i.fixedBy||'?')} · ${fmtTime(i.fixedAt)}
+            <span class="fix-box-edit" onclick="showFixInput('${i.id}','${esc(i.fixDescription)}')">Edit</span>
+          </div>
         </div>
-      </div>
-      ` : i.status === 'resolved' ? `
-      <div class="fix-box" style="border-style:dashed;background:transparent;opacity:.7">
-        <div class="fix-box-lbl">How it was fixed</div>
-        <div class="fix-box-text" style="color:var(--muted)">No fix description recorded.
-          <span class="fix-box-edit" onclick="editFixDescription('${i.id}','')">Add one</span>
+        ` : i.status === 'resolved' ? `
+        <div class="fix-box" style="border-style:dashed;background:transparent;opacity:.75">
+          <div class="fix-box-lbl">How it was fixed</div>
+          <div class="fix-box-text" style="color:var(--muted)">No fix description yet.
+            <span class="fix-box-edit" onclick="showFixInput('${i.id}','')">Add one</span>
+          </div>
         </div>
+        ` : ''}
       </div>
-      ` : ''}
 
       <div class="sec-lbl" style="margin-bottom:9px">Updates & Comments</div>
       <div class="clist" id="clist"><div style="color:#94a3b8;font-size:13px">Loading…</div></div>
@@ -2051,54 +2053,110 @@ function closeDetail(){
   if(historySub){historySub();historySub=null}
 }
 
-// Allows amending or adding a fix description after the fact. Used from
-// both the "Edit" link on an existing fix box and the "Add one" prompt
-// on resolved issues that have no fix recorded.
-async function editFixDescription(issueId, current){
-  const newText = prompt('Describe how this issue was fixed:', current||'');
-  if(newText === null) return; // cancelled
-  const trimmed = newText.trim();
-  const update = {
-    fixDescription: trimmed || firebase.firestore.FieldValue.delete(),
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  };
-  if(trimmed){
+// Shows the inline fix description input in the detail view.
+// Called when the user clicks "Add fix description" or "Edit".
+// Replaces the current fix box content with an editable textarea
+// and Save button, matching the style of the comments input.
+function showFixInput(issueId, current){
+  const container = document.getElementById('fixContainer');
+  if(!container) return;
+  container.innerHTML = `
+    <div class="fix-box">
+      <div class="fix-box-lbl">How it was fixed</div>
+      <div class="cinput-row" style="position:relative;margin-top:6px">
+        <textarea class="fc" id="fixText" placeholder="Briefly describe what fixed this issue. This will be visible to the whole team in the resolved view and the archive." style="min-height:72px;font-size:13px">${esc(current||'')}</textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:7px;justify-content:flex-end">
+        <button class="btn btn-g" style="font-size:12px;padding:5px 12px" onclick="cancelFixInput('${issueId}')">Cancel</button>
+        <button class="btn btn-p" style="font-size:12px;padding:5px 12px" onclick="saveFixDescription('${issueId}')">Save Fix</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('fixText')?.focus();
+}
+
+// Cancels the inline fix input and restores the previous display.
+// Re-fetches the current issue state so the box reflects whatever
+// was last saved rather than a stale cached value.
+function cancelFixInput(issueId){
+  const issue = issues.find(i=>i.id===issueId);
+  if(issue) renderFixBox(issueId, issue);
+}
+
+// Saves the fix description from the inline textarea to Firestore.
+async function saveFixDescription(issueId){
+  const text = document.getElementById('fixText')?.value.trim();
+  const update = {updatedAt: firebase.firestore.FieldValue.serverTimestamp()};
+  if(text){
+    update.fixDescription = text;
     update.fixedBy = user.name;
     update.fixedAt = firebase.firestore.FieldValue.serverTimestamp();
+  } else {
+    update.fixDescription = firebase.firestore.FieldValue.delete();
+    update.fixedBy = firebase.firestore.FieldValue.delete();
+    update.fixedAt = firebase.firestore.FieldValue.delete();
   }
   await db.collection('issues').doc(issueId).update(update);
-  if(trimmed){
-    await logActivity(issueId, 'fix', {text: trimmed, amended: true});
+  if(text) await logActivity(issueId, 'fix', {text});
+  showToast(text ? 'Fix description saved.' : 'Fix description removed.');
+  // Refresh the fix box from the updated Firestore doc
+  const snap = await db.collection('issues').doc(issueId).get();
+  if(snap.exists){
+    const issue = {id:snap.id, ...snap.data()};
+    renderFixBox(issueId, issue);
   }
-  showToast(trimmed ? 'Fix description saved.' : 'Fix description removed.');
+}
+
+// Renders the read/edit state of the fix description box into
+// #fixContainer without re-rendering the whole detail view.
+function renderFixBox(issueId, issue){
+  const container = document.getElementById('fixContainer');
+  if(!container) return;
+  if(issue.fixDescription){
+    container.innerHTML = `
+      <div class="fix-box">
+        <div class="fix-box-lbl">How it was fixed</div>
+        <div class="fix-box-text">${esc(issue.fixDescription)}</div>
+        <div class="fix-box-meta">
+          Fixed by ${esc(issue.fixedBy||'?')} · ${fmtTime(issue.fixedAt)}
+          <span class="fix-box-edit" onclick="showFixInput('${issueId}','${esc(issue.fixDescription)}')">Edit</span>
+        </div>
+      </div>
+    `;
+  } else if(issue.status === 'resolved'){
+    container.innerHTML = `
+      <div class="fix-box" style="border-style:dashed;background:transparent;opacity:.75">
+        <div class="fix-box-lbl">How it was fixed</div>
+        <div class="fix-box-text" style="color:var(--muted)">No fix description yet.
+          <span class="fix-box-edit" onclick="showFixInput('${issueId}','')">Add one</span>
+        </div>
+      </div>
+    `;
+  } else {
+    container.innerHTML = '';
+  }
 }
 
 async function updateField(id, field, val){
-  // Get the previous value so we can log the change
   const issue = issues.find(i=>i.id===id);
   const prev = issue ? issue[field] : null;
   const update = {[field]:val, updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
 
-  // When an issue is being marked resolved (and wasn't already), prompt
-  // for a fix description so future team members can learn from it.
-  // Empty/skipped is allowed for quick fixes that do not need documenting.
-  if(field === 'status' && val === 'resolved' && prev !== 'resolved'){
-    const fixText = prompt('Briefly describe how this issue was fixed.\n\nThis will be saved with the issue and visible in the resolved view and the archive so the team can reference it later. You can leave this blank to skip.');
-    if(fixText && fixText.trim()){
-      update.fixDescription = fixText.trim();
-      update.fixedBy = user.name;
-      update.fixedAt = firebase.firestore.FieldValue.serverTimestamp();
-    }
-  }
-
   await db.collection('issues').doc(id).update(update);
-  // Log significant field changes to history
   if(['status','priority'].includes(field) && prev !== val){
     await logActivity(id, field, {from:prev, to:val});
   }
-  // If a fix description was captured, log it to history too
-  if(update.fixDescription){
-    await logActivity(id, 'fix', {text: update.fixDescription});
+  // When status changes to resolved and the detail view is open,
+  // refresh the fix container so the "Add one" prompt appears
+  // immediately without the user having to close and reopen the card.
+  if(field === 'status' && val === 'resolved' && prev !== 'resolved'){
+    const updated = {id, ...issue, status:'resolved'};
+    renderFixBox(id, updated);
+  }
+  // When status changes away from resolved, clear the fix container
+  if(field === 'status' && val !== 'resolved' && prev === 'resolved'){
+    const container = document.getElementById('fixContainer');
+    if(container) container.innerHTML = '';
   }
 }
 
