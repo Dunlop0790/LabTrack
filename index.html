@@ -1606,16 +1606,21 @@ async function ensureUserInRoster(){
   if(isGuest()) return;
 }
 
-// Group roster by role, in display order
+// Group roster by role for assignee autocomplete and @mention suggestions.
+// Uses SEED_ROSTER directly so the dropdown only ever shows the preset
+// team members regardless of what names are in Firestore. Names added
+// during old logins exist in Firestore but are not surfaced here.
 function groupedRoster(filterTerm){
   const term = (filterTerm||'').toLowerCase().trim();
   const out = {};
-  ROLE_ORDER.forEach(r=> out[r] = []);
-  roster.forEach(r=>{
-    if(term && !r.name.toLowerCase().includes(term)) return;
-    if(out[r.role]) out[r.role].push(r.name);
+  ROLE_ORDER.forEach(r => out[r] = []);
+  ROLE_ORDER.forEach(role => {
+    (SEED_ROSTER[role]||[]).forEach(name => {
+      if(term && !name.toLowerCase().includes(term)) return;
+      out[role].push(name);
+    });
+    out[role].sort((a,b) => a.localeCompare(b));
   });
-  ROLE_ORDER.forEach(r=> out[r].sort((a,b)=>a.localeCompare(b)));
   return out;
 }
 
@@ -1716,18 +1721,17 @@ function subscribeIssues(bid){
       if(!isFirstLoad){
         newIssues.forEach(issue=>{
           const prev = prevIssueMap[issue.id];
-          // New issue added by someone else: play alert for all priorities.
-          // The sound signals "someone just logged something" regardless of
-          // severity so the team stays aware without having to watch the board.
-          // We only skip issues added by the current user (they already know).
-          if(!prev && issue.createdBy !== user.name){
+          // New issue: play alert for all priorities on all new issues,
+          // including ones logged by the current user. The sound fires
+          // on the Firestore snapshot confirmation, which happens after
+          // the issue is fully saved, not while it is being created.
+          if(!prev){
             playAlert();
-            if(Notification.permission==='granted'){
+            if(Notification.permission==='granted' && issue.createdBy !== user.name){
               new Notification(`${issue.priority.toUpperCase()}: ${issue.title}`,{body:`Logged by ${issue.createdBy}`});
             }
           }
-          // Existing issue escalated to Critical/Urgent: alert regardless of
-          // who made the change, since this signals a worsening situation.
+          // Existing issue escalated to Critical/Urgent
           else if(prev && prev.priority!==issue.priority &&
                   ['critical','urgent'].includes(issue.priority) &&
                   !['critical','urgent'].includes(prev.priority)){
