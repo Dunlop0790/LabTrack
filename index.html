@@ -2842,13 +2842,16 @@ function renderStats(){
     if(trackCounts[i.track]!==undefined) trackCounts[i.track]++;
   });
 
-  // Recurring problems: same instrument (type + unit) appearing 3+ times.
-  // Title is intentionally excluded since the same physical problem is often
-  // logged with slightly different wording each time.
+  // Recurring problems: same instrument + unit + track appearing 3+ times.
+  // Track is included so OP and BB issues on the same unit are counted
+  // separately (BIM 1 OP and BIM 1 BB are different patterns). General
+  // track issues are not side-specific so track is omitted for those.
   const recurMap = {};
   all.forEach(i=>{
     if(!i.instrumentType) return;
-    const key = [i.instrumentType, i.unitNumber||''].filter(Boolean).join(' ');
+    const parts = [i.instrumentType, i.unitNumber||''];
+    if(i.track && i.track !== 'general') parts.push(i.track.toUpperCase());
+    const key = parts.filter(Boolean).join(' ');
     recurMap[key] = (recurMap[key]||0)+1;
   });
   const recurring = Object.entries(recurMap).filter(([k,v])=>v>=3).sort((a,b)=>b[1]-a[1]);
@@ -3593,75 +3596,50 @@ function renderLsHTML(){
   const final = lsBuildFinalTable();
   const fmt = n => typeof n === 'number' ? n.toLocaleString() : (n || '');
 
-  // Reusable inline style snippets
   const T_RESET = 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;';
-  const TD_BASE = 'border:1px solid #000;padding:4px 7px;font-size:11px;font-family:Calibri,Arial,sans-serif;text-align:center;vertical-align:middle;';
-  // No default background. Each cell that needs one declares it explicitly.
-  // (Some browsers parse duplicate `background` rules in a single style attribute
-  // unpredictably, so we only ever set background once per element.)
+  const TD_BASE = 'border:1px solid #000;padding:4px 7px;font-size:11px;font-family:Calibri,Arial,sans-serif;text-align:center;vertical-align:middle;white-space:nowrap;';
   const TH_BASE = TD_BASE + 'font-weight:bold;';
   const TH_WHITE = TH_BASE + 'background:#FFFFFF;';
-
-  // Background fills. These ARE preserved by Outlook web when set inline.
   const BLUE = 'background:#ADD8E6;';
   const YELLOW = 'background:#FFDE2A;';
   const RED = 'background:#FF5B5B;';
-
-  // Color RULES to put directly on parent cell or paragraph style.
-  // Outlook web preserves color when it's set on the parent cell/element style,
-  // but strips it when set on inner <span>/<font> wrappers. So we apply colors
-  // at the cell level, not the text level.
-  // We also include `mso-color-alt` (Microsoft Office proprietary CSS) which is
-  // the same trick Word uses to preserve colors when pasted into Outlook.
   const C_BB = 'color:#D9A300;mso-color-alt:#D9A300;';
   const C_OP = 'color:#C00000;mso-color-alt:#C00000;';
   const C_SEC = 'color:#1F4E79;mso-color-alt:#1F4E79;';
 
-  // For cases where color must wrap inline text (notes section), still use
-  // <font color> + <span> defense. These get patched at the parent paragraph
-  // level by SECH/BBH/OPH.
-  const SECH = (txt) => `<p style="${C_SEC}font-weight:bold;margin:8px 0 2px 0;font-family:Calibri,Arial,sans-serif;font-size:13px"><b>${txt}</b></p>`;
-  const BBH = (txt) => `<p style="${C_BB}font-weight:bold;margin:4px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px"><b>${txt}</b></p>`;
-  const OPH = (txt) => `<p style="${C_OP}font-weight:bold;margin:4px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px"><b>${txt}</b></p>`;
+  // Helper: td/th with explicit width attribute AND inline style width so
+  // Outlook honours it (colgroup/col is ignored by Outlook on paste).
+  const th = (w, style, content) => `<th width="${w}" style="${style}width:${w}px;">${content}</th>`;
+  const td = (w, style, content) => `<td width="${w}" style="${style}width:${w}px;">${content}</td>`;
 
-  // Spacer: minimal vertical separation. Section headers below have their
-  // own top margin; we just want a small breath between sections.
+  const SECH = (txt) => `<p style="${C_SEC}font-weight:bold;margin:8px 0 2px 0;font-family:Calibri,Arial,sans-serif;font-size:13px"><b>${txt}</b></p>`;
+  const BBH  = (txt) => `<p style="${C_BB}font-weight:bold;margin:4px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px"><b>${txt}</b></p>`;
+  const OPH  = (txt) => `<p style="${C_OP}font-weight:bold;margin:4px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px"><b>${txt}</b></p>`;
   const SPACE = '<div style="height:8px;line-height:8px">&nbsp;</div>';
 
   let html = '';
 
-  // Final table (CSV-driven). Headers: Time + the 4 right-side ones are blue-filled.
-  // Data cells below them are plain white. Only Time COLUMN cells stay blue.
-  // Inline CSS background is used because it's confirmed to survive Outlook web.
+  // Final table: 7 columns × 64px = 448px total
   if(final){
-    html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
-      `<colgroup>` +
-        `<col width="64">` +
-        `<col width="64">` +
-        `<col width="64">` +
-        `<col width="64">` +
-        `<col width="64">` +
-        `<col width="64">` +
-        `<col width="64">` +
-      `</colgroup>` +
+    html += `<table width="448" cellpadding="0" cellspacing="0" style="${T_RESET}width:448px;">` +
       `<thead><tr>` +
-      `<th style="${TH_BASE}${BLUE}">Time</th>` +
-      `<th style="${TH_BASE}${YELLOW}">BB Total</th>` +
-      `<th style="${TH_BASE}${RED}">OP Total</th>` +
-      `<th style="${TH_BASE}${BLUE}">Hourly Total</th>` +
-      `<th style="${TH_BASE}${BLUE}">Running Total</th>` +
-      `<th style="${TH_BASE}${BLUE}">Projected Remaining</th>` +
-      `<th style="${TH_BASE}${BLUE}">Projected</th>` +
-    `</tr></thead><tbody>`;
+      th(64, TH_BASE+BLUE,   'Time') +
+      th(64, TH_BASE+YELLOW, 'BB Total') +
+      th(64, TH_BASE+RED,    'OP Total') +
+      th(64, TH_BASE+BLUE,   'Hourly Total') +
+      th(64, TH_BASE+BLUE,   'Running Total') +
+      th(64, TH_BASE+BLUE,   'Projected Remaining') +
+      th(64, TH_BASE+BLUE,   'Projected') +
+      `</tr></thead><tbody>`;
     final.forEach(r=>{
       html += `<tr>` +
-        `<td style="${TD_BASE}${BLUE}font-weight:bold"><b>${esc(r.time)}</b></td>` +
-        `<td style="${TD_BASE}">${fmt(r.bb)}</td>` +
-        `<td style="${TD_BASE}">${fmt(r.op)}</td>` +
-        `<td style="${TD_BASE}">${fmt(r.hourly)}</td>` +
-        `<td style="${TD_BASE}">${fmt(r.running)}</td>` +
-        `<td style="${TD_BASE}">${fmt(r.remaining)}</td>` +
-        `<td style="${TD_BASE}">${fmt(r.projected)}</td>` +
+        td(64, TD_BASE+BLUE+'font-weight:bold;', `<b>${esc(r.time)}</b>`) +
+        td(64, TD_BASE, fmt(r.bb)) +
+        td(64, TD_BASE, fmt(r.op)) +
+        td(64, TD_BASE, fmt(r.hourly)) +
+        td(64, TD_BASE, fmt(r.running)) +
+        td(64, TD_BASE, fmt(r.remaining)) +
+        td(64, TD_BASE, fmt(r.projected)) +
       `</tr>`;
     });
     html += `</tbody></table>`;
@@ -3670,37 +3648,34 @@ function renderLsHTML(){
     html += `<div style="font-style:italic;color:#777;font-size:11px;margin:10px 0;font-family:Calibri,Arial,sans-serif">Upload CSV files and enter projected to generate the table.</div>`;
   }
 
-  // Unpacking + Shipments: single combined table with click-to-X cells everywhere
+  // Unpacking + Shipments: 5 columns, total 300px
   const unp = lsState.unpacking;
   const anyUnp = unp.ongoing || unp.completed || unp.lh_flx || unp.lh_fedex || unp.lh_ups || unp.lh_wc;
   if(anyUnp){
     html += SECH("UNPACKING/SHIPMENTS:");
-    html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
-      `<colgroup>` +
-        `<col width="100"><col width="50"><col width="50"><col width="50"><col width="50">` +
-      `</colgroup>` +
+    html += `<table width="300" cellpadding="0" cellspacing="0" style="${T_RESET}width:300px;">` +
       `<tr>` +
-        `<td style="${TD_BASE}font-weight:bold;text-align:left" rowspan="2">Unpacking:</td>` +
-        `<th style="${TH_WHITE}" colspan="2">Ongoing</th>` +
-        `<th style="${TH_WHITE}" colspan="2">Completed</th>` +
-      `</tr>` +
-      `<tr>` +
-        `<td style="${TD_BASE}" colspan="2">${unp.ongoing?'X':''}</td>` +
-        `<td style="${TD_BASE}" colspan="2">${unp.completed?'X':''}</td>` +
-      `</tr>` +
-      `<tr>` +
-        `<td style="${TD_BASE}font-weight:bold;text-align:left">Line Haul:</td>` +
-        `<th style="${TH_WHITE}">FLX</th>` +
-        `<th style="${TH_WHITE}">FedEx</th>` +
-        `<th style="${TH_WHITE}">UPS</th>` +
-        `<th style="${TH_WHITE}">WC</th>` +
-      `</tr>` +
-      `<tr>` +
-        `<td style="${TD_BASE}"></td>` +
-        `<td style="${TD_BASE}">${unp.lh_flx?'X':''}</td>` +
-        `<td style="${TD_BASE}">${unp.lh_fedex?'X':''}</td>` +
-        `<td style="${TD_BASE}">${unp.lh_ups?'X':''}</td>` +
-        `<td style="${TD_BASE}">${unp.lh_wc?'X':''}</td>` +
+        td(100, TD_BASE+'font-weight:bold;text-align:left;', '<b>Unpacking:</b>') +
+        th(50,  TH_WHITE, 'Ongoing') +
+        th(50,  TH_WHITE, '') +
+        th(50,  TH_WHITE, 'Completed') +
+        th(50,  TH_WHITE, '') +
+      `</tr><tr>` +
+        td(100, TD_BASE, '') +
+        td(100, TD_BASE, unp.ongoing?'X':'', ) +
+        td(100, TD_BASE, unp.completed?'X':'') +
+      `</tr><tr>` +
+        td(100, TD_BASE+'font-weight:bold;text-align:left;', '<b>Line Haul:</b>') +
+        th(50,  TH_WHITE, 'FLX') +
+        th(50,  TH_WHITE, 'FedEx') +
+        th(50,  TH_WHITE, 'UPS') +
+        th(50,  TH_WHITE, 'WC') +
+      `</tr><tr>` +
+        td(100, TD_BASE, '') +
+        td(50,  TD_BASE, unp.lh_flx?'X':'') +
+        td(50,  TD_BASE, unp.lh_fedex?'X':'') +
+        td(50,  TD_BASE, unp.lh_ups?'X':'') +
+        td(50,  TD_BASE, unp.lh_wc?'X':'') +
       `</tr>` +
     `</table>`;
     html += SPACE;
@@ -3713,109 +3688,102 @@ function renderLsHTML(){
   if(lsState.opNotes.trim()){
     html += OPH('OP:') + `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Calibri,Arial,sans-serif">${noteLines(lsState.opNotes)}</ul>`;
   }
-  if(lsState.bbNotes.trim() || lsState.opNotes.trim()){
-    html += SPACE;
-  }
+  if(lsState.bbNotes.trim() || lsState.opNotes.trim()) html += SPACE;
 
-  // Startup Times
+  // Startup Times: 5 columns, 375px total
   const anyStartup = lsState.startup.some(r=>r.bb||r.op||r.full||r.partial);
   if(anyStartup){
     html += SECH("Startup Time(s):");
-    html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
-      `<colgroup>` +
-        `<col width="160"><col width="55"><col width="55"><col width="50"><col width="55">` +
-      `</colgroup>` +
+    html += `<table width="375" cellpadding="0" cellspacing="0" style="${T_RESET}width:375px;">` +
       `<thead><tr>` +
-      `<th style="${TH_WHITE}text-align:left">Departments/Module</th>` +
-      `<th style="${TH_WHITE}${C_BB}">BB</th>` +
-      `<th style="${TH_WHITE}${C_OP}">OP</th>` +
-      `<th style="${TH_WHITE}">Full</th>` +
-      `<th style="${TH_WHITE}">Partial</th>` +
-    `</tr></thead><tbody>`;
+      th(160, TH_WHITE+'text-align:left;', 'Departments/Module') +
+      th(55,  TH_WHITE+C_BB, 'BB') +
+      th(55,  TH_WHITE+C_OP, 'OP') +
+      th(50,  TH_WHITE, 'Full') +
+      th(55,  TH_WHITE, 'Partial') +
+      `</tr></thead><tbody>`;
     lsState.startup.forEach(r=>{
       html += `<tr>` +
-        `<td style="${TD_BASE}text-align:left;font-weight:bold">${esc(r.dept)}:</td>` +
-        `<td style="${TD_BASE}">${esc(r.bb)}</td>` +
-        `<td style="${TD_BASE}">${esc(r.op)}</td>` +
-        `<td style="${TD_BASE}">${r.full?'X':''}</td>` +
-        `<td style="${TD_BASE}">${r.partial?'X':''}</td>` +
+        td(160, TD_BASE+'text-align:left;font-weight:bold;', `<b>${esc(r.dept)}:</b>`) +
+        td(55,  TD_BASE, esc(r.bb)) +
+        td(55,  TD_BASE, esc(r.op)) +
+        td(50,  TD_BASE, r.full?'X':'') +
+        td(55,  TD_BASE, r.partial?'X':'') +
       `</tr>`;
     });
     html += `</tbody></table>`;
     html += SPACE;
   }
 
-  // Buckets to Load: boxed like the template
+  // Buckets to Load
   if(lsState.bucketCount!=='' || lsState.bucketTime){
     html += SECH("Buckets to Load:");
-    html += `<table style="${T_RESET}"><tbody><tr>` +
-      `<td style="${TD_BASE}font-weight:bold;padding:5px 12px"><b>${esc(lsState.bucketCount)} @ ${esc(lsState.bucketTime)}</b></td>` +
-    `</tr></tbody></table>`;
+    html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
+      `<tbody><tr>` +
+      td('auto', TD_BASE+'font-weight:bold;padding:5px 12px;', `<b>${esc(lsState.bucketCount)} @ ${esc(lsState.bucketTime)}</b>`) +
+      `</tr></tbody></table>`;
     if(lsState.bucketNotes.trim()){
       html += `<div style="font-size:12px;margin-top:4px;font-family:Calibri,Arial,sans-serif">${esc(lsState.bucketNotes).replace(/\n/g,'<br>')}</div>`;
     }
     html += SPACE;
   }
 
-  // Pending Buckets to Relabel
+  // Pending Buckets to Relabel: 2 columns × 60px = 120px
   if(lsState.relabelBb!=='' || lsState.relabelOp!==''){
     html += SECH("Pending Buckets to Relabel:");
-    html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
-      `<colgroup><col width="60"><col width="60"></colgroup>` +
+    html += `<table width="120" cellpadding="0" cellspacing="0" style="${T_RESET}width:120px;">` +
       `<thead><tr>` +
-      `<th style="${TH_WHITE}${C_BB}">BB</th>` +
-      `<th style="${TH_WHITE}${C_OP}">OP</th>` +
-    `</tr></thead><tbody><tr>` +
-      `<td style="${TD_BASE}">${esc(lsState.relabelBb)}</td>` +
-      `<td style="${TD_BASE}">${esc(lsState.relabelOp)}</td>` +
-    `</tr></tbody></table>`;
+      th(60, TH_WHITE+C_BB, 'BB') +
+      th(60, TH_WHITE+C_OP, 'OP') +
+      `</tr></thead><tbody><tr>` +
+      td(60, TD_BASE, esc(lsState.relabelBb)) +
+      td(60, TD_BASE, esc(lsState.relabelOp)) +
+      `</tr></tbody></table>`;
     html += SPACE;
   }
 
-  // OOS Analyzers: narrower row labels, BB/OP side-by-side as in template
+  // OOS Analyzers: 4 columns, 440px total
   const hasOos = Object.values(lsState.oos).some(arr=>arr.length);
   if(hasOos){
     html += SECH("OOS Analyzers:");
-    html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
-      `<colgroup>` +
-        `<col width="65"><col width="155"><col width="65"><col width="155">` +
-      `</colgroup>` +
+    html += `<table width="440" cellpadding="0" cellspacing="0" style="${T_RESET}width:440px;">` +
       `<thead><tr>` +
-      `<th style="${TH_WHITE}${C_BB}text-align:left" colspan="2">BB</th>` +
-      `<th style="${TH_WHITE}${C_OP}text-align:left" colspan="2">OP</th>` +
-    `</tr></thead><tbody>`;
+      th(65,  TH_WHITE+C_BB+'text-align:left;', 'BB') +
+      th(155, TH_WHITE+C_BB+'text-align:left;', '') +
+      th(65,  TH_WHITE+C_OP+'text-align:left;', 'OP') +
+      th(155, TH_WHITE+C_OP+'text-align:left;', '') +
+      `</tr></thead><tbody>`;
     ['hemo','special','auto'].forEach(d=>{
       const lbl = d==='hemo'?'HEMO':d==='special'?'SPECIAL':'AUTO';
       html += `<tr>` +
-        `<td style="${TD_BASE}text-align:left;font-weight:bold"><b>${lbl}:</b></td>` +
-        `<td style="${TD_BASE}text-align:left">${lsState.oos['bb_'+d].map(esc).join(', ')}</td>` +
-        `<td style="${TD_BASE}text-align:left;font-weight:bold"><b>${lbl}:</b></td>` +
-        `<td style="${TD_BASE}text-align:left">${lsState.oos['op_'+d].map(esc).join(', ')}</td>` +
+        td(65,  TD_BASE+'text-align:left;font-weight:bold;', `<b>${lbl}:</b>`) +
+        td(155, TD_BASE+'text-align:left;', lsState.oos['bb_'+d].map(esc).join(', ')) +
+        td(65,  TD_BASE+'text-align:left;font-weight:bold;', `<b>${lbl}:</b>`) +
+        td(155, TD_BASE+'text-align:left;', lsState.oos['op_'+d].map(esc).join(', ')) +
       `</tr>`;
     });
     html += `</tbody></table>`;
     html += SPACE;
   }
 
-  // Overloads / Buffer Status
+  // Overloads / Buffer Status: 4 columns, 330px total
   const hasOver = Object.values(lsState.overloads).some(v=>v) || lsState.overloadNotes.trim();
   if(hasOver){
     html += SECH("Overloads/Buffer Status:");
-    html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
-      `<colgroup>` +
-        `<col width="65"><col width="100"><col width="65"><col width="100">` +
-      `</colgroup>` +
+    html += `<table width="330" cellpadding="0" cellspacing="0" style="${T_RESET}width:330px;">` +
       `<thead><tr>` +
-      `<th style="${TH_WHITE}${C_BB}text-align:left" colspan="2">BB</th>` +
-      `<th style="${TH_WHITE}${C_OP}text-align:left" colspan="2">OP</th>` +
-    `</tr></thead><tbody>`;
+      th(65,  TH_WHITE+C_BB+'text-align:left;', 'BB') +
+      th(100, TH_WHITE, '') +
+      th(65,  TH_WHITE+C_OP+'text-align:left;', 'OP') +
+      th(100, TH_WHITE, '') +
+      `</tr></thead><tbody>`;
     ['hemo','special','auto'].forEach(d=>{
       const lbl = d==='hemo'?'HEMO':d==='special'?'SPECIAL':'AUTO';
       html += `<tr>` +
-        `<td style="${TD_BASE}text-align:left;font-weight:bold"><b>${lbl}:</b></td>` +
-        `<td style="${TD_BASE}text-align:left">${esc(lsState.overloads['bb_'+d])}</td>` +
-        `<td style="${TD_BASE}text-align:left;font-weight:bold"><b>${lbl}:</b></td>` +
-        `<td style="${TD_BASE}text-align:left">${esc(lsState.overloads['op_'+d])}</td>` +
+        td(65,  TD_BASE+'text-align:left;font-weight:bold;', `<b>${lbl}:</b>`) +
+        td(100, TD_BASE+'text-align:left;', esc(lsState.overloads['bb_'+d])) +
+        td(65,  TD_BASE+'text-align:left;font-weight:bold;', `<b>${lbl}:</b>`) +
+        td(100, TD_BASE+'text-align:left;', esc(lsState.overloads['op_'+d])) +
       `</tr>`;
     });
     html += `</tbody></table>`;
@@ -3825,27 +3793,24 @@ function renderLsHTML(){
     html += SPACE;
   }
 
-  // BIM Read Rates: single combined table, no gap between BB and OP halves
+  // BIM Read Rates: 4 columns, 260px total
   const hasBim = lsState.bim.bb.some(v=>v) || lsState.bim.op.some(v=>v);
   if(hasBim){
     html += SECH("BIM Read Rates:");
-    html += `<table cellpadding="0" cellspacing="0" style="${T_RESET}">` +
-      `<colgroup>` +
-        `<col width="55"><col width="75"><col width="55"><col width="75">` +
-      `</colgroup>` +
+    html += `<table width="260" cellpadding="0" cellspacing="0" style="${T_RESET}width:260px;">` +
       `<thead><tr>` +
-      `<th style="${TH_WHITE}${C_BB}">BB</th>` +
-      `<th style="${TH_WHITE}">% Success</th>` +
-      `<th style="${TH_WHITE}${C_OP}">OP</th>` +
-      `<th style="${TH_WHITE}">% Success</th>` +
-    `</tr></thead><tbody>`;
+      th(55,  TH_WHITE+C_BB, 'BB') +
+      th(75,  TH_WHITE, '% Success') +
+      th(55,  TH_WHITE+C_OP, 'OP') +
+      th(75,  TH_WHITE, '% Success') +
+      `</tr></thead><tbody>`;
     const labels = ['1','2','3','4','5','6','7','8','IOM 1','IOM 2'];
     labels.forEach((lbl,i)=>{
       html += `<tr>` +
-        `<td style="${TD_BASE}font-weight:bold"><b>${lbl}</b></td>` +
-        `<td style="${TD_BASE}">${esc(lsState.bim.bb[i])}</td>` +
-        `<td style="${TD_BASE}font-weight:bold"><b>${lbl}</b></td>` +
-        `<td style="${TD_BASE}">${esc(lsState.bim.op[i])}</td>` +
+        td(55,  TD_BASE+'font-weight:bold;', `<b>${lbl}</b>`) +
+        td(75,  TD_BASE, esc(lsState.bim.bb[i])) +
+        td(55,  TD_BASE+'font-weight:bold;', `<b>${lbl}</b>`) +
+        td(75,  TD_BASE, esc(lsState.bim.op[i])) +
       `</tr>`;
     });
     html += `</tbody></table>`;
