@@ -562,23 +562,35 @@
     .ls-final-toggle input{cursor:pointer;width:14px;height:14px;accent-color:#d97706}
 
     /* ── LINE STATUS INTERACTIVE PREVIEW TABLE ──
-       The live preview top table has extra controls that do not appear
-       in the copy output: a delete button per row and a ROM Samples input.
-       The delete button is hidden by default and appears on row hover. */
-    .ls-preview-tbl{border-collapse:collapse;width:100%;font-size:12px;font-family:'Inter',sans-serif;margin-bottom:10px}
-    .ls-preview-tbl th,.ls-preview-tbl td{border:1px solid var(--border);padding:4px 7px;text-align:center;vertical-align:middle}
-    .ls-preview-tbl thead th{font-weight:600;background:var(--code-bg)}
-    .ls-preview-tbl .lsp-time{background:#ADD8E6;font-weight:700;color:#000}
-    .ls-preview-tbl .lsp-bb{background:#FFDE2A;color:#000}
-    .ls-preview-tbl .lsp-op{background:#FF5B5B;color:#000}
-    .ls-preview-tbl .lsp-rom-hdr{background:var(--code-bg);min-width:140px}
-    .ls-preview-tbl .lsp-rom-cell{min-width:140px;padding:2px 5px}
-    .ls-preview-tbl .lsp-del-col{width:24px;border:none;background:transparent;padding:0}
-    .lsp-del-btn{display:none;width:20px;height:20px;border-radius:4px;border:1px solid var(--border);background:var(--card-bg);color:var(--critical);font-size:14px;line-height:1;cursor:pointer;padding:0;font-weight:700}
-    .lsp-row:hover .lsp-del-btn{display:inline-flex;align-items:center;justify-content:center}
-    .lsp-del-btn:hover{background:var(--critical);color:#fff;border-color:var(--critical)}
-    .lsp-rom-input{width:100%;border:1px solid var(--border);border-radius:4px;padding:3px 6px;font-size:11px;background:var(--input-bg);color:var(--text);font-family:inherit}
-    .lsp-rom-input:focus{outline:none;border-color:#3b82f6}
+       The live preview top table has extra controls: a delete button per
+       row (hover-only) and a ROM Samples input (hover-only if empty,
+       always visible if filled). The copy output uses renderLsHTML()
+       directly and never contains these controls. */
+    .ls-preview-tbl{border-collapse:collapse;font-size:11px;font-family:'Inter',sans-serif;margin-bottom:10px;width:auto}
+    .ls-preview-tbl th,.ls-preview-tbl td{border:1px solid #bbb;padding:4px 8px;text-align:center;vertical-align:middle;white-space:nowrap}
+    .ls-preview-tbl thead th{font-weight:700;background:#f1f5f9;color:#1e293b}
+    .ls-preview-tbl .lsp-del-col{border:none;background:transparent;padding:0 2px;width:20px}
+    .ls-preview-tbl .lsp-rom-hdr{background:#e0f2fe;min-width:120px}
+    /* Time column: blue fill matching the copy output */
+    .ls-preview-tbl td.lsp-time{background:#ADD8E6;font-weight:700;color:#000}
+    .ls-preview-tbl th.lsp-time{background:#ADD8E6}
+    /* BB column: yellow fill */
+    .ls-preview-tbl td.lsp-bb{background:#FFDE2A;color:#000}
+    .ls-preview-tbl th.lsp-bb{background:#FFDE2A;color:#000}
+    /* OP column: red fill */
+    .ls-preview-tbl td.lsp-op{background:#FF5B5B;color:#000}
+    .ls-preview-tbl th.lsp-op{background:#FF5B5B;color:#000}
+    /* Delete button: hidden, appears on row hover */
+    .lsp-del-btn{display:none;width:18px;height:18px;border-radius:3px;border:1px solid #ccc;background:#fff;color:#dc2626;font-size:13px;line-height:1;cursor:pointer;padding:0;font-weight:700;align-items:center;justify-content:center}
+    .lsp-row:hover .lsp-del-btn{display:inline-flex}
+    .lsp-del-btn:hover{background:#dc2626;color:#fff;border-color:#dc2626}
+    /* ROM cell: shows empty until hover or until content is typed */
+    .lsp-rom-cell{min-width:120px;padding:3px 6px}
+    .lsp-rom-input{width:100%;border:1px solid #cbd5e1;border-radius:4px;padding:2px 6px;font-size:11px;background:#fff;color:#1e293b;font-family:inherit;box-sizing:border-box;display:none}
+    /* Show input on row hover, or always if it has a value */
+    .lsp-row:hover .lsp-rom-input{display:block}
+    .lsp-rom-input.has-value{display:block}
+    .lsp-rom-input:focus{outline:none;border-color:#3b82f6;display:block}
 
     /* ── LS ARCHIVE VIEWER ──
        Month/week accordion for the permanent Line Status archive.
@@ -3464,6 +3476,7 @@ function refreshPreview(){
   final.forEach(r => {
     if(deleted.has(r.time)) return;
     const rom = (lsState.romNotes||{})[r.time] || '';
+    const projVal = fmt(r.projected);
     tableHtml += `<tr class="lsp-row">
       <td class="lsp-del-col"><button class="lsp-del-btn" onclick="lsDeleteSlot('${r.time.replace(/'/g,"\\'")}')">×</button></td>
       <td class="lsp-time"><b>${esc(r.time)}</b></td>
@@ -3472,8 +3485,8 @@ function refreshPreview(){
       <td>${fmt(r.hourly)}</td>
       <td>${fmt(r.running)}</td>
       <td>${fmt(r.remaining)}</td>
-      <td>${fmt(r.projected)}</td>
-      <td class="lsp-rom-cell"><input class="lsp-rom-input" type="text" value="${esc(rom)}" placeholder="ROM Samples..." oninput="lsSetRom('${r.time.replace(/'/g,"\\'")}',this.value)"></td>
+      <td>${projVal}</td>
+      <td class="lsp-rom-cell"><input class="lsp-rom-input${rom?' has-value':''}" type="text" value="${esc(rom)}" placeholder="ROM Samples..." oninput="lsSetRom('${r.time.replace(/'/g,"\\'")}',this.value);this.classList.toggle('has-value',this.value.length>0)"></td>
     </tr>`;
   });
 
