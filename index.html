@@ -12,7 +12,7 @@
     :root{
       --navy:#1a2942;--navy2:#243752;--bg:#eef1f5;--white:#fff;
       --border:#dde3ec;--text:#1e293b;--muted:#64748b;
-      --critical:#dc2626;--urgent:#ea580c;--monitor-c:#b45309;--low:#6b7280;
+      --critical:#dc2626;--urgent:#ea580c;--moderate-c:#0e7490;--low:#6b7280;
       --op:#dc2626;--bb:#d97706;
       --col-open:#3b82f6;--col-inprog:#8b5cf6;--col-watch:#f59e0b;--col-done:#10b981;
       --r:8px;
@@ -26,12 +26,12 @@
       --card-bg:#1e293b;--col-bg:#172033;--panel-bg:#1e293b;--input-bg:#0f172a;
       --hover-bg:#334155;--accent-soft:#1e3a5f;--accent-text:#93c5fd;
       --shadow-sm:0 1px 3px rgba(0,0,0,.4);--shadow-md:0 4px 14px rgba(0,0,0,.5);
-      --critical:#ef4444;--urgent:#fb923c;--monitor-c:#fbbf24;--low:#94a3b8;
+      --critical:#ef4444;--urgent:#fb923c;--moderate-c:#22d3ee;--low:#94a3b8;
       --op:#ef4444;--bb:#fbbf24;
     }
     html.dark .pbadge.critical{background:#7f1d1d;color:#fecaca}
     html.dark .pbadge.urgent{background:#7c2d12;color:#fed7aa}
-    html.dark .pbadge.monitor{background:#78350f;color:#fde68a}
+    html.dark .pbadge.moderate{background:#0c4a6e;color:#67e8f9}
     html.dark .pbadge.low{background:#374151;color:#d1d5db}
     html.dark .tbadge.op{background:#7f1d1d;color:#fecaca}
     html.dark .tbadge.bb{background:#78350f;color:#fde68a}
@@ -116,7 +116,7 @@
     .chip.c-gen{border-color:#64748b;background:#64748b;color:#fff}
     .chip.c-critical{border-color:var(--critical);background:var(--critical);color:#fff}
     .chip.c-urgent{border-color:var(--urgent);background:var(--urgent);color:#fff}
-    .chip.c-monitor{border-color:var(--monitor-c);background:var(--monitor-c);color:#fff}
+    .chip.c-moderate{border-color:var(--moderate-c);background:var(--moderate-c);color:#fff}
     .chip.c-low{border-color:var(--low);background:var(--low);color:#fff}
     .fdivider{width:1px;height:18px;background:var(--border);margin:0 3px}
     .search-wrap{position:relative;margin-left:auto}
@@ -167,12 +167,12 @@
     .dot-gen{background:#94a3b8}
     .dot-critical{background:var(--critical)}
     .dot-urgent{background:var(--urgent)}
-    .dot-monitor{background:var(--monitor-c)}
+    .dot-moderate{background:var(--moderate-c)}
     .dot-low{background:var(--low)}
-    .chip.c-op .dot,.chip.c-bb .dot,.chip.c-gen .dot,.chip.c-critical .dot,.chip.c-urgent .dot,.chip.c-monitor .dot,.chip.c-low .dot{background:rgba(255,255,255,.95)}
+    .chip.c-op .dot,.chip.c-bb .dot,.chip.c-gen .dot,.chip.c-critical .dot,.chip.c-urgent .dot,.chip.c-moderate .dot,.chip.c-low .dot{background:rgba(255,255,255,.95)}
     select.fc option[value="critical"]{color:var(--critical)}
     select.fc option[value="urgent"]{color:var(--urgent)}
-    select.fc option[value="monitor"]{color:var(--monitor-c)}
+    select.fc option[value="moderate"]{color:var(--moderate-c)}
     select.fc option[value="low"]{color:var(--low)}
     select.fc option[value="op"]{color:var(--op)}
     select.fc option[value="bb"]{color:var(--bb)}
@@ -198,7 +198,7 @@
     .card.op{border-left-color:var(--op)}.card.bb{border-left-color:var(--bb)}.card.general{border-left-color:#94a3b8}
     .card-top{display:flex;align-items:center;gap:5px;margin-bottom:5px}
     .pbadge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.3px}
-    .pbadge.critical{background:#fee2e2;color:var(--critical)}.pbadge.urgent{background:#ffedd5;color:var(--urgent)}.pbadge.monitor{background:#fef3c7;color:var(--monitor-c)}.pbadge.low{background:#f1f5f9;color:var(--low)}
+    .pbadge.critical{background:#fee2e2;color:var(--critical)}.pbadge.urgent{background:#ffedd5;color:var(--urgent)}.pbadge.moderate{background:#e0f2fe;color:var(--moderate-c)}.pbadge.low{background:#f1f5f9;color:var(--low)}
     .tbadge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:auto}
     .tbadge.op{background:#fee2e2;color:var(--op)}.tbadge.bb{background:#fef3c7;color:#92400e}.tbadge.general{background:#f1f5f9;color:#64748b}
     .card-title{font-size:13px;font-weight:600;line-height:1.4;margin-bottom:5px}
@@ -656,11 +656,11 @@
     </div>
     <div class="frow">
       <div class="fg">
-        <label class="flbl" data-tooltip="Critical: line is down or a major process is stopped. Urgent: line is running but degraded and needs attention soon. Monitor: something to keep an eye on, not blocking. Low: non-urgent, can be addressed when time allows.">Priority *</label>
+        <label class="flbl" data-tooltip="Critical: line is down or a major process is stopped. Urgent: line is running but degraded and needs attention soon. Moderate: something to keep an eye on, not blocking. Low: non-urgent, can be addressed when time allows.">Priority *</label>
         <select class="fc" id="issuePriority">
           <option value="critical">● Critical</option>
           <option value="urgent">● Urgent</option>
-          <option value="monitor" selected>● Monitor</option>
+          <option value="moderate" selected>● Moderate</option>
           <option value="low">● Low</option>
         </select>
       </div>
@@ -838,7 +838,7 @@
   <span class="chip c-all" id="pAll" onclick="setPF('all')">All</span>
   <span class="chip" id="pCrit" onclick="setPF('critical')">Critical</span>
   <span class="chip" id="pUrg" onclick="setPF('urgent')">Urgent</span>
-  <span class="chip" id="pMon" onclick="setPF('monitor')">Monitor</span>
+  <span class="chip" id="pMon" onclick="setPF('moderate')">Moderate</span>
   <span class="chip" id="pLow" onclick="setPF('low')">Low</span>
   <div class="search-wrap">
     <span class="search-icon" data-icon="search"></span>
@@ -1039,10 +1039,10 @@ let isFirstLoad = true;
 let mentionState = {textareaId:null, listId:null, startPos:0, term:''};
 const COLS = ['open','inprogress','monitoring','resolved'];
 const COL_LABELS = {open:'Open',inprogress:'In Progress',monitoring:'Monitoring',resolved:'Resolved'};
-const PRIORITY_ORDER = {critical:0,urgent:1,monitor:2,low:3};
-const PRIORITY_LABELS = {critical:'Critical',urgent:'Urgent',monitor:'Monitor',low:'Low'};
+const PRIORITY_ORDER = {critical:0,urgent:1,moderate:2,low:3};
+const PRIORITY_LABELS = {critical:'Critical',urgent:'Urgent',moderate:'Moderate',low:'Low'};
 // Aging thresholds in milliseconds. If Critical sits Open >1hr, show warning
-const AGE_WARN_MS = {critical:60*60*1000, urgent:2*60*60*1000, monitor:24*60*60*1000, low:7*24*60*60*1000};
+const AGE_WARN_MS = {critical:60*60*1000, urgent:2*60*60*1000, moderate:24*60*60*1000, low:7*24*60*60*1000};
 
 // Seeded roster. These names get added on first launch if not already present
 const SEED_ROSTER = {
@@ -1886,8 +1886,8 @@ function renderCard(issue){
   const ai = initials(issue.assignee||'');
   const aging = isAging(issue);
   const age = fmtAge(issue.createdAt);
-  const agingTitle = aging ? 'title="This issue has been open longer than expected for its priority. Critical: over 1 hr, Urgent: over 2 hr, Monitor: over 24 hr, Low: over 7 days."' : '';
-  const priorityTitles = {critical:'Critical: line is down or a major process is stopped.',urgent:'Urgent: line is running but degraded, needs attention soon.',monitor:'Monitor: something to watch, not currently blocking.',low:'Low: non-urgent, address when time allows.'};
+  const agingTitle = aging ? 'title="This issue has been open longer than expected for its priority. Critical: over 1 hr, Urgent: over 2 hr, Moderate: over 24 hr, Low: over 7 days."' : '';
+  const priorityTitles = {critical:'Critical: line is down or a major process is stopped.',urgent:'Urgent: line is running but degraded, needs attention soon.',moderate:'Moderate: something to watch, not currently blocking.',low:'Low: non-urgent, address when time allows.'};
   return `<div class="card ${tc} ${aging?'aging':''}" onclick="openDetail('${issue.id}')" ${agingTitle}>
     <div class="card-top">
       <span class="pbadge ${issue.priority}" title="${priorityTitles[issue.priority]||''}">${issue.priority}</span>
@@ -1919,7 +1919,7 @@ function openNewIssue(){
 function closeNewIssue(){
   document.getElementById('newIssueOverlay').classList.add('hidden');
   ['issueTitle','issueDesc','issueUnit','issueAssignee'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('issuePriority').value='monitor';
+  document.getElementById('issuePriority').value='moderate';
   document.getElementById('issueTrack').value='op';
   document.getElementById('issueInstrument').value='';
 }
@@ -2084,7 +2084,7 @@ function buildDetailHTML(i){
         <select class="fc" onchange="updateField('${i.id}','priority',this.value)">
           <option value="critical" ${i.priority==='critical'?'selected':''}>● Critical</option>
           <option value="urgent" ${i.priority==='urgent'?'selected':''}>● Urgent</option>
-          <option value="monitor" ${i.priority==='monitor'?'selected':''}>● Monitor</option>
+          <option value="moderate" ${i.priority==='moderate'?'selected':''}>● Moderate</option>
           <option value="low" ${i.priority==='low'?'selected':''}>● Low</option>
         </select>
       </div>
@@ -2391,8 +2391,8 @@ function setTF(v){
 
 function setPF(v){
   pFilter=v;
-  const map={all:'pAll',critical:'pCrit',urgent:'pUrg',monitor:'pMon',low:'pLow'};
-  const cls={all:'c-all',critical:'c-critical',urgent:'c-urgent',monitor:'c-monitor',low:'c-low'};
+  const map={all:'pAll',critical:'pCrit',urgent:'pUrg',moderate:'pMon',low:'pLow'};
+  const cls={all:'c-all',critical:'c-critical',urgent:'c-urgent',moderate:'c-moderate',low:'c-low'};
   Object.values(map).forEach(id=>document.getElementById(id).className='chip');
   document.getElementById(map[v]).classList.add(cls[v]);
   renderBoard();
@@ -2811,7 +2811,7 @@ function renderStats(){
   const maxInst = topInst[0] ? topInst[0][1] : 1;
 
   // Average resolution time per priority (resolved/archived only)
-  const resByPri = {critical:[], urgent:[], monitor:[], low:[]};
+  const resByPri = {critical:[], urgent:[], moderate:[], low:[]};
   all.forEach(i=>{
     if(i.status!=='resolved' && !i.archivedAt) return;
     const created = i.createdAt?.toMillis ? i.createdAt.toMillis() : 0;
@@ -2820,7 +2820,7 @@ function renderStats(){
     const ms = resolvedTs - created;
     if(resByPri[i.priority]) resByPri[i.priority].push(ms);
   });
-  const avgResHtml = ['critical','urgent','monitor','low'].map(p=>{
+  const avgResHtml = ['critical','urgent','moderate','low'].map(p=>{
     const arr = resByPri[p];
     if(!arr.length) return `<div class="bar-row"><span class="bar-label">${PRIORITY_LABELS[p]}</span><span style="color:var(--muted);font-size:12px">No data</span></div>`;
     const avg = arr.reduce((a,b)=>a+b,0)/arr.length;
