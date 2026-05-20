@@ -32,6 +32,10 @@
     html.dark .pbadge.critical{background:#7f1d1d;color:#fecaca}
     html.dark .pbadge.urgent{background:#7c2d12;color:#fed7aa}
     html.dark .pbadge.moderate{background:#0c4a6e;color:#67e8f9}
+    /* Backward compatibility: issues created before the Monitor->Moderate
+       rename still have priority:'monitor' in Firestore. Style them
+       identically to moderate until they are resolved and archived. */
+    html.dark .pbadge.monitor{background:#0c4a6e;color:#67e8f9}
     html.dark .pbadge.low{background:#374151;color:#d1d5db}
     html.dark .tbadge.op{background:#7f1d1d;color:#fecaca}
     html.dark .tbadge.bb{background:#78350f;color:#fde68a}
@@ -198,7 +202,7 @@
     .card.op{border-left-color:var(--op)}.card.bb{border-left-color:var(--bb)}.card.general{border-left-color:#94a3b8}
     .card-top{display:flex;align-items:center;gap:5px;margin-bottom:5px}
     .pbadge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.3px}
-    .pbadge.critical{background:#fee2e2;color:var(--critical)}.pbadge.urgent{background:#ffedd5;color:var(--urgent)}.pbadge.moderate{background:#e0f2fe;color:var(--moderate-c)}.pbadge.low{background:#f1f5f9;color:var(--low)}
+    .pbadge.critical{background:#fee2e2;color:var(--critical)}.pbadge.urgent{background:#ffedd5;color:var(--urgent)}.pbadge.moderate{background:#e0f2fe;color:var(--moderate-c)}.pbadge.monitor{background:#e0f2fe;color:var(--moderate-c)}.pbadge.low{background:#f1f5f9;color:var(--low)}
     .tbadge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:auto}
     .tbadge.op{background:#fee2e2;color:var(--op)}.tbadge.bb{background:#fef3c7;color:#92400e}.tbadge.general{background:#f1f5f9;color:#64748b}
     .card-title{font-size:13px;font-weight:600;line-height:1.4;margin-bottom:5px}
@@ -1801,7 +1805,15 @@ function subscribeIssues(bid){
 
   issueSub = db.collection('issues').where('boardId','==',bid)
     .onSnapshot(snap=>{
-      const newIssues = snap.docs.map(d=>({id:d.id,...d.data()}));
+      const newIssues = snap.docs.map(d=>{
+        const data = d.data();
+        // Normalize legacy 'monitor' priority to 'moderate'. Issues created
+        // before the rename still have priority:'monitor' in Firestore. We
+        // normalize on read so all display logic, sorting, and aging uses
+        // the current value without needing a data migration.
+        if(data.priority === 'monitor') data.priority = 'moderate';
+        return {id:d.id, ...data};
+      });
 
       if(!isFirstLoad){
         newIssues.forEach(issue=>{
