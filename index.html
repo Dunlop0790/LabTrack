@@ -3258,7 +3258,7 @@ function renderLineStatus(){
                 ${['1','2','3','4','5','6','7','8','IOM 1','IOM 2'].map((lbl,i)=>`
                   <div class="ls-bim-row">
                     <span class="lbl">${lbl}</span>
-                    <input value="${esc(lsState.bim[t][i])}" oninput="lsUpdateBim('${t}',${i},this.value)" placeholder="%" />
+                    <input value="${esc(lsState.bim[t][i])}" oninput="lsUpdateBim('${t}',${i},this.value)" placeholder="-" />
                   </div>
                 `).join('')}
               </div>
@@ -3802,24 +3802,33 @@ function renderLsHTML(){
     html += SPACE;
   }
 
-  // BIM Read Rates: 4 columns, 260px total
+  // BIM Read Rates: 4 columns side by side (70+90+70+90 = 320px)
+  // Label columns are 70px so "IOM 1" / "IOM 2" never wrap.
+  // BB and OP each span their two columns as a unified colored header.
   const hasBim = lsState.bim.bb.some(v=>v) || lsState.bim.op.some(v=>v);
   if(hasBim){
     html += SECH("BIM Read Rates:");
-    html += `<table width="260" cellpadding="0" cellspacing="0" style="${T_RESET}width:260px;">` +
-      `<thead><tr>` +
-      th(55,  TH_BASE+YELLOW+'color:#000;', 'BB') +
-      th(75,  TH_WHITE, '% Success') +
-      th(55,  TH_BASE+RED+'color:#000;', 'OP') +
-      th(75,  TH_WHITE, '% Success') +
-      `</tr></thead><tbody>`;
     const labels = ['1','2','3','4','5','6','7','8','IOM 1','IOM 2'];
+    html += `<table width="320" cellpadding="0" cellspacing="0" style="${T_RESET}width:320px;">` +
+      `<thead>` +
+      `<tr>` +
+      `<th width="160" colspan="2" style="${TH_BASE}${YELLOW}color:#000;width:160px;">BB</th>` +
+      `<th width="160" colspan="2" style="${TH_BASE}${RED}color:#000;width:160px;">OP</th>` +
+      `</tr><tr>` +
+      th(70,  TH_WHITE+'white-space:nowrap;', '#') +
+      th(90,  TH_WHITE, '% Success') +
+      th(70,  TH_WHITE+'white-space:nowrap;', '#') +
+      th(90,  TH_WHITE, '% Success') +
+      `</tr>` +
+      `</thead><tbody>`;
     labels.forEach((lbl,i)=>{
+      const bbVal = lsState.bim.bb[i] || '-';
+      const opVal = lsState.bim.op[i] || '-';
       html += `<tr>` +
-        td(55,  TD_BASE+'font-weight:bold;', `<b>${lbl}</b>`) +
-        td(75,  TD_BASE, esc(lsState.bim.bb[i])) +
-        td(55,  TD_BASE+'font-weight:bold;', `<b>${lbl}</b>`) +
-        td(75,  TD_BASE, esc(lsState.bim.op[i])) +
+        td(70,  TD_BASE+'font-weight:bold;white-space:nowrap;', `<b>${lbl}</b>`) +
+        td(90,  TD_BASE, esc(bbVal)) +
+        td(70,  TD_BASE+'font-weight:bold;white-space:nowrap;', `<b>${lbl}</b>`) +
+        td(90,  TD_BASE, esc(opVal)) +
       `</tr>`;
     });
     html += `</tbody></table>`;
