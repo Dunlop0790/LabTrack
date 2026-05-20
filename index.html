@@ -222,6 +222,24 @@
     /* ── FORM ── */
     .fg{margin-bottom:14px}
     .flbl{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:5px}
+
+    /* ── TOOLTIP SYSTEM ──
+       A small "?" bubble that shows a plain-language explanation on hover
+       (desktop) or tap (mobile). Pure CSS for the bubble itself; the JS
+       handles tap-toggle for touch devices. The bubble appears above the
+       trigger by default and flips below when there is not enough space.
+       Kept intentionally simple: no animation, no portal rendering, no
+       dependencies. */
+    .tt-wrap{position:relative;display:inline-flex;align-items:center;gap:5px}
+    .tt-btn{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;border:1.5px solid var(--muted);color:var(--muted);font-size:10px;font-weight:700;cursor:help;flex-shrink:0;line-height:1;background:transparent;padding:0;font-family:'Inter',sans-serif;user-select:none;transition:border-color .1s,color .1s}
+    .tt-btn:hover,.tt-btn.open{border-color:var(--accent);color:var(--accent)}
+    .tt-box{position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:var(--card-bg);border:1px solid var(--border);border-radius:7px;padding:9px 11px;font-size:12px;font-weight:400;color:var(--text);line-height:1.45;min-width:200px;max-width:280px;text-align:left;text-transform:none;letter-spacing:0;box-shadow:0 4px 16px rgba(0,0,0,.18);pointer-events:none;opacity:0;white-space:normal;z-index:300;transition:opacity .1s}
+    .tt-btn:hover + .tt-box,.tt-btn.open + .tt-box{opacity:1;pointer-events:auto}
+    /* Flip below when near top of screen */
+    .tt-flip .tt-box{bottom:auto;top:calc(100% + 7px)}
+    /* Arrow */
+    .tt-box::before{content:'';position:absolute;bottom:-5px;left:50%;transform:translateX(-50%) rotate(45deg);width:8px;height:8px;background:var(--card-bg);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+    .tt-flip .tt-box::before{bottom:auto;top:-5px;border-right:none;border-bottom:none;border-left:1px solid var(--border);border-top:1px solid var(--border)}
     .fc{width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:6px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s;font-family:inherit;background:var(--input-bg)}
     .fc:focus{border-color:#3b82f6}
     select.fc{cursor:pointer}
@@ -529,12 +547,14 @@
   <div class="modal setup-modal">
     <div class="setup-icon" id="setupIcon"></div>
     <div class="setup-title">Welcome to LabTrack</div>
-    <div class="setup-sub">Enter your name once. It'll be saved to this device so you never have to type it again.</div>
+    <div class="setup-sub">Select your name and role to get started. Choose Guest to browse without making changes.</div>
     <div class="fg" style="text-align:left">
       <label class="flbl">Your Name</label>
-      <input class="fc" id="setupName" placeholder="e.g. John D." />
+      <select class="fc" id="setupName">
+        <option value="">Select your name...</option>
+      </select>
     </div>
-    <div class="fg" style="text-align:left">
+    <div class="fg" style="text-align:left" id="roleSection">
       <label class="flbl">Your Role</label>
       <div class="roles">
         <div class="role-opt" id="roleALO" onclick="selectRole('ALO')">
@@ -551,7 +571,8 @@
         </div>
       </div>
     </div>
-    <button class="btn btn-p" style="width:100%;padding:11px" onclick="saveUser()">Get Started</button>
+    <button class="btn btn-p" style="width:100%;padding:11px;margin-bottom:8px" onclick="saveUser()">Get Started</button>
+    <button class="btn btn-g" style="width:100%;padding:10px" onclick="enterGuest()">Browse as Guest</button>
   </div>
 </div>
 
@@ -568,7 +589,7 @@
     </div>
     <div class="frow">
       <div class="fg">
-        <label class="flbl">Priority *</label>
+        <label class="flbl">Priority * ${tt('Critical: line is down or a major process is stopped. Urgent: line is running but degraded and needs attention soon. Monitor: something to keep an eye on, not blocking. Low: non-urgent, can be addressed when time allows.')}</label>
         <select class="fc" id="issuePriority">
           <option value="critical">● Critical</option>
           <option value="urgent">● Urgent</option>
@@ -615,7 +636,7 @@
       </div>
     </div>
     <div class="fg">
-      <label class="flbl">Assign To</label>
+      <label class="flbl">Assign To ${tt('Who is actively working this issue. You can leave this blank and assign later from the card. Start typing to search the team roster.')}</label>
       <div class="assign-wrap">
         <input class="fc" id="issueAssignee" placeholder="Type to search names…" autocomplete="off"
                oninput="showAssignDropdown('issueAssignee','issueAssignList',this.value)"
@@ -704,11 +725,7 @@
           <div class="dept-item" onclick="closeDeptDropdowns();openReports()">
             <span class="dept-ico" data-icon="clipboard"></span>Reports
           </div>
-          <!-- External links: href values to be filled in by Corey when ready -->
-          <a class="dept-item" href="#" target="_blank" rel="noopener" onclick="closeDeptDropdowns()">
-            <span class="dept-ico" data-icon="link"></span>FlexLab
-          </a>
-          <a class="dept-item" href="#" target="_blank" rel="noopener" onclick="closeDeptDropdowns()">
+          <a class="dept-item" href="http://das.davita.com" target="_blank" rel="noopener" onclick="closeDeptDropdowns()">
             <span class="dept-ico" data-icon="link"></span>DAS
           </a>
         </div>
@@ -731,8 +748,7 @@
        External links use anchor tags so they work as native links on tap. -->
   <div class="ham-section">ALO</div>
   <div class="ham-item ham-sub" onclick="closeHam();openReports()"><span class="ham-ico" data-icon="clipboard"></span>Reports</div>
-  <a class="ham-item ham-sub" href="#" target="_blank" rel="noopener" onclick="closeHam()"><span class="ham-ico" data-icon="link"></span>FlexLab</a>
-  <a class="ham-item ham-sub" href="#" target="_blank" rel="noopener" onclick="closeHam()"><span class="ham-ico" data-icon="link"></span>DAS</a>
+  <a class="ham-item ham-sub" href="http://das.davita.com" target="_blank" rel="noopener" onclick="closeHam()"><span class="ham-ico" data-icon="link"></span>DAS</a>
   <div class="ham-item" onclick="closeHam();openArchive()"><span class="ham-ico" data-icon="archive"></span>Archive</div>
   <div class="ham-item" onclick="closeHam();openStats()"><span class="ham-ico" data-icon="chart"></span>Stats</div>
   <div class="ham-item" onclick="closeHam();window.print()"><span class="ham-ico" data-icon="printer"></span>Print</div>
@@ -989,6 +1005,30 @@ function isAging(issue){
   const age = Date.now() - issue.createdAt.toDate().getTime();
   return age > (AGE_WARN_MS[issue.priority]||AGE_WARN_MS.low);
 }
+
+// ── TOOLTIP HELPER ────────────────────────────────────────────
+// Generates the HTML for a tooltip trigger bubble and its content box.
+// Usage: tt('Your explanation text here') inside any label or heading.
+// The bubble shows on hover (desktop) and toggles on tap (mobile).
+// text: plain string, no HTML markup. Flip: set true to open downward
+// when the trigger is near the top of the viewport.
+function tt(text, flip){
+  const safeText = esc(text);
+  return `<span class="tt-wrap${flip?' tt-flip':''}"><button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button><span class="tt-box">${safeText}</span></span>`;
+}
+
+// Tap-toggle for mobile: clicking the ? button opens/closes the tooltip.
+// Clicking anywhere else on the page closes all open tooltips.
+function ttToggle(e){
+  e.stopPropagation();
+  const btn = e.currentTarget;
+  const wasOpen = btn.classList.contains('open');
+  document.querySelectorAll('.tt-btn.open').forEach(b => b.classList.remove('open'));
+  if(!wasOpen) btn.classList.add('open');
+}
+document.addEventListener('click', () => {
+  document.querySelectorAll('.tt-btn.open').forEach(b => b.classList.remove('open'));
+});
 
 // ── ICONS ─────────────────────────────────────────────────────
 // Inline SVG icon set used throughout the UI. All icons use
@@ -1381,14 +1421,70 @@ function selectRole(role){
   document.getElementById('roleSiemens').classList.toggle('sel',role==='Siemens');
 }
 
+// Populates the name picker in the setup overlay from the preset
+// roster. Called once at boot before the user selects anything.
+// The roster is grouped by role so names appear in a logical order.
+function populateSetupNames(){
+  const sel = document.getElementById('setupName');
+  if(!sel) return;
+  // Build grouped options from SEED_ROSTER in role display order
+  ROLE_ORDER.forEach(role => {
+    const names = SEED_ROSTER[role];
+    if(!names || !names.length) return;
+    const grp = document.createElement('optgroup');
+    grp.label = role;
+    names.slice().sort((a,b)=>a.localeCompare(b)).forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      grp.appendChild(opt);
+    });
+    sel.appendChild(grp);
+  });
+  // When a name is selected, auto-select the matching role so the user
+  // doesn't have to click twice for someone whose role is known.
+  sel.addEventListener('change', () => {
+    const chosen = sel.value;
+    ROLE_ORDER.forEach(role => {
+      if((SEED_ROSTER[role]||[]).includes(chosen)){
+        selectRole(role);
+      }
+    });
+  });
+}
+
 function saveUser(){
-  const name=document.getElementById('setupName').value.trim();
-  if(!name){alert('Please enter your name.');return}
-  if(!selectedRole){alert('Please select your role.');return}
-  user={name,role:selectedRole};
-  localStorage.setItem('lt_user',JSON.stringify(user));
+  const name = document.getElementById('setupName').value.trim();
+  if(!name){ alert('Please select your name.'); return; }
+  if(!selectedRole){ alert('Please select your role.'); return; }
+  user = {name, role:selectedRole, guest:false};
+  localStorage.setItem('lt_user', JSON.stringify(user));
   document.getElementById('setupOverlay').classList.add('hidden');
   initApp();
+}
+
+// Guest mode: read-only access. The user can browse boards, view issues,
+// and read reports but cannot create issues, post comments, or publish.
+// Guest identity is not persisted so it is re-prompted on every visit.
+function enterGuest(){
+  user = {name:'Guest', role:'Guest', guest:true};
+  // Intentionally not saving to localStorage so guest is prompted again
+  // on next visit. Use the normal identity flow if you want to be remembered.
+  document.getElementById('setupOverlay').classList.add('hidden');
+  initApp();
+}
+
+// Returns true if the current user is in guest (read-only) mode.
+function isGuest(){ return user?.guest === true; }
+
+// Gate function: call before any write operation. Shows a friendly
+// message and returns false if the user is in guest mode.
+function requireIdentity(action){
+  if(isGuest()){
+    showToast(`Sign in with your name to ${action||'do that'}.`);
+    return false;
+  }
+  return true;
 }
 
 function resetUser(){
@@ -1403,8 +1499,8 @@ function resetUser(){
 // board, kicks off the realtime issue subscription, and triggers any
 // scheduled maintenance tasks (archive sweep, snapshot purge).
 async function initApp(){
-  document.getElementById('userName').textContent=user.name;
-  document.getElementById('userAvatar').textContent=initials(user.name);
+  document.getElementById('userName').textContent = isGuest() ? 'Guest (read-only)' : user.name;
+  document.getElementById('userAvatar').textContent = isGuest() ? '?' : initials(user.name);
   // Inject inline SVG icons into all static placeholders. This is a
   // one-time pass at boot; dynamically-rendered elements (cards,
   // hamburger menu items already in the DOM) are handled here too.
@@ -1493,14 +1589,11 @@ async function loadRoster(){
 }
 
 async function ensureUserInRoster(){
-  const exists = roster.some(r => r.name.toLowerCase() === user.name.toLowerCase());
-  if(!exists){
-    await db.collection('roster').doc(user.name).set({
-      role: user.role,
-      addedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    roster.push({name:user.name, role:user.role});
-  }
+  // Roster is now preset-only. We no longer add names on login.
+  // This function is kept as a no-op so existing call sites don't break.
+  // If a name needs to be added, it should be added to SEED_ROSTER
+  // in the source code and redeployed, or added manually in Firestore.
+  if(isGuest()) return;
 }
 
 // Group roster by role, in display order
@@ -1545,7 +1638,10 @@ function switchBoard(id){
   subscribeIssues(id);
 }
 
-function openNewBoard(){document.getElementById('newBoardOverlay').classList.remove('hidden')}
+function openNewBoard(){
+  if(!requireIdentity('create boards')) return;
+  document.getElementById('newBoardOverlay').classList.remove('hidden');
+}
 function closeNewBoard(){document.getElementById('newBoardOverlay').classList.add('hidden')}
 
 async function submitNewBoard(){
@@ -1610,14 +1706,18 @@ function subscribeIssues(bid){
       if(!isFirstLoad){
         newIssues.forEach(issue=>{
           const prev = prevIssueMap[issue.id];
-          // New issue from someone else: alert if Critical/Urgent
-          if(!prev && ['critical','urgent'].includes(issue.priority) && issue.createdBy!==user.name){
+          // New issue added by someone else: play alert for all priorities.
+          // The sound signals "someone just logged something" regardless of
+          // severity so the team stays aware without having to watch the board.
+          // We only skip issues added by the current user (they already know).
+          if(!prev && issue.createdBy !== user.name){
             playAlert();
             if(Notification.permission==='granted'){
-              new Notification(`⚠️ ${issue.priority.toUpperCase()}: ${issue.title}`,{body:`Logged by ${issue.createdBy}`});
+              new Notification(`${issue.priority.toUpperCase()}: ${issue.title}`,{body:`Logged by ${issue.createdBy}`});
             }
           }
-          // Existing issue escalated to Critical/Urgent
+          // Existing issue escalated to Critical/Urgent: alert regardless of
+          // who made the change, since this signals a worsening situation.
           else if(prev && prev.priority!==issue.priority &&
                   ['critical','urgent'].includes(issue.priority) &&
                   !['critical','urgent'].includes(prev.priority)){
@@ -1687,9 +1787,11 @@ function renderCard(issue){
   const ai = initials(issue.assignee||'');
   const aging = isAging(issue);
   const age = fmtAge(issue.createdAt);
-  return `<div class="card ${tc} ${aging?'aging':''}" onclick="openDetail('${issue.id}')">
+  const agingTitle = aging ? 'title="This issue has been open longer than expected for its priority. Critical: over 1 hr, Urgent: over 2 hr, Monitor: over 24 hr, Low: over 7 days."' : '';
+  const priorityTitles = {critical:'Critical: line is down or a major process is stopped.',urgent:'Urgent: line is running but degraded, needs attention soon.',monitor:'Monitor: something to watch, not currently blocking.',low:'Low: non-urgent, address when time allows.'};
+  return `<div class="card ${tc} ${aging?'aging':''}" onclick="openDetail('${issue.id}')" ${agingTitle}>
     <div class="card-top">
-      <span class="pbadge ${issue.priority}">${issue.priority}</span>
+      <span class="pbadge ${issue.priority}" title="${priorityTitles[issue.priority]||''}">${issue.priority}</span>
       <span class="tbadge ${tc}">${tl}</span>
     </div>
     <div class="card-title">${esc(issue.title)}</div>
@@ -1710,6 +1812,7 @@ function renderCard(issue){
 // assignee. On submit, the card is written to Firestore which triggers
 // a realtime update on every connected client.
 function openNewIssue(){
+  if(!requireIdentity('log issues')) return;
   document.getElementById('issueAssignee').value='';
   document.getElementById('newIssueOverlay').classList.remove('hidden');
   document.getElementById('issueTitle').focus();
@@ -1909,10 +2012,28 @@ async function updateField(id, field, val){
   // Get the previous value so we can log the change
   const issue = issues.find(i=>i.id===id);
   const prev = issue ? issue[field] : null;
-  await db.collection('issues').doc(id).update({[field]:val, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  const update = {[field]:val, updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+
+  // When an issue is being marked resolved (and wasn't already), prompt
+  // for a fix description so future team members can learn from it.
+  // Empty/skipped is allowed for quick fixes that do not need documenting.
+  if(field === 'status' && val === 'resolved' && prev !== 'resolved'){
+    const fixText = prompt('Briefly describe how this issue was fixed.\n\nThis will be saved with the issue and visible in the resolved view and the archive so the team can reference it later. You can leave this blank to skip.');
+    if(fixText && fixText.trim()){
+      update.fixDescription = fixText.trim();
+      update.fixedBy = user.name;
+      update.fixedAt = firebase.firestore.FieldValue.serverTimestamp();
+    }
+  }
+
+  await db.collection('issues').doc(id).update(update);
   // Log significant field changes to history
   if(['status','priority'].includes(field) && prev !== val){
     await logActivity(id, field, {from:prev, to:val});
+  }
+  // If a fix description was captured, log it to history too
+  if(update.fixDescription){
+    await logActivity(id, 'fix', {text: update.fixDescription});
   }
 }
 
@@ -1946,6 +2067,7 @@ function toggleHistory(issueId){
 }
 
 async function postComment(issueId){
+  if(!requireIdentity('post comments')) return;
   const text=document.getElementById('ctext')?.value.trim();
   if(!text) return;
   const mentions = extractMentions(text);
@@ -2802,6 +2924,7 @@ function renderLineStatus(){
                 ${boards.map(b=>`<option value="${b.id}" ${lsSourceBoard===b.id?'selected':''}>${esc(b.title)}</option>`).join('')}
               </select>
               <button class="ls-add-btn" style="font-size:11px;padding:3px 9px" onclick="lsRefreshNotes()">Refresh from Board</button>
+              ${tt('Pulls open issues from the selected board and fills in the BB and OP notes fields. Pick a board from the dropdown first if you want to pull from something other than the one you are currently viewing. You can edit the result after it populates.')}
             </div>
           </div>
           <div class="ls-cell-hdr bb" style="margin-top:5px">BB</div>
@@ -2928,9 +3051,21 @@ function renderLineStatus(){
 
         <div class="ls-actions">
           <button class="btn-clear" onclick="lsClear()">Clear All</button>
-          <button class="btn-snap" onclick="lsSaveSnapshot()">Save Snapshot</button>
-          <button class="btn-copy" onclick="lsCopy()">Copy to Clipboard</button>
-          <button class="btn-publish" onclick="lsPublish()" title="Publish this report so the team can view it under the Today tab">Publish</button>
+          <span class="tt-wrap tt-flip">
+            <button class="btn-snap" onclick="lsSaveSnapshot()">Save Snapshot</button>
+            <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
+            <span class="tt-box">Saves a draft of this form so you can reload it later from the Saved Snapshots tab.</span>
+          </span>
+          <span class="tt-wrap tt-flip">
+            <button class="btn-copy" onclick="lsCopy()">Copy to Clipboard</button>
+            <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
+            <span class="tt-box">Copies the formatted report so you can paste it directly into an Outlook email. Tables and layout are preserved on paste.</span>
+          </span>
+          <span class="tt-wrap tt-flip">
+            <button class="btn-publish" onclick="lsPublish()" title="Publish this report so the team can view it under the Today tab">Publish</button>
+            <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
+            <span class="tt-box">Posts the current report to the Today tab where the whole team can see it in real time. Anyone can edit and republish to correct information without sending a follow-up email.</span>
+          </span>
         </div>
       </div>
 
@@ -3844,6 +3979,7 @@ function renderEOD(){
                 ${boards.map(b=>`<option value="${b.id}" ${eodSourceBoard===b.id?'selected':''}>${esc(b.title)}</option>`).join('')}
               </select>
               <button class="ls-add-btn" style="font-size:11px;padding:3px 9px" onclick="eodRefreshIssues()">Refresh from Board</button>
+              ${tt('Pulls open issues from the selected board and fills in the BB and OP issue sections, sorted by instrument type (BIM, HVS, or general). Pick a board from the dropdown first if needed. You can edit the result after it populates.')}
             </div>
           </div>
           <div class="ls-cell-hdr bb" style="margin-top:6px">BB - BIM Issues</div>
@@ -3895,9 +4031,21 @@ function renderEOD(){
 
         <div class="ls-actions">
           <button class="btn-clear" onclick="eodClear()">Clear All</button>
-          <button class="btn-snap" onclick="eodSaveSnapshot()">Save Snapshot</button>
-          <button class="btn-copy" onclick="eodCopy()">Copy to Clipboard</button>
-          <button class="btn-publish" onclick="eodPublish()" title="Publish this EOD so the team can view it under the Today tab">Publish</button>
+          <span class="tt-wrap tt-flip">
+            <button class="btn-snap" onclick="eodSaveSnapshot()">Save Snapshot</button>
+            <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
+            <span class="tt-box">Saves a draft of this form so you can reload it later from the Saved Snapshots tab.</span>
+          </span>
+          <span class="tt-wrap tt-flip">
+            <button class="btn-copy" onclick="eodCopy()">Copy to Clipboard</button>
+            <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
+            <span class="tt-box">Copies the formatted report so you can paste it directly into an Outlook email. Tables and layout are preserved on paste.</span>
+          </span>
+          <span class="tt-wrap tt-flip">
+            <button class="btn-publish" onclick="eodPublish()" title="Publish this EOD so the team can view it under the Today tab">Publish</button>
+            <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
+            <span class="tt-box">Posts the current EOD to the Today tab where the whole team can see it in real time. Anyone can edit and republish to correct information without sending a follow-up email.</span>
+          </span>
         </div>
       </div>
 
@@ -4592,6 +4740,8 @@ if(localStorage.getItem('lt_theme') === 'dark') document.documentElement.classLi
 // the setup screen (in case user is brand-new) and the main app
 // header/hamburger before initApp() runs.
 injectStaticIcons();
+// Populate the name picker in the setup overlay from the preset roster.
+populateSetupNames();
 
 const saved=localStorage.getItem('lt_user');
 if(saved){
