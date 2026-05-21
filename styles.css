@@ -21,17 +21,16 @@ html.dark{
   --critical:#ef4444;--urgent:#fb923c;--moderate-c:#22d3ee;--low:#94a3b8;
   --op:#ef4444;--bb:#fbbf24;
 }
-html.dark .pbadge.critical{background:#7f1d1d;color:#fecaca}
-html.dark .pbadge.urgent{background:#7c2d12;color:#fed7aa}
-html.dark .pbadge.moderate{background:#0c4a6e;color:#67e8f9}
-/* Backward compatibility: issues created before the Monitor->Moderate
-   rename still have priority:'monitor' in Firestore. Style them
-   identically to moderate until they are resolved and archived. */
-html.dark .pbadge.monitor{background:#0c4a6e;color:#67e8f9}
-html.dark .pbadge.low{background:#374151;color:#d1d5db}
-html.dark .tbadge.op{background:#7f1d1d;color:#fecaca}
-html.dark .tbadge.bb{background:#78350f;color:#fde68a}
-html.dark .tbadge.general{background:#334155;color:#cbd5e1}
+/* Dark mode: pbadges remain outlined (no fill); tbadges use slightly
+   darker solid colors so they don't glow on the darker card background. */
+html.dark .pbadge.critical{color:#fca5a5;border-color:#fca5a5}
+html.dark .pbadge.urgent{color:#fdba74;border-color:#fdba74}
+html.dark .pbadge.moderate{color:#67e8f9;border-color:#67e8f9}
+html.dark .pbadge.monitor{color:#67e8f9;border-color:#67e8f9}
+html.dark .pbadge.low{color:#9ca3af;border-color:#9ca3af}
+html.dark .tbadge.op{background:#b91c1c;color:#fff}
+html.dark .tbadge.bb{background:#d97706;color:#1e293b}
+html.dark .tbadge.general{background:#64748b;color:#fff}
 html.dark select.fc option{background:var(--input-bg);color:var(--text)}
 html.dark .desc-box{background:#0f172a}
 html.dark .ci{background:#0f172a}
@@ -194,16 +193,62 @@ select.fc option[value="general"]{color:#64748b}
 .col-empty{text-align:center;padding:18px 8px;color:#94a3b8;font-size:12px;font-style:italic}
 
 /* ── CARD ── */
-.card{background:var(--card-bg);border-radius:7px;padding:11px 12px;cursor:pointer;border-left:4px solid #94a3b8;box-shadow:var(--shadow-sm);transition:box-shadow .15s,transform .1s}
-.card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}
+/* Card design: priority drives the left edge stripe; track is conveyed by
+   the solid-color tbadge pill. No top border accent, no hover lift —
+   instead a subtle background shift on hover for a quieter feel. */
+.card{
+  background:var(--card-bg);
+  border:1px solid var(--border);
+  border-left:3px solid #94a3b8;
+  border-radius:6px;
+  padding:10px 12px 11px;
+  cursor:pointer;
+  transition:background .12s,border-color .12s;
+}
+.card:hover{
+  background:var(--hover-bg);
+  border-color:var(--border);
+}
+/* Priority drives the left edge color */
+.card.p-critical{border-left-color:var(--critical)}
+.card.p-urgent{border-left-color:var(--urgent)}
+.card.p-moderate,.card.p-monitor{border-left-color:var(--moderate-c)}
+.card.p-low{border-left-color:var(--low)}
+/* Resolved cards: keep the priority color but mute it so the column
+   reads as quieter. The signal is still there at a glance for anyone
+   scanning the resolved column without shouting from a finished issue. */
+.card.s-resolved{opacity:.85}
+.card.s-resolved{border-left-color:#cbd5e1}
+.card.s-resolved.p-critical{border-left-color:#fca5a5}
+.card.s-resolved.p-urgent{border-left-color:#fdba74}
+.card.s-resolved.p-moderate,.card.s-resolved.p-monitor{border-left-color:#7dd3fc}
+.card.s-resolved.p-low{border-left-color:#cbd5e1}
+html.dark .card.s-resolved.p-critical{border-left-color:#7f1d1d}
+html.dark .card.s-resolved.p-urgent{border-left-color:#7c2d12}
+html.dark .card.s-resolved.p-moderate,html.dark .card.s-resolved.p-monitor{border-left-color:#0c4a6e}
+html.dark .card.s-resolved.p-low{border-left-color:#475569}
+/* Track color removed from card border-left; lives on the tbadge only.
+   Keep the legacy selectors as no-ops so existing rendered HTML doesn't
+   regress (they will just be overridden by the priority rules above). */
+.card.op,.card.bb,.card.general{}
+
+/* Priority badge: smaller and less visually loud. The left edge stripe
+   is now the primary signal; this stays as a redundant text label. */
+.pbadge{font-size:9px;font-weight:600;padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.4px;background:transparent;color:var(--muted);border:1px solid var(--border)}
+.pbadge.critical{color:var(--critical);border-color:var(--critical)}
+.pbadge.urgent{color:var(--urgent);border-color:var(--urgent)}
+.pbadge.moderate,.pbadge.monitor{color:var(--moderate-c);border-color:var(--moderate-c)}
+.pbadge.low{color:var(--low);border-color:var(--low)}
+
+/* Track badge: solid color fill, the primary track signal */
+.tbadge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px;margin-left:auto;text-transform:uppercase;letter-spacing:.3px;transition:filter .12s}
+.tbadge.op{background:var(--op);color:#fff}
+.tbadge.bb{background:#f59e0b;color:#1e293b}
+.tbadge.general{background:#94a3b8;color:#fff}
+.card:hover .tbadge{filter:brightness(0.92)}
 .card.aging{box-shadow:0 0 0 2px rgba(220,38,38,.35), 0 4px 12px rgba(220,38,38,.25);animation:agingPulse 2.5s ease-in-out infinite}
 @keyframes agingPulse{0%,100%{box-shadow:0 0 0 2px rgba(220,38,38,.35), 0 4px 12px rgba(220,38,38,.25)}50%{box-shadow:0 0 0 3px rgba(220,38,38,.5), 0 4px 18px rgba(220,38,38,.4)}}
-.card.op{border-left-color:var(--op)}.card.bb{border-left-color:var(--bb)}.card.general{border-left-color:#94a3b8}
 .card-top{display:flex;align-items:center;gap:5px;margin-bottom:5px}
-.pbadge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.3px}
-.pbadge.critical{background:#fee2e2;color:var(--critical)}.pbadge.urgent{background:#ffedd5;color:var(--urgent)}.pbadge.moderate{background:#e0f2fe;color:var(--moderate-c)}.pbadge.monitor{background:#e0f2fe;color:var(--moderate-c)}.pbadge.low{background:#f1f5f9;color:var(--low)}
-.tbadge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:auto}
-.tbadge.op{background:#fee2e2;color:var(--op)}.tbadge.bb{background:#fef3c7;color:#92400e}.tbadge.general{background:#f1f5f9;color:#64748b}
 .card-title{font-size:13px;font-weight:600;line-height:1.4;margin-bottom:5px}
 .card-inst{font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:7px;letter-spacing:.3px}
 .card-bot{display:flex;align-items:center;gap:5px}
@@ -213,7 +258,7 @@ select.fc option[value="general"]{color:#64748b}
 .cc svg{flex-shrink:0}
 
 /* ── OVERLAYS ── */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.25);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
 .overlay.hidden{display:none}
 .modal{background:var(--card-bg);border-radius:12px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;padding:22px}
 .modal-lg{max-width:740px}
@@ -243,8 +288,11 @@ select.fc option[value="general"]{color:#64748b}
 /* Arrow */
 .tt-box::before{content:'';position:absolute;bottom:-5px;left:50%;transform:translateX(-50%) rotate(45deg);width:8px;height:8px;background:var(--card-bg);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
 .tt-flip .tt-box::before{bottom:auto;top:-5px;border-right:none;border-bottom:none;border-left:1px solid var(--border);border-top:1px solid var(--border)}
-.fc{width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:6px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s;font-family:inherit;background:var(--input-bg)}
-.fc:focus{border-color:#3b82f6}
+/* Form inputs: 1px borders with a subtle box-shadow ring on focus
+   rather than a color change. Tighter vertical padding to match the
+   denser overall feel of the redesign. */
+.fc{width:100%;padding:7px 11px;border:1px solid var(--border);border-radius:6px;font-size:14px;color:var(--text);outline:none;transition:border-color .12s,box-shadow .12s;font-family:inherit;background:var(--input-bg)}
+.fc:focus{border-color:var(--border);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
 select.fc{cursor:pointer}
 textarea.fc{resize:vertical;min-height:76px}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:11px}
@@ -305,8 +353,11 @@ html.dark .fix-box-lbl{color:#4ade80}
 .role-sub{font-size:11px;color:var(--muted);margin-top:2px}
 
 /* ── TOAST ── */
-.toast{position:fixed;bottom:18px;right:18px;background:#1e293b;color:#fff;padding:11px 15px;border-radius:8px;font-size:13px;z-index:999;max-width:280px;box-shadow:0 4px 14px rgba(0,0,0,.2);transform:translateY(70px);opacity:0;transition:all .28s;pointer-events:none}
-.toast.show{transform:translateY(0);opacity:1}
+/* Toast notifications: top-right, flat strip with 3px colored left accent.
+   Smaller padding, smaller border-radius, faster slide-in. Replaces the
+   bottom-right pill with a more restrained, peripheral-vision design. */
+.toast{position:fixed;top:18px;right:18px;background:var(--card-bg);color:var(--text);border:1px solid var(--border);border-left:3px solid #3b82f6;padding:9px 13px;border-radius:5px;font-size:13px;font-weight:500;z-index:999;max-width:300px;box-shadow:0 4px 14px rgba(0,0,0,.12);transform:translateX(20px);opacity:0;transition:transform .12s,opacity .12s;pointer-events:none}
+.toast.show{transform:translateX(0);opacity:1}
 .loading{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted)}
 .credit{position:fixed;bottom:10px;right:14px;font-size:11px;color:#94a3b8;pointer-events:none;user-select:none;z-index:50}
 
@@ -370,7 +421,7 @@ html.dark .fix-box-lbl{color:#4ade80}
 .btn-tool.primary:hover{background:rgba(59,130,246,.28);border-color:rgba(59,130,246,.7)}
 
 /* Full-screen overlays for archive and stats */
-.panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;padding:24px}
+.panel-overlay{position:fixed;inset:0;background:rgba(15,23,42,.25);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);z-index:200;display:none;padding:24px}
 .panel-overlay.open{display:flex;align-items:flex-start;justify-content:center}
 .panel{background:var(--card-bg);border-radius:10px;width:100%;max-width:1100px;max-height:calc(100vh - 48px);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.25)}
 
@@ -449,7 +500,7 @@ html.dark .fix-box-lbl{color:#4ade80}
 /* Archive specific */
 .week-pick{font-size:13px;padding:6px 11px;border:1.5px solid var(--border);border-radius:6px;background:var(--input-bg);color:var(--text);cursor:pointer;min-width:200px}
 .arch-list{display:flex;flex-direction:column;gap:8px}
-.arch-empty{padding:50px 20px;text-align:center;color:var(--muted);font-size:14px}
+.arch-empty{padding:18px 0;color:var(--muted);font-size:13px;font-style:italic}
 .arch-card{background:var(--panel-bg);border:1px solid var(--border);border-left:4px solid #94a3b8;border-radius:7px;padding:11px 14px;cursor:pointer;transition:all .12s}
 .arch-card:hover{background:var(--hover-bg);border-color:#94a3b8}
 .arch-card.op{border-left-color:var(--op)}
@@ -502,9 +553,8 @@ html.dark .fix-box-lbl{color:#4ade80}
 .ls-sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#3b82f6;margin-bottom:9px}
 .ls-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .ls-row + .ls-row{margin-top:7px}
-.ls-mini{font-size:12px;padding:5px 9px;border:1.5px solid var(--border);border-radius:5px;background:var(--input-bg);color:var(--text);outline:none;width:auto}
-.ls-mini:focus{border-color:#3b82f6}
-.ls-mini:focus{border-color:#3b82f6}
+.ls-mini{font-size:12px;padding:4px 9px;border:1px solid var(--border);border-radius:5px;background:var(--input-bg);color:var(--text);outline:none;width:auto;transition:border-color .12s,box-shadow .12s}
+.ls-mini:focus{box-shadow:0 0 0 3px rgba(59,130,246,.15)}
 .ls-mini.w70{width:70px}
 .ls-mini.w90{width:90px}
 .ls-lbl{font-size:12px;font-weight:600;color:var(--muted);min-width:80px}
@@ -592,11 +642,7 @@ body.dark .ls-render{background:#fff;color:#000}
 .today-meta-actions button{font-size:12px;padding:6px 12px;border:1.5px solid var(--border);background:var(--card-bg);color:var(--text);border-radius:5px;cursor:pointer;font-weight:600}
 .today-meta-actions button:hover{border-color:#3b82f6;color:#3b82f6}
 .today-meta-actions button.withdraw:hover{border-color:var(--critical);color:var(--critical)}
-.today-empty{padding:50px 20px;text-align:center;color:var(--muted)}
-.today-empty-ico{margin-bottom:10px;opacity:0.5;color:var(--muted);display:flex;align-items:center;justify-content:center}
-.today-empty-ico svg{display:block}
-.today-empty-title{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text)}
-.today-empty-sub{font-size:12px}
+.today-empty{padding:18px 0;color:var(--muted);font-size:13px;font-style:italic}
 
 /* Revision history list: shows every publish/edit for today's reports.
    Same visual style as the snapshot list for consistency. */
@@ -706,4 +752,4 @@ html.dark .sug-thumbs-btn.voted{background:#1e3a5f}
 .sug-close-btn:hover{border-color:var(--critical);color:var(--critical)}
 .sug-close-btn.reopen:hover{border-color:#10b981;color:#10b981}
 .sug-closed-hdr{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.sug-empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px}
+.sug-empty{padding:18px 0;color:var(--muted);font-size:13px;font-style:italic}

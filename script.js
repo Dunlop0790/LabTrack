@@ -941,7 +941,7 @@ function renderCard(issue){
   const age = fmtAge(issue.createdAt);
   const agingTitle = aging ? 'title="This issue has been open longer than expected for its priority. Critical: over 1 hr, Urgent: over 2 hr, Moderate: over 24 hr, Low: over 7 days."' : '';
   const priorityTitles = {critical:'Critical: line is down or a major process is stopped.',urgent:'Urgent: line is running but degraded, needs attention soon.',moderate:'Moderate: something to watch, not currently blocking.',low:'Low: non-urgent, address when time allows.'};
-  return `<div class="card ${tc} ${aging?'aging':''}" onclick="openDetail('${issue.id}')" ${agingTitle}>
+  return `<div class="card ${tc} p-${issue.priority} s-${issue.status} ${aging?'aging':''}" onclick="openDetail('${issue.id}')" ${agingTitle}>
     <div class="card-top">
       <span class="pbadge ${issue.priority}" title="${priorityTitles[issue.priority]||''}">${issue.priority}</span>
       <span class="tbadge ${tc}">${tl}</span>
@@ -3794,14 +3794,11 @@ async function renderTodayHistory(){
 }
 
 // Empty-state placeholder shown when no published record exists yet.
+// If sub is provided, use it as the message text directly instead of
+// the default "No {label} published today." phrasing.
 function todayEmptyState(label, sub){
-  return `
-    <div class="today-empty">
-      <div class="today-empty-ico">${ICONS.inbox}</div>
-      <div class="today-empty-title">No ${label} published today</div>
-      <div class="today-empty-sub">${sub || 'When someone hits Publish on the ' + label + ' form, it will appear here.'}</div>
-    </div>
-  `;
+  const msg = sub || `No ${label} published today.`;
+  return `<div class="today-empty">${esc(msg)}</div>`;
 }
 
 // Loads a published record back into the form so the publisher (or
