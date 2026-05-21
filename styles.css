@@ -41,6 +41,13 @@ html.dark .arch-card{background:#0f172a}
 html.dark .mention{background:#1e3a5f;color:#93c5fd}
 body{font-family:'Geist','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;font-size:14px;transition:background .2s,color .2s;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 
+/* Force form controls to inherit the body font instead of using the
+   browser's default system font for inputs, selects, textareas, and
+   buttons. Without this, native form elements fall back to the OS font
+   (Arial/Helvetica) and look visibly out of place next to the Geist
+   text everywhere else. */
+input,select,textarea,button,optgroup,option{font-family:inherit;font-size:inherit}
+
 /* ── HEADER (three-tier layout) ──
    Tier 1 (top, navy): logo, board picker, primary navigation (Today),
                        and global toggles (theme, sound, godzilla, user).
