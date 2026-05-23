@@ -2223,12 +2223,14 @@ function renderLineStatus(){
       style="width:100%;text-align:center"
       oninput="lsUpdateRollover('${field}',${idx},this.value)">`;
 
-  // Auto-sum row: displays the sum of the three rows above it (rom+wbb+hvs)
-  // or the five input rows (wbbProc+bb+op+relabel+load+bims)
-  const sumRow = (fields, idx) => {
+  // Auto-sum row: marks each cell with a data-roll-sum attribute so
+  // lsUpdateRollover() can find and update it directly without a full
+  // form re-render (which would steal focus from the input the user is
+  // currently typing in).
+  const sumRow = (fields, idx, sumKey) => {
     const vals = fields.map(f => parseFloat((rState[f]||[])[idx]) || 0);
     const total = vals.reduce((a,b)=>a+b, 0);
-    return `<td style="${TD_BASE}background:#f0f4ff;font-weight:bold">${total || ''}</td>`;
+    return `<td data-roll-sum="${sumKey}-${idx}" style="${TD_BASE}background:#f0f4ff;font-weight:bold">${total || ''}</td>`;
   };
 
   const rolloverSection = isFinal ? `
@@ -2252,7 +2254,7 @@ function renderLineStatus(){
             <tr><td style="${TD_BASE}text-align:left">Total HVS Throughput</td>${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('hvs',i)}</td>`).join('')}</tr>
             <tr>
               <td style="${TH_BASE}${BLUE}text-align:left"><b>Actual Volume Complete</b></td>
-              ${[0,1,2,3,4].map(i=>sumRow(['rom','wbb','hvs'],i)).join('')}
+              ${[0,1,2,3,4].map(i=>sumRow(['rom','wbb','hvs'],i,'actual')).join('')}
             </tr>
             <tr><td colspan="6" style="height:6px;border:none"></td></tr>
             <tr><td style="${TD_BASE}text-align:left"># of Samples in WBB to be Processed</td>${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('wbbProc',i)}</td>`).join('')}</tr>
@@ -2263,7 +2265,7 @@ function renderLineStatus(){
             <tr><td style="${TD_BASE}text-align:left">BIMs</td>${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('bims',i)}</td>`).join('')}</tr>
             <tr>
               <td style="${TH_BASE}${BLUE}text-align:left"><b>Volume Left to Complete</b></td>
-              ${[0,1,2,3,4].map(i=>sumRow(['wbbProc','bb','op','relabel','load','bims'],i)).join('')}
+              ${[0,1,2,3,4].map(i=>sumRow(['wbbProc','bb','op','relabel','load','bims'],i,'left')).join('')}
             </tr>
           </tbody>
         </table>
@@ -2332,7 +2334,7 @@ function renderLineStatus(){
             <select class="ls-mini" style="margin-left:auto" id="lsSourceBoard" onchange="lsSourceBoard=this.value">
               ${boards.map(b=>`<option value="${b.id}"${b.id===boardId?' selected':''}>${esc(b.title)}</option>`).join('')}
             </select>
-            <button class="ls-refresh-btn" onclick="lsRefreshNotes()">Refresh from Board</button>
+            <button class="ls-add-btn" style="font-size:11px;padding:3px 9px" onclick="lsRefreshNotes()">Refresh from Board</button>
           </div>
           <label class="ls-lbl" style="display:block;margin-top:8px">BB</label>
           <textarea class="ls-textarea" placeholder="BB issues, notes..." oninput="lsUpdate('bbNotes',this.value)">${esc(lsState.bbNotes)}</textarea>
@@ -2513,8 +2515,17 @@ function lsUpdateRollover(field, idx, value){
   if(!lsState.rollover) lsState.rollover = {};
   if(!lsState.rollover[field]) lsState.rollover[field] = ['','','','',''];
   lsState.rollover[field][idx] = value;
-  // Re-render the full form to update the auto-sum rows
-  renderLineStatus();
+  // Update the two auto-sum row cells directly in the DOM rather than
+  // re-rendering the whole form. A full re-render would destroy the
+  // input the user is currently typing in and they would lose focus
+  // after every single keystroke.
+  const R = lsState.rollover;
+  const sumActual = ['rom','wbb','hvs'].reduce((a,f)=>a+(parseFloat((R[f]||[])[idx])||0),0);
+  const sumLeft = ['wbbProc','bb','op','relabel','load','bims'].reduce((a,f)=>a+(parseFloat((R[f]||[])[idx])||0),0);
+  const actualEl = document.querySelector(`[data-roll-sum="actual-${idx}"]`);
+  const leftEl = document.querySelector(`[data-roll-sum="left-${idx}"]`);
+  if(actualEl) actualEl.textContent = sumActual || '';
+  if(leftEl) leftEl.textContent = sumLeft || '';
   lsSavePersist();
 }
 
