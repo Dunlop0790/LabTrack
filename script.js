@@ -2105,7 +2105,21 @@ let lsState = {
   opNotes: '',
   isFinal: false,
   deletedSlots: [],
-  romNotes: {}
+  romNotes: {},
+  // Rollover template (shows only when isFinal is checked)
+  rollover: {
+    dates:   ['','','','',''],
+    proj:    ['','','','',''],
+    rom:     ['','','','',''],
+    wbb:     ['','','','',''],
+    hvs:     ['','','','',''],
+    wbbProc: ['','','','',''],
+    bb:      ['','','','',''],
+    op:      ['','','','',''],
+    relabel: ['','','','',''],
+    load:    ['','','','',''],
+    bims:    ['','','','','']
+  }
 };
 
 let currentReportTab = 'ls';
@@ -2113,9 +2127,22 @@ let currentReportTab = 'ls';
 function openReports(){
   document.getElementById('reportsPanel').classList.add('open');
   updateHeaderActiveStates();
-  // Restore saved projected if any
-  const savedProj = localStorage.getItem('lt_lsProjected');
-  if(savedProj && !lsState.projected) lsState.projected = savedProj;
+  // Restore persisted lsState from localStorage if available.
+  // This means whatever the last person filled in stays on the form
+  // so repeat information does not need to be re-entered each shift.
+  // CSV file handles are not serialisable so they are always blank on
+  // restore; everything else (notes, values, OOS lists, rollover) survives.
+  const saved = localStorage.getItem('lt_lsState');
+  if(saved){
+    try {
+      const restored = JSON.parse(saved);
+      // Merge into lsState so any new keys added since the last save
+      // still get their defaults rather than being undefined.
+      Object.assign(lsState, restored);
+      lsState.csvOp = null;
+      lsState.csvBb = null;
+    } catch(e){ console.warn('lsState restore failed:', e); }
+  }
   // Default date if blank
   if(!lsState.date) lsState.date = formatTodayLong();
   switchReportTab(currentReportTab);
@@ -2147,12 +2174,117 @@ function formatTodayLong(){
   return `${days[d.getDay()]}, ${months[d.getMonth()]} ${day}${suffix}, ${d.getFullYear()}`;
 }
 
-// Render the full Line Status form + preview
+// Render the full Line Status form + preview.
+// When isFinal is checked, only the sections relevant to a final
+// shift report are shown: projection table, BB/OP notes, rollover
+// template, and OOS analyzers. All other sections (startup times,
+// buckets to load, relabel, overloads, BIM read rates) are hidden.
 function renderLineStatus(){
   const body = document.getElementById('reportsBody');
+  const isFinal = lsState.isFinal;
+
+  // OOS combobox datalist options: flat list of every instrument ID
+  // across both tracks so the user can type and get suggestions.
+  const oosAllOptions = [
+    ...LS_OOS_OPTIONS.bb_hemo, ...LS_OOS_OPTIONS.bb_special, ...LS_OOS_OPTIONS.bb_auto,
+    ...LS_OOS_OPTIONS.op_hemo, ...LS_OOS_OPTIONS.op_special, ...LS_OOS_OPTIONS.op_auto
+  ];
+  const oosDatalist = `<datalist id="dl_oos_all">${oosAllOptions.map(o=>`<option value="${o}">`).join('')}</datalist>`;
+
+  // Rollover template: 5-column table (day columns filled by user).
+  // Only rendered when Final is checked. Computed rows (Actual volume
+  // complete, Volume left to complete) auto-sum inputs above them via
+  // oninput handlers -- no server round-trip needed.
+  const T_RESET = 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;';
+  const TD_BASE = 'border:1px solid #000;padding:4px 7px;font-size:11px;font-family:Calibri,Arial,sans-serif;text-align:center;vertical-align:middle;';
+  const TH_BASE = TD_BASE + 'font-weight:bold;';
+  const BLUE = 'background:#ADD8E6;';
+  const YELLOW = 'background:#FFDE2A;';
+  const RED = 'background:#FF5B5B;';
+
+  const rState = lsState.rollover || {};
+  const rDates   = rState.dates   || ['','','','',''];
+  const rProj    = rState.proj    || ['','','','',''];
+  const rRom     = rState.rom     || ['','','','',''];
+  const rWbb     = rState.wbb     || ['','','','',''];
+  const rHvs     = rState.hvs     || ['','','','',''];
+  const rWbbProc = rState.wbbProc || ['','','','',''];
+  const rBb      = rState.bb      || ['','','','',''];
+  const rOp      = rState.op      || ['','','','',''];
+  const rRelabel = rState.relabel || ['','','','',''];
+  const rLoad    = rState.load    || ['','','','',''];
+  const rBims    = rState.bims    || ['','','','',''];
+
+  // Rollover input helper: plain number input for a cell in the rollover table
+  const ri = (field, idx) =>
+    `<input class="ls-mini" type="text" inputmode="numeric"
+      value="${esc(String((rState[field]||[])[idx]||''))}"
+      placeholder="-"
+      style="width:100%;text-align:center"
+      oninput="lsUpdateRollover('${field}',${idx},this.value)">`;
+
+  // Auto-sum row: displays the sum of the three rows above it (rom+wbb+hvs)
+  // or the five input rows (wbbProc+bb+op+relabel+load+bims)
+  const sumRow = (fields, idx) => {
+    const vals = fields.map(f => parseFloat((rState[f]||[])[idx]) || 0);
+    const total = vals.reduce((a,b)=>a+b, 0);
+    return `<td style="${TD_BASE}background:#f0f4ff;font-weight:bold">${total || ''}</td>`;
+  };
+
+  const rolloverSection = isFinal ? `
+    <div class="ls-section">
+      <div class="ls-sec-title">Rollover Template</div>
+      <div style="overflow-x:auto">
+        <table cellpadding="0" cellspacing="0" style="${T_RESET}width:100%;min-width:500px">
+          <thead>
+            <tr>
+              <th style="${TH_BASE}${BLUE}text-align:left;min-width:200px">Item</th>
+              ${[0,1,2,3,4].map(i=>`<th style="${TH_BASE}${BLUE}min-width:90px"><input class="ls-mini" value="${esc(rDates[i])}" placeholder="Date..." style="width:100%;text-align:center;background:transparent;border:none;border-bottom:1px solid #999;border-radius:0;padding:2px 4px" oninput="lsUpdateRollover('dates',${i},this.value)"></th>`).join('')}
+            </tr>
+            <tr>
+              <th style="${TH_BASE}text-align:left">Projected Volume</th>
+              ${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('proj',i)}</td>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="${TD_BASE}text-align:left"># of ROM Samples Complete</td>${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('rom',i)}</td>`).join('')}</tr>
+            <tr><td style="${TD_BASE}text-align:left"># of Completed Samples in WBB</td>${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('wbb',i)}</td>`).join('')}</tr>
+            <tr><td style="${TD_BASE}text-align:left">Total HVS Throughput</td>${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('hvs',i)}</td>`).join('')}</tr>
+            <tr>
+              <td style="${TH_BASE}${BLUE}text-align:left"><b>Actual Volume Complete</b></td>
+              ${[0,1,2,3,4].map(i=>sumRow(['rom','wbb','hvs'],i)).join('')}
+            </tr>
+            <tr><td colspan="6" style="height:6px;border:none"></td></tr>
+            <tr><td style="${TD_BASE}text-align:left"># of Samples in WBB to be Processed</td>${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('wbbProc',i)}</td>`).join('')}</tr>
+            <tr><td style="${TD_BASE}${YELLOW}text-align:left">BB</td>${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('bb',i)}</td>`).join('')}</tr>
+            <tr><td style="${TD_BASE}${RED}color:#000;text-align:left">OP</td>${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('op',i)}</td>`).join('')}</tr>
+            <tr><td style="${TD_BASE}text-align:left"># of Samples Left to Relabel (1 bucket = 400)</td>${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('relabel',i)}</td>`).join('')}</tr>
+            <tr><td style="${TD_BASE}text-align:left"># of Samples Left to Load (1 bucket = 400)</td>${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('load',i)}</td>`).join('')}</tr>
+            <tr><td style="${TD_BASE}text-align:left">BIMs</td>${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('bims',i)}</td>`).join('')}</tr>
+            <tr>
+              <td style="${TH_BASE}${BLUE}text-align:left"><b>Volume Left to Complete</b></td>
+              ${[0,1,2,3,4].map(i=>sumRow(['wbbProc','bb','op','relabel','load','bims'],i)).join('')}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  ` : '';
+
   body.innerHTML = `
     <div class="reports-split">
       <div class="ls-form">
+
+        <div class="ls-section ls-section-final-toggle">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <label class="ls-final-toggle" title="Mark this as the last Line Status of the shift. Final line statuses are stored permanently in the LS Archive tab.">
+              <input type="checkbox" id="lsFinalCheck" ${isFinal?'checked':''} onchange="lsUpdate('isFinal',this.checked)">
+              Final Line Status
+            </label>
+            ${isFinal ? '<span style="font-size:12px;color:var(--muted)">Non-essential sections are hidden in Final mode.</span>' : ''}
+          </div>
+        </div>
+
         <div class="ls-section">
           <div class="ls-sec-title">CSV Files</div>
           <div class="ls-csv-zone" id="lsCsvZone" tabindex="0">
@@ -2167,6 +2299,7 @@ function renderLineStatus(){
           </div>
         </div>
 
+        ${!isFinal ? `
         <div class="ls-section">
           <div class="ls-sec-title">Unpacking / Shipments</div>
           <table class="ls-unpack-tbl">
@@ -2187,30 +2320,38 @@ function renderLineStatus(){
             </thead>
           </table>
         </div>
+        ` : ''}
 
         <div class="ls-section">
           <div class="ls-sec-title" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px">
-            BB / OP Notes
-            <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-              <select class="ls-mini" style="font-size:11px" onchange="lsSourceBoard=this.value||null">
-                <option value="">Current board</option>
-                ${boards.map(b=>`<option value="${b.id}" ${lsSourceBoard===b.id?'selected':''}>${esc(b.title)}</option>`).join('')}
-              </select>
-              <button class="ls-add-btn" style="font-size:11px;padding:3px 9px" onclick="lsRefreshNotes()">Refresh from Board</button>
-              ${tt('Pulls open issues from the selected board and fills in the BB and OP notes fields. Pick a board from the dropdown first if you want to pull from something other than the one you are currently viewing. You can edit the result after it populates.')}
-            </div>
+            <span>BB / OP Notes</span>
+            <span class="tt-wrap">
+              <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
+              <span class="tt-box">${tt('Pulls open issues from the selected board and fills in the BB and OP notes fields. Pick a board from the dropdown first if you want to pull from something other than the one you are currently viewing. You can edit the result after it populates.')}</span>
+            </span>
+            <select class="ls-mini" style="margin-left:auto" id="lsSourceBoard" onchange="lsSourceBoard=this.value">
+              ${boards.map(b=>`<option value="${b.id}"${b.id===boardId?' selected':''}>${esc(b.title)}</option>`).join('')}
+            </select>
+            <button class="ls-refresh-btn" onclick="lsRefreshNotes()">Refresh from Board</button>
           </div>
-          <div class="ls-cell-hdr bb" style="margin-top:5px">BB</div>
-          <textarea class="ls-textarea" placeholder="One issue per line (will render as bullets)" oninput="lsUpdate('bbNotes',this.value)">${esc(lsState.bbNotes)}</textarea>
-          <div class="ls-cell-hdr op" style="margin-top:8px">OP</div>
-          <textarea class="ls-textarea" placeholder="One issue per line (will render as bullets)" oninput="lsUpdate('opNotes',this.value)">${esc(lsState.opNotes)}</textarea>
+          <label class="ls-lbl" style="display:block;margin-top:8px">BB</label>
+          <textarea class="ls-textarea" placeholder="BB issues, notes..." oninput="lsUpdate('bbNotes',this.value)">${esc(lsState.bbNotes)}</textarea>
+          <label class="ls-lbl" style="display:block;margin-top:8px">OP</label>
+          <textarea class="ls-textarea" placeholder="OP issues, notes..." oninput="lsUpdate('opNotes',this.value)">${esc(lsState.opNotes)}</textarea>
         </div>
 
+        ${!isFinal ? `
         <div class="ls-section">
           <div class="ls-sec-title">Startup Times</div>
           <table class="ls-startup-tbl">
             <thead>
-              <tr><th>Dept/Module</th><th style="color:var(--bb)">BB</th><th style="color:var(--op)">OP</th><th>Full</th><th>Partial</th></tr>
+              <tr>
+                <th style="text-align:left">Dept / Module</th>
+                <th style="color:var(--bb)">BB</th>
+                <th style="color:var(--op)">OP</th>
+                <th>Full</th>
+                <th>Partial</th>
+              </tr>
             </thead>
             <tbody>
               ${lsState.startup.map((r,i)=>`
@@ -2250,9 +2391,13 @@ function renderLineStatus(){
             </div>
           </div>
         </div>
+        ` : ''}
+
+        ${rolloverSection}
 
         <div class="ls-section">
           <div class="ls-sec-title">OOS Analyzers</div>
+          ${oosDatalist}
           ${['bb','op'].map(t=>`
             <div class="ls-cell-hdr ${t}" style="margin-top:${t==='op'?'10px':'0'}">${t.toUpperCase()}</div>
             <div class="ls-grid" style="grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:5px">
@@ -2261,20 +2406,20 @@ function renderLineStatus(){
                 return `<div class="ls-cell">
                   <div style="font-size:10px;font-weight:700;color:var(--muted)">${d.toUpperCase()}</div>
                   <div class="ls-tag-list" id="oosTags_${key}">${renderOosTags(key)}</div>
-                  <div class="ls-add-row">
-                    <select class="ls-mini" id="oosSel_${key}">
-                      <option value="">add...</option>
-                      ${LS_OOS_OPTIONS[key].filter(o=>!lsState.oos[key].includes(o)).map(o=>`<option value="${o}">${o}</option>`).join('')}
-                    </select>
-                    <button class="ls-add-btn" onclick="lsAddOos('${key}')">+</button>
+                  <div class="ls-add-row" style="gap:4px">
+                    <input class="ls-mini" list="dl_oos_all" placeholder="type or pick..." autocomplete="off"
+                      id="oosInput_${key}"
+                      onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v&&!lsState.oos['${key}'].includes(v)){lsState.oos['${key}'].push(v);lsSavePersist();renderLineStatus();}this.value='';event.preventDefault();}"
+                    />
+                    <button class="ls-add-btn" onclick="(()=>{const inp=document.getElementById('oosInput_${key}');const v=inp?.value.trim();if(v&&!lsState.oos['${key}'].includes(v)){lsState.oos['${key}'].push(v);lsSavePersist();renderLineStatus();}if(inp)inp.value='';})()">+</button>
                   </div>
-                  <input class="ls-mini" placeholder="custom..." onkeydown="if(event.key==='Enter'){lsAddOosCustom('${key}',this.value);this.value=''}" style="margin-top:4px;width:100%" />
                 </div>`;
               }).join('')}
             </div>
           `).join('')}
         </div>
 
+        ${!isFinal ? `
         <div class="ls-section">
           <div class="ls-sec-title">Overloads / Buffer Status</div>
           ${['bb','op'].map(t=>`
@@ -2308,6 +2453,7 @@ function renderLineStatus(){
             `).join('')}
           </div>
         </div>
+        ` : ''}
 
         <div class="ls-actions">
           <button class="btn-clear" onclick="lsClear()">Clear All</button>
@@ -2321,13 +2467,9 @@ function renderLineStatus(){
             <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
             <span class="tt-box">Copies the formatted report so you can paste it directly into an Outlook email. Tables and layout are preserved on paste.</span>
           </span>
-          <label class="ls-final-toggle" title="Mark this as the last Line Status of the shift. Final line statuses are stored permanently in the LS Archive tab.">
-            <input type="checkbox" id="lsFinalCheck" ${lsState.isFinal?'checked':''} onchange="lsUpdate('isFinal',this.checked)">
-            Final
-          </label>
           <span class="tt-wrap tt-flip">
-            <button class="btn-publish ${lsState.isFinal?'btn-publish-final':''}" onclick="lsPublish()" title="Publish this report so the team can view it under the Today tab">
-              ${lsState.isFinal ? 'Publish Final' : 'Publish'}
+            <button class="btn-publish ${isFinal?'btn-publish-final':''}" onclick="lsPublish()" title="Publish this report so the team can view it under the Today tab">
+              ${isFinal ? 'Publish Final' : 'Publish'}
             </button>
             <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
             <span class="tt-box">Posts the current report to the Today tab where the whole team can see it in real time. If Final is checked, it is also saved permanently to the LS Archive.</span>
@@ -2364,22 +2506,45 @@ function renderOosTags(key){
 }
 
 // State updaters
+// Persists lsState to localStorage on every field change so the form
+// survives page reloads. The CSV file handles (csvOp, csvBb) are not
+// serialisable so we strip them before saving.
+function lsUpdateRollover(field, idx, value){
+  if(!lsState.rollover) lsState.rollover = {};
+  if(!lsState.rollover[field]) lsState.rollover[field] = ['','','','',''];
+  lsState.rollover[field][idx] = value;
+  // Re-render the full form to update the auto-sum rows
+  renderLineStatus();
+  lsSavePersist();
+}
+
+function lsSavePersist(){
+  try {
+    const copy = {...lsState};
+    delete copy.csvOp;
+    delete copy.csvBb;
+    localStorage.setItem('lt_lsState', JSON.stringify(copy));
+  } catch(e){ console.warn('lsState persist failed:', e); }
+}
 function lsUpdate(field, value){
   lsState[field] = value;
-  if(field==='projected') localStorage.setItem('lt_lsProjected', value);
-  refreshPreview();
+  if(field==='isFinal') renderLineStatus(); else refreshPreview();
+  lsSavePersist();
 }
 function lsUpdateNested(parent, key, value){
   lsState[parent][key] = value;
   refreshPreview();
+  lsSavePersist();
 }
 function lsUpdateBim(track, idx, value){
   lsState.bim[track][idx] = value;
   refreshPreview();
+  lsSavePersist();
 }
 function lsUpdateStartup(idx, field, value){
   lsState.startup[idx][field] = value;
   refreshPreview();
+  lsSavePersist();
 }
 // Toggles a boolean cell in the Startup Times grid (Full or Partial
 // columns). Triggers a full form re-render rather than just a preview
@@ -2387,16 +2552,19 @@ function lsUpdateStartup(idx, field, value){
 function lsToggleStartup(idx, field){
   lsState.startup[idx][field] = !lsState.startup[idx][field];
   renderLineStatus();
+  lsSavePersist();
 }
 function lsToggleUnpack(field){
   lsState.unpacking[field] = !lsState.unpacking[field];
   renderLineStatus();
+  lsSavePersist();
 }
 function lsAddOos(key){
   const sel = document.getElementById('oosSel_'+key);
   if(sel?.value && !lsState.oos[key].includes(sel.value)){
     lsState.oos[key].push(sel.value);
     renderLineStatus();
+    lsSavePersist();
   }
 }
 function lsAddOosCustom(key, value){
@@ -2404,11 +2572,13 @@ function lsAddOosCustom(key, value){
   if(v && !lsState.oos[key].includes(v)){
     lsState.oos[key].push(v);
     renderLineStatus();
+    lsSavePersist();
   }
 }
 function lsRemoveOos(key, value){
   lsState.oos[key] = lsState.oos[key].filter(v=>v!==value);
   renderLineStatus();
+  lsSavePersist();
 }
 
 // Auto-pull notes from active LabTrack issues
@@ -2533,7 +2703,13 @@ function lsClear(){
     bbNotes:'', opNotes:'',
     isFinal: false,
     deletedSlots: [],
-    romNotes: {}
+    romNotes: {},
+    rollover: {
+      dates:['','','','',''], proj:['','','','',''],
+      rom:['','','','',''], wbb:['','','','',''], hvs:['','','','',''],
+      wbbProc:['','','','',''], bb:['','','','',''], op:['','','','',''],
+      relabel:['','','','',''], load:['','','','',''], bims:['','','','','']
+    }
   };
   renderLineStatus();
   showToast('Line Status cleared.');
@@ -2955,6 +3131,38 @@ function renderLsHTML(){
       `</tr>`;
     });
     html += `</tbody></table>`;
+  }
+
+  // Rollover template: only included in copy/publish output when Final is checked
+  if(lsState.isFinal && lsState.rollover){
+    const R = lsState.rollover;
+    const sum = (fields, idx) => fields.reduce((a,f)=>a+(parseFloat((R[f]||[])[idx])||0),0);
+    html += SPACE;
+    html += SECH("Rollover Template:");
+    html += `<table width="550" cellpadding="0" cellspacing="0" style="${T_RESET}width:550px;">` +
+      `<thead>` +
+      `<tr>` +
+      th(150, TH_BASE+BLUE+'text-align:left;', 'Item') +
+      [0,1,2,3,4].map(i=>th(80, TH_BASE+BLUE, esc((R.dates||[])[i]||''))).join('') +
+      `</tr>` +
+      `<tr>` +
+      td(150, TD_BASE+'text-align:left;font-weight:bold;', '<b>Projected Volume</b>') +
+      [0,1,2,3,4].map(i=>td(80, TD_BASE, esc((R.proj||[])[i]||''))).join('') +
+      `</tr>` +
+      `</thead><tbody>` +
+      `<tr>${td(150,TD_BASE+'text-align:left;','# of ROM Samples Complete')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.rom||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(150,TD_BASE+'text-align:left;','# of Completed Samples in WBB')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.wbb||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(150,TD_BASE+'text-align:left;','Total HVS Throughput')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.hvs||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(150,TH_BASE+BLUE+'text-align:left;','<b>Actual Volume Complete</b>')}${[0,1,2,3,4].map(i=>td(80,TH_BASE+BLUE+'font-weight:bold;',sum(['rom','wbb','hvs'],i)||'')).join('')}</tr>` +
+      `<tr><td colspan="6" style="height:5px;border:none"></td></tr>` +
+      `<tr>${td(150,TD_BASE+'text-align:left;','# of Samples in WBB to be Processed')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.wbbProc||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(150,TD_BASE+YELLOW+'color:#000;text-align:left;','BB')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.bb||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(150,TD_BASE+RED+'color:#000;text-align:left;','OP')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.op||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(150,TD_BASE+'text-align:left;','# of Samples Left to Relabel (1 bucket = 400)')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.relabel||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(150,TD_BASE+'text-align:left;','# of Samples Left to Load (1 bucket = 400)')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.load||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(150,TD_BASE+'text-align:left;','BIMs')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.bims||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(150,TH_BASE+BLUE+'text-align:left;','<b>Volume Left to Complete</b>')}${[0,1,2,3,4].map(i=>td(80,TH_BASE+BLUE+'font-weight:bold;',sum(['wbbProc','bb','op','relabel','load','bims'],i)||'')).join('')}</tr>` +
+      `</tbody></table>`;
   }
 
   return html;
