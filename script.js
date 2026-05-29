@@ -213,7 +213,9 @@ const ICONS = {
   // Bell: in-app mention notification (replaces 💬 in browser notification body)
   // Chain link: external links in department dropdowns (FlexLab, DAS, etc.)
   link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
-  bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>'
+  bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
+  // Open book: Reference / Job Aid panel
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'
 };
 
 // Injects inline SVGs into all static placeholders that use the
@@ -516,6 +518,7 @@ function updateHeaderActiveStates(){
   setActive('hdrArchiveBtn', isOpen('archivePanel'));
   setActive('hdrStatsBtn', isOpen('statsPanel'));
   setActive('hdrSuggestBtn', isOpen('suggestPanel'));
+  setActive('hdrRefBtn', isOpen('refPanel'));
 }
 
 // ── ACTIVITY LOG ──────────────────────────────────────────────
@@ -4281,6 +4284,274 @@ async function purgePublishedReportsDaily(){
 // status ('open'|'closed'), closedBy, closedAt, thumbs (string[]).
 
 let suggestSub = null;
+
+// ── REFERENCE / JOB AID ───────────────────────────────────────
+// Static on-shift reference material. No Firestore, no network: the
+// data lives in the code so it loads instantly and works offline once
+// the page is cached. Three resources behind tabs: IOM error code
+// lookup, the Line Status how-to, and the ALO training guide.
+
+// IOM error codes from the 2025 reference sheet. Each entry:
+// [code, description, details, solutionClass, solutionLabel].
+// solutionClass drives the badge color (backon/relabel/problem/siemens).
+const IOM_ERROR_CODES = [
+  ['4547','Prepare Not Executed due to Analyzer not Ready','Tests not enabled or analyzer not online','backon','Back On'],
+  ['SC052','Sample Tube of Unknown Origin','Sample detected on Track but origin unknown, cannot determine pre-analytics','backon','Back On'],
+  ['1566 / SC09B / 1135','Sample ID Mismatch','Barcode readers could not properly identify sample. Double or partial barcode, label incorrectly placed','relabel','Relabel, Back On'],
+  ['SC001','User Sample Delivery Request','Sample was manually requested to IOM','backon','Back On'],
+  ['SC002','Priority Output Rack Missing or Full','IOM Priority Output Racks are missing or full','backon','Back On'],
+  ['SC003','Unknown Test Code','Sample has at least one test order received that is unknown','relabel','Relabel, Back On'],
+  ['SC00C','Sample Delivery Request','Sample requested for delivery by LIS to IOM PO racks','backon','Back On'],
+  ['SC00E','Duplicate Sample ID','A duplicate has been detected on the track','problem','Problem'],
+  ['SC010','Cap Type Inconsistent or Cap Presence','Sample has a cap color or cap presence conflicting with sample','problem','Problem'],
+  ['SC013','Inconsistent Test Orders','Sample has at least two orders that pose a conflict of pre-analytical processing','problem','Problem'],
+  ['SC016','Overdue Incomplete Sample','Sample remained without test orders longer than configured time','problem','Problem'],
+  ['SC017','Tube Type Inconsistent with Tests','Vision system detected inconsistent tube for ordered tests','problem','Problem'],
+  ['SC01E','Tube Lost','Tube presence sensors detected empty carrier expected to be full','siemens','Siemens'],
+  ['SC01F','Sample Needs Manual Unseal','Sample cannot be automatically desealed by DSM1','backon','Back On'],
+  ['SC021','Sample Needs Manual Unseal, Tube Sealed Too Many Times','Cannot be desealed by DSM1 because sealed too many times','backon','Back On'],
+  ['SC022','Unknown Tube Type','Vision system detected unknown tube type','backon','Back On'],
+  ['SC023','Unknown Cap Type','Vision system detected unknown cap type','backon','Back On'],
+  ['SC031','Tube Already Detected with Different Cap Color','Vision system detected different cap color','backon','Back On'],
+  ['SC036','Sorting Rack Missing or Full','Could not sort to IOM rack because missing or full','backon','Back On'],
+  ['SC046','Priority Output Sorting Test','Requested by LIS or GUI to PO rack via sorting test with Tube Processing','siemens','Siemens'],
+  ['SC047','Uncapped Tube Detected','Uncapped tube in input module lane that does not support uncapped tubes','problem','Problem'],
+  ['SC050','Priority Sorting','Priority sorting test parked in rack without automatic retrieval','problem','Problem'],
+  ['SC05F','Too Many Sample ID Mismatches','Module reported mismatches greater than configured threshold','siemens','Siemens'],
+  ['SC062','Shaker Timeout Expired','Shaker timeout expired when adding tube to decapper or analyzer','backon','Back On'],
+  ['SC06A','Shaker Timeout Expired and Tube Uncapped','Shaker timeout expired but tube already decapped','problem','Problem'],
+  ['SC06B','Shaker Module Not Available','Tube volume cannot be shaken, no shaker module available','backon','Back On'],
+  ['SC096','Overdue Sample on Track','Tube traveling on track longer than configured max time','siemens','Siemens'],
+  ['8008','Sample Presentation Error (X01)','Detected by software on Analyzer Interface Module and System','problem','Problem'],
+  ['800C','Sample Queue Error (X02)','On AIM and System. Maintains error even when reloaded to Track','problem','Problem'],
+  ['8010 / 8011','Carrier Not Arrived on Antenna','System slow, jam on Pit Lane, belts off, or antenna malfunction','backon','Back On'],
+  ['8015','Process Antenna Reading Error','Antenna reading error at the Process Gate','backon','Back On'],
+  ['8018','Carrier Run Away','Carrier at Process Gate ran away due to improper gate activation','backon','Back On'],
+  ['8452','Sample Process Error, Atellica Instrumentation Error','Tube cannot be processed due to instrument fault','backon','Back On'],
+  ['8453','Sample Process Error, Sample ID Mismatch','Tube ID read by instrument does not match automation','relabel','Relabel, Back On'],
+  ['8454','Sample Process Error, Unreadable Sample ID','Analyzer could not read tube barcode','relabel','Relabel, Back On'],
+  ['8455','Sample Process Error, No Test Order','No test order received from Host LIS','problem','Problem'],
+  ['8456','Sample Process Error, Module or Consumable Not Available','Module or consumable unavailable for requested tests','backon','Back On'],
+  ['8457','Sample Process Error, No Reagent Available','Reagents unavailable for requested tests','backon','Back On'],
+  ['8458','Sample Process Error, Duplicate Sample ID','ID identical to a manually loaded Atellica tube','problem','Problem'],
+  ['845A','Sample Process Error, Insufficient Sample','Analyzer did not detect sufficient sample volume','problem','Problem'],
+  ['845B','Sample Process Error, Clogged Sample Probe','Clogged sample probe during tube processing','problem','Problem'],
+  ['845C','Sample Process Error, HIL or Unknown Container Type','Detected HIL or unknown Atellica container type','problem','Problem'],
+  ['845D','Sample Process Error, One or more tests cannot be processed','Problem with HIL, Specimen Type, or tests not enabled','problem','Problem'],
+  ['8476','Sample Process Error, Test not enabled for specimen type','Test not enabled for specimen type','problem','Problem'],
+  ['8477','Sample Process Error, Test not processed','Test not processed','problem','Problem'],
+  ['0D80','Sample Complete Message not Arrived','Processed sample did not get complete message from analyzer','backon','Back On'],
+  ['0587','Cap Drop Failure','Sensor cannot detect cap drop in chute','backon','Back On'],
+  ['0506','Head Down Failure','Encoder strip did not move between taught window','backon','Back On'],
+  ['070C','Desealing Fault','Head sensor still detects foil after desealing','backon','Back On'],
+  ['0207','Unreadable Sample ID','Track cannot read the sample tube barcode','relabel','Relabel, Back On'],
+  ['1564','High Temperature','CM seal or motor faulty, allowing warm air to leak in','backon','Back On'],
+  ['0D82','Analyzer Red State during Sampling Request','Sample cannot process until analyzer is fixed','backon','Back On'],
+  ['0216','Output Rack Missing or Full','Could not sort to IOM rack because missing or full','backon','Back On'],
+  ['S6800','Invalid Barcode ID','Barcode reader could not properly read label','relabel','Relabel, Back On']
+];
+
+let refActiveTab = 'errors';
+let ecActiveFilter = 'all';
+
+function openReference(){
+  document.getElementById('refPanel').classList.add('open');
+  updateHeaderActiveStates();
+  switchRefTab(refActiveTab);
+}
+
+function closeReference(){
+  document.getElementById('refPanel').classList.remove('open');
+  updateHeaderActiveStates();
+}
+
+function switchRefTab(tab){
+  refActiveTab = tab;
+  document.getElementById('refTabErrors').classList.toggle('active', tab==='errors');
+  document.getElementById('refTabLsGuide').classList.toggle('active', tab==='lsguide');
+  document.getElementById('refTabTraining').classList.toggle('active', tab==='training');
+  if(tab==='errors') renderErrorCodes();
+  else if(tab==='lsguide') renderLsGuide();
+  else if(tab==='training') renderTrainingGuide();
+}
+
+function renderErrorCodes(){
+  const body = document.getElementById('refBody');
+  body.innerHTML = `
+    <input class="ec-search" id="ecSearch" placeholder="Search by code or keyword (e.g. barcode, SC09B, jam)..." oninput="renderEcRows()" />
+    <div class="ec-filters">
+      <div class="ec-filter active" data-f="all" onclick="ecSetFilter('all')">All</div>
+      <div class="ec-filter" data-f="backon" onclick="ecSetFilter('backon')">Back On</div>
+      <div class="ec-filter" data-f="relabel" onclick="ecSetFilter('relabel')">Relabel</div>
+      <div class="ec-filter" data-f="problem" onclick="ecSetFilter('problem')">Problem</div>
+      <div class="ec-filter" data-f="siemens" onclick="ecSetFilter('siemens')">Siemens</div>
+    </div>
+    <div class="ec-count" id="ecCount"></div>
+    <table class="ec-table">
+      <thead><tr><th style="width:110px">Code</th><th>Description</th><th>Details</th><th style="width:130px">Solution</th></tr></thead>
+      <tbody id="ecBody"></tbody>
+    </table>
+  `;
+  renderEcRows();
+}
+
+function ecSetFilter(f){
+  ecActiveFilter = f;
+  document.querySelectorAll('.ec-filter').forEach(el => el.classList.toggle('active', el.dataset.f === f));
+  renderEcRows();
+}
+
+function renderEcRows(){
+  const q = (document.getElementById('ecSearch')?.value || '').toLowerCase().trim();
+  const rows = IOM_ERROR_CODES.filter(r => {
+    const matchFilter = ecActiveFilter === 'all' || r[3] === ecActiveFilter;
+    const matchQuery = !q || r[0].toLowerCase().includes(q) || r[1].toLowerCase().includes(q) || r[2].toLowerCase().includes(q);
+    return matchFilter && matchQuery;
+  });
+  const bodyEl = document.getElementById('ecBody');
+  const countEl = document.getElementById('ecCount');
+  if(countEl) countEl.textContent = `${rows.length} of ${IOM_ERROR_CODES.length} codes`;
+  if(!bodyEl) return;
+  bodyEl.innerHTML = rows.length ? rows.map(r => `
+    <tr>
+      <td class="ec-code">${esc(r[0])}</td>
+      <td class="ec-desc">${esc(r[1])}</td>
+      <td class="ec-detail">${esc(r[2])}</td>
+      <td><span class="ec-sol ${r[3]}">${esc(r[4])}</span></td>
+    </tr>
+  `).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:30px">No matching error codes.</td></tr>';
+}
+
+function renderLsGuide(){
+  document.getElementById('refBody').innerHTML = `
+    <div class="guide">
+      <h2>Line Status: How To</h2>
+      <h3>Getting DAS Data</h3>
+      <ul>
+        <li>Open a new tab and go to the DAS site (use the shared DAS login)</li>
+        <li>Find the calendar on the right side of the screen and enter the date range</li>
+        <li>Day of 07:00 to the day after at 07:00 (example: March 20 at 7AM to March 21 at 7AM)</li>
+        <li>Press Update</li>
+        <li>Click Actions at the top left, then click the preferred line (192 for BB, 191 for OP)</li>
+        <li>Click Sample Events</li>
+        <li>In "Node Type," type "HVS" into the bar and press enter</li>
+        <li>Click the green area of the circle on the left of the screen</li>
+        <li>In Flex Sample Events Over Time, click the three dots on the right side, then press Inspect</li>
+        <li>Download the formatted CSV</li>
+      </ul>
+      <div class="gnote">Repeat the line-selection steps for the opposite line's data.</div>
+      <h3>Loading into the Creator</h3>
+      <ul>
+        <li>Drag and drop the CSV into the "CSV Files" area at the top of the Line Status creator</li>
+        <li>Enter the projected volume from the day</li>
+        <li>A formatted table is created automatically from the selected files</li>
+      </ul>
+      <h3>Sending Line Status</h3>
+      <ul>
+        <li>Always send as close to the 25th minute of the hour as possible</li>
+        <li>Be specific about any module or analyzer issues</li>
+        <li>Be specific about line and HVS issues, especially line issues that affect throughput</li>
+        <li>Remove any resolved issues from previous line statuses so it is clear they are no longer an issue</li>
+        <li>Note any actions taken when describing an issue (sorting, using the ROM, moving samples to the opposite line)</li>
+      </ul>
+      <div class="gnote">Line status communicates to the lab, upper management, and the Engineers. Be as descriptive as possible.</div>
+    </div>
+  `;
+}
+
+function renderTrainingGuide(){
+  document.getElementById('refBody').innerHTML = `
+    <div class="guide">
+      <h2>ALO Training Guide</h2>
+
+      <div class="gweek">
+        <h3>Week 1: Track Layout, Basic Module Functions, DMS</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Scheduled as float for undivided attention to learning the track layout.</p>
+        <ul>
+          <li>Understand the track layout and component purposes</li>
+          <li>Learn ALO, Tech, and Siemens terminology</li>
+          <li>Walk the track and identify key modules (IOM, BIM, ROM400, centrifuges, BOMs)</li>
+          <li>View T, L, and U turns in the track system</li>
+          <li>Have a TM explain the general flow of samples on the track</li>
+        </ul>
+        <p style="font-size:12px;font-weight:600;margin-top:8px">DMS Training</p>
+        <ul>
+          <li>Identify system icons and their functions; learn what each node color means</li>
+          <li>Navigate to the counters and configuration pages</li>
+          <li>Perform software recovery using the prompts</li>
+          <li>Switch between IOM modules to see lane contents</li>
+        </ul>
+      </div>
+
+      <div class="gweek">
+        <h3>Week 2: Real Interactions and Recovery through DMS</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Scheduled to a line for real interactions with modules and recoveries.</p>
+        <ul>
+          <li>Recognize module functions and perform recoveries via DMS</li>
+          <li>Troubleshooting and escalation procedures</li>
+          <li>Error types and ownership (Tech, ALO, Siemens)</li>
+          <li>Priority of line vs analyzer errors</li>
+          <li>Identify and recover BIM and analyzer errors; walk the track to diagnose issues</li>
+        </ul>
+      </div>
+
+      <div class="gweek">
+        <h3>Week 3: Prioritization and Communication</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Scheduled to the opposite line to learn its layout and positioning.</p>
+        <ul>
+          <li>Error recognition, troubleshooting, and recovery</li>
+          <li>Error prioritization and sorting from DMS</li>
+          <li>Effective walkie communication with Techs, ALOs, and Engineers</li>
+          <li>Understand necessary escalation procedures</li>
+          <li>Identify overload causes and action plans</li>
+        </ul>
+      </div>
+
+      <div class="gweek">
+        <h3>Week 4: Decision-Making and Confidence Building</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Scheduled to a line to practice ALO knowledge under supervision.</p>
+        <ul>
+          <li>Independent issue identification and recovery</li>
+          <li>Escalation judgment; line saturation and overload handling</li>
+          <li>Act as primary ALO under supervision, recovering red modules and analyzing root causes</li>
+          <li>Reconfigure WBBs as needed; simulate overload situations and respond</li>
+        </ul>
+      </div>
+
+      <div class="gweek">
+        <h3>Week 5: Line Status and Critical Thinking</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Scheduled as first float to practice supporting other ALOs and Line Status. Use the Line Status Guide to train.</p>
+        <ul>
+          <li>DAS navigation and Line Status formatting</li>
+          <li>Line-level communication with other ALOs</li>
+          <li>Understand throughput-impacting issues</li>
+          <li>Practice gathering Line Status data and formatting reports</li>
+          <li>Support lane coverage during breaks</li>
+        </ul>
+      </div>
+
+      <div class="gweek">
+        <h3>Week 6: Maintenance and Final Validation</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Assigned to second float to train on maintenance.</p>
+        <ul>
+          <li>Routine maintenance (Day vs Night shift)</li>
+          <li>Day Shift: centrifuges, DSM, BIMs</li>
+          <li>Night Shift: decappers, sealer modules, BOMs</li>
+          <li>Deeper understanding of module mechanics; close skill gaps and final assessment</li>
+        </ul>
+      </div>
+
+      <div class="gweek">
+        <h3>Weeks 7 and 8: Decision-Making and Confidence Building</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Scheduled to a line to practice ALO knowledge.</p>
+        <ul>
+          <li>Continue shadowing; bring forth issues happening on either track and use as teaching moments</li>
+          <li>Closing skill gaps, training checklists, and competencies</li>
+        </ul>
+      </div>
+    </div>
+  `;
+}
 
 function openSuggestions(){
   document.getElementById('suggestPanel').classList.add('open');

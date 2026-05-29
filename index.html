@@ -203,6 +203,7 @@
       <button class="btn-tool desktop-only" id="hdrArchiveBtn" onclick="openArchive()" title="View archived issues">Archive</button>
       <button class="btn-tool desktop-only" id="hdrStatsBtn" onclick="openStats()" title="View statistics">Stats</button>
       <button class="btn-tool desktop-only" id="hdrSuggestBtn" onclick="openSuggestions()" title="Team suggestions and feature requests">Suggestions</button>
+      <button class="btn-tool desktop-only" id="hdrRefBtn" onclick="openReference()" title="Reference and job aid: error codes, guides, training">Reference</button>
       <button class="btn-tool desktop-only" onclick="window.print()" title="Print current board">Print</button>
     </div>
   </div>
@@ -222,6 +223,7 @@
   <div class="ham-item" onclick="closeHam();openArchive()"><span class="ham-ico" data-icon="archive"></span>Archive</div>
   <div class="ham-item" onclick="closeHam();openStats()"><span class="ham-ico" data-icon="chart"></span>Stats</div>
   <div class="ham-item" onclick="closeHam();openSuggestions()"><span class="ham-ico" data-icon="bell"></span>Suggestions</div>
+  <div class="ham-item" onclick="closeHam();openReference()"><span class="ham-ico" data-icon="book"></span>Reference</div>
   <div class="ham-item" onclick="closeHam();window.print()"><span class="ham-ico" data-icon="printer"></span>Print</div>
   <div class="ham-item" onclick="closeHam();toggleTheme()"><span class="ham-ico" id="hamThemeIco"></span><span id="hamThemeLbl">Dark Mode</span></div>
   <div class="ham-item godzilla-ham" onclick="closeHam();toggleGodzilla()"><span class="ham-ico">🦖</span><span id="hamGodzillaLbl">Godzilla Mode</span></div>
@@ -345,6 +347,27 @@
       <button class="mclose" style="margin-left:auto" onclick="closeSuggestions()">×</button>
     </div>
     <div class="panel-body" id="suggestBody"></div>
+  </div>
+</div>
+
+<!-- ── REFERENCE / JOB AID PANEL ──
+     Consolidated on-shift reference material: IOM error code lookup,
+     the Line Status how-to guide, and the ALO training guide. Tabbed
+     so each resource has its own space. All content is static (no
+     Firestore) so it loads instantly and works offline once cached.
+-->
+<div class="panel-overlay" id="refPanel">
+  <div class="panel" style="max-width:1000px">
+    <div class="panel-hdr">
+      <div class="panel-title">Reference &amp; Job Aid</div>
+      <div class="reports-tabs">
+        <div class="reports-tab active" id="refTabErrors" onclick="switchRefTab('errors')">IOM Error Codes</div>
+        <div class="reports-tab" id="refTabLsGuide" onclick="switchRefTab('lsguide')">Line Status Guide</div>
+        <div class="reports-tab" id="refTabTraining" onclick="switchRefTab('training')">ALO Training Guide</div>
+      </div>
+      <button class="mclose" onclick="closeReference()">×</button>
+    </div>
+    <div class="panel-body" id="refBody"></div>
   </div>
 </div>
 

@@ -194,8 +194,8 @@ select.fc option[value="general"]{color:#64748b}
 
 /* ── CARD ── */
 /* Card design: priority drives the left edge stripe; track is conveyed by
-   the solid-color tbadge pill. No top border accent, no hover lift —
-   instead a subtle background shift on hover for a quieter feel. */
+   the solid-color tbadge pill. No top border accent, no hover lift.
+   Instead a subtle background shift on hover for a quieter feel. */
 .card{
   background:var(--card-bg);
   border:1px solid var(--border);
@@ -753,3 +753,41 @@ html.dark .sug-thumbs-btn.voted{background:#1e3a5f}
 .sug-close-btn.reopen:hover{border-color:#10b981;color:#10b981}
 .sug-closed-hdr{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
 .sug-empty{padding:18px 0;color:var(--muted);font-size:13px;font-style:italic}
+
+/* ── REFERENCE / JOB AID ──
+   Error code lookup table, guides. Solution badge colors map to the
+   site palette: Back On = teal (moderate), Relabel = amber (BB track),
+   Problem = red (critical/OP), Siemens = navy (escalation). */
+.ec-search{width:100%;max-width:440px;padding:9px 13px;border:1px solid var(--border);border-radius:7px;font-size:13px;margin-bottom:10px;font-family:inherit;background:var(--input-bg);color:var(--text)}
+.ec-search:focus{outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.ec-filters{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.ec-filter{font-size:11px;font-weight:600;padding:4px 11px;border-radius:14px;cursor:pointer;border:1.5px solid var(--border);color:var(--muted);background:transparent;transition:all .12s}
+.ec-filter:hover{border-color:#aaa;color:var(--text)}
+.ec-filter.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.ec-count{font-size:11px;color:var(--muted);margin-bottom:10px}
+.ec-table{width:100%;border-collapse:collapse;font-size:13px;background:var(--card-bg);border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.ec-table th{background:var(--panel-hdr-bg);padding:9px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)}
+.ec-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.ec-table tr:last-child td{border-bottom:none}
+.ec-table tr:hover td{background:var(--hover-bg)}
+.ec-code{font-family:'Geist Mono','Geist',monospace;font-weight:600;font-size:12px;white-space:nowrap}
+.ec-desc{font-weight:600}
+.ec-detail{color:var(--muted);font-size:12px}
+.ec-sol{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:2px 8px;border-radius:10px;white-space:nowrap;display:inline-block}
+.ec-sol.backon{background:#cffafe;color:#0e7490}
+.ec-sol.relabel{background:#fef3c7;color:#b45309}
+.ec-sol.problem{background:#fee2e2;color:#b91c1c}
+.ec-sol.siemens{background:var(--navy);color:#fff}
+html.dark .ec-sol.backon{background:#0c4a6e;color:#67e8f9}
+html.dark .ec-sol.relabel{background:#78350f;color:#fde68a}
+html.dark .ec-sol.problem{background:#7f1d1d;color:#fca5a5}
+html.dark .ec-sol.siemens{background:#0f172a;color:#cbd5e1}
+
+/* Guides */
+.guide{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:24px 28px;max-width:820px;line-height:1.6}
+.guide h2{font-size:18px;font-weight:800;margin:0 0 14px;letter-spacing:-.3px}
+.guide h3{font-size:14px;font-weight:700;margin:20px 0 8px;color:var(--accent-text)}
+.guide ul{margin:0 0 12px 20px}
+.guide li{font-size:13px;margin-bottom:5px;color:var(--text)}
+.guide .gweek{border-left:3px solid var(--col-inprog);padding-left:14px;margin-bottom:18px}
+.guide .gnote{background:var(--accent-soft);border:1px solid var(--border);border-radius:6px;padding:10px 13px;font-size:12px;color:var(--accent-text);margin-top:12px}
