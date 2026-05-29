@@ -179,34 +179,6 @@
     </div>
   </div>
 
-  <!-- Tier 2: tools and panels. Department dropdowns (e.g. ALO) group
-       related tools together; flat buttons stay for general utilities.
-       Future departments can add their own dropdowns alongside ALO. -->
-  <div class="hdr-tier2">
-    <div class="hdr-right" style="margin-left:0">
-      <!-- ALO department dropdown -->
-      <div class="dept-dropdown desktop-only" data-dropdown="alo">
-        <button class="btn-tool dept-trigger" id="hdrAloBtn" onclick="toggleDeptDropdown('alo')" title="ALO tools and links">
-          ALO
-          <svg class="dept-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="dept-menu" id="deptMenuAlo">
-          <div class="dept-item" onclick="closeDeptDropdowns();openReports()">
-            <span class="dept-ico" data-icon="clipboard"></span>Reports
-          </div>
-          <a class="dept-item" href="http://das.davita.com" target="_blank" rel="noopener" onclick="closeDeptDropdowns()">
-            <span class="dept-ico" data-icon="link"></span>DAS
-          </a>
-        </div>
-      </div>
-      <!-- Flat utility buttons -->
-      <button class="btn-tool desktop-only" id="hdrArchiveBtn" onclick="openArchive()" title="View archived issues">Archive</button>
-      <button class="btn-tool desktop-only" id="hdrStatsBtn" onclick="openStats()" title="View statistics">Stats</button>
-      <button class="btn-tool desktop-only" id="hdrSuggestBtn" onclick="openSuggestions()" title="Team suggestions and feature requests">Suggestions</button>
-      <button class="btn-tool desktop-only" id="hdrRefBtn" onclick="openReference()" title="Reference and job aid: error codes, guides, training">Reference</button>
-      <button class="btn-tool desktop-only" onclick="window.print()" title="Print current board">Print</button>
-    </div>
-  </div>
 
 </header>
 
