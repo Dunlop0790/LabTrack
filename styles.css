@@ -181,6 +181,90 @@ select.fc option[value="bb"]{color:var(--bb)}
 select.fc option[value="general"]{color:#64748b}
 
 /* ── BOARD ── */
+/* ── DASHBOARD HOME ──
+   Landing view. Tile grid where the issue board is one tool among many. */
+.hidden{display:none !important}
+.dash{max-width:1400px;margin:0 auto;padding:20px;width:100%}
+.dash-greet{margin-bottom:18px}
+.dash-greet h1{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:3px}
+.dash-greet p{font-size:13px;color:var(--muted)}
+.dash-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;grid-auto-rows:min-content}
+@media(max-width:980px){.dash-grid{grid-template-columns:1fr 1fr}.tile-board{grid-column:1/-1;grid-row:auto}}
+@media(max-width:620px){.dash-grid{grid-template-columns:1fr}}
+
+.tile{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-sm)}
+.tile-hdr{padding:13px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.tile-ico{width:30px;height:30px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.tile-ico svg{width:16px;height:16px}
+.tile-title{font-size:14px;font-weight:700;letter-spacing:-.2px}
+.tile-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.tile-action{margin-left:auto;font-size:11px;font-weight:600;color:var(--accent-text);cursor:pointer;padding:4px 10px;border-radius:5px;transition:background .12s;display:flex;align-items:center;gap:4px}
+.tile-action:hover{background:var(--accent-soft)}
+.tile-action svg{width:12px;height:12px}
+
+.tile-board{grid-row:span 2}
+.mini-board{display:flex;gap:8px;padding:12px;overflow:hidden;flex:1;max-height:440px}
+.mini-col{flex:1;background:var(--col-bg);border-radius:8px;display:flex;flex-direction:column;min-width:0}
+.mini-col-hdr{padding:8px 10px;display:flex;align-items:center;gap:6px;border-bottom:2px solid}
+.mini-col-hdr.open{border-color:var(--col-open)}
+.mini-col-hdr.inprogress{border-color:var(--col-inprog)}
+.mini-col-hdr.monitoring{border-color:var(--col-watch)}
+.mini-col-hdr.resolved{border-color:var(--col-done)}
+.mini-col-name{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+.mini-col-ct{font-size:10px;color:var(--muted);margin-left:auto;background:var(--border);padding:0 6px;border-radius:8px;font-weight:600}
+.mini-col-body{padding:6px;display:flex;flex-direction:column;gap:5px;overflow-y:auto}
+.mini-card{background:var(--card-bg);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:5px;padding:7px 8px;cursor:pointer;transition:background .1s}
+.mini-card:hover{background:var(--hover-bg)}
+.mini-card.p-critical{border-left-color:var(--critical)}
+.mini-card.p-urgent{border-left-color:var(--urgent)}
+.mini-card.p-moderate,.mini-card.p-monitor{border-left-color:var(--moderate-c)}
+.mini-card.p-low{border-left-color:var(--low)}
+.mini-card-top{display:flex;align-items:center;gap:4px;margin-bottom:3px}
+.mini-tb{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:1px 5px;border-radius:2px}
+.mini-tb.op{background:var(--op);color:#fff}
+.mini-tb.bb{background:var(--bb);color:#fff}
+.mini-tb.gen{background:#94a3b8;color:#fff}
+.mini-card-title{font-size:11px;font-weight:500;line-height:1.35;color:var(--text)}
+.mini-card-meta{font-size:9px;color:var(--muted);margin-top:3px}
+.mini-empty{font-size:10px;color:var(--muted);font-style:italic;padding:8px 6px;text-align:center}
+
+.tile-tool{cursor:pointer;transition:border-color .12s,box-shadow .12s}
+.tile-tool:hover{border-color:#bcc7d6;box-shadow:var(--shadow-md)}
+.tile-links{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 14px}
+.tile-link{font-size:11px;font-weight:600;padding:4px 9px;border-radius:5px;background:var(--hover-bg);color:var(--text);text-decoration:none;cursor:pointer;transition:background .1s;display:inline-flex;align-items:center;gap:3px}
+.tile-link:hover{background:var(--border)}
+.tile-link.ext::after{content:'\2197';font-size:9px;opacity:.6}
+
+.stat-strip{display:flex;gap:0}
+.stat-cell{flex:1;padding:12px 14px;border-right:1px solid var(--border);text-align:center}
+.stat-cell:last-child{border-right:none}
+.stat-num{font-size:22px;font-weight:800;letter-spacing:-.5px;line-height:1}
+.stat-num.red{color:var(--critical)}
+.stat-num.amber{color:var(--urgent)}
+.stat-num.blue{color:var(--accent-text)}
+.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:4px;font-weight:600}
+
+/* Tile icon background tints */
+.ico-board{background:var(--accent-soft);color:var(--accent-text)}
+.ico-ls{background:#dcfce7;color:#16a34a}
+.ico-eod{background:#fef3c7;color:#d97706}
+.ico-ref{background:#f3e8ff;color:#9333ea}
+.ico-stats{background:#cffafe;color:#0891b2}
+.ico-sug{background:#fee2e2;color:#dc2626}
+.ico-arch{background:var(--hover-bg);color:var(--muted)}
+html.dark .ico-ls{background:#14532d;color:#86efac}
+html.dark .ico-eod{background:#78350f;color:#fcd34d}
+html.dark .ico-ref{background:#581c87;color:#d8b4fe}
+html.dark .ico-stats{background:#164e63;color:#67e8f9}
+html.dark .ico-sug{background:#7f1d1d;color:#fca5a5}
+
+/* Board view bar (when board is expanded from the dashboard) */
+.board-view-bar{display:flex;align-items:center;gap:14px;padding:12px 18px 0}
+.dash-back{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--accent-text);background:transparent;border:none;cursor:pointer;font-family:inherit;padding:5px 8px;border-radius:6px;transition:background .12s}
+.dash-back:hover{background:var(--accent-soft)}
+.dash-back svg{width:14px;height:14px}
+.board-view-title{font-size:15px;font-weight:700;letter-spacing:-.2px}
+
 .board{flex:1;display:flex;padding:16px 18px;gap:14px;overflow-x:auto;align-items:flex-start}
 .col{background:var(--col-bg);border-radius:10px;width:270px;flex-shrink:0;display:flex;flex-direction:column;max-height:calc(100vh - 110px)}
 .col-hdr{padding:11px 13px;display:flex;align-items:center;gap:7px;border-top:3px solid transparent;border-radius:10px 10px 0 0}

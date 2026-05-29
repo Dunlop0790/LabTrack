@@ -158,7 +158,7 @@
        This is the "always orient yourself" tier: who am I, what board am I
        on, where do I most often want to go, and how is the app configured. -->
   <div class="hdr-tier1">
-    <div class="logo">Lab<span>Track</span></div>
+    <div class="logo" onclick="showDashHome()" style="cursor:pointer" title="Back to dashboard">Lab<span>Track</span></div>
     <div class="board-context">
       <span class="board-context-lbl">Board</span>
       <select class="board-sel" id="boardSel" onchange="switchBoard(this.value)"></select>
@@ -230,6 +230,30 @@
   <div class="ham-item" onclick="closeHam();toggleSound()"><span class="ham-ico" id="hamSoundIco"></span><span id="hamSoundLbl">Alert Sounds</span></div>
 </div>
 
+<!-- ── DASHBOARD HOME ──
+     The landing view. Issue tracking is one tile among several tools.
+     The board tile shows a compact read-only mini board; Expand swaps
+     to the full board view (boardView below). All other tiles open
+     their respective panels or views.
+-->
+<div id="dashHome">
+  <div class="dash">
+    <div class="dash-greet">
+      <h1 id="dashGreet">Welcome</h1>
+      <p id="dashGreetSub"></p>
+    </div>
+    <div class="dash-grid" id="dashGrid"></div>
+  </div>
+</div>
+
+<!-- ── BOARD VIEW (shown when the board tile is expanded) ── -->
+<div id="boardView" class="hidden">
+
+<div class="board-view-bar">
+  <button class="dash-back" onclick="showDashHome()"><span data-icon="arrow-left"></span> Dashboard</button>
+  <span class="board-view-title" id="boardViewTitle">Issue Board</span>
+</div>
+
 <!-- ── FILTER BAR ── -->
 <div class="fbar">
   <span class="flabel">Track</span>
@@ -252,6 +276,9 @@
 
 <!-- ── BOARD ── -->
 <div class="board" id="boardArea"><div class="loading">Connecting…</div></div>
+
+</div>
+<!-- end boardView -->
 
 <!-- Print-only header -->
 <div class="print-hdr">

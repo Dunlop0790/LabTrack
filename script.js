@@ -215,7 +215,11 @@ const ICONS = {
   link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
   // Open book: Reference / Job Aid panel
-  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+  // Arrow left: back to dashboard
+  'arrow-left': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+  // Expand: open board to full view
+  'expand': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>'
 };
 
 // Injects inline SVGs into all static placeholders that use the
@@ -659,7 +663,7 @@ async function initApp(){
   await loadBoards();
   if('Notification' in window && Notification.permission==='default') Notification.requestPermission();
   // Re-render every minute so card ages update and aging warnings appear
-  setInterval(()=>{ if(issues.length) renderBoard(); }, 60000);
+  setInterval(()=>{ if(issues.length) renderCurrentView(); }, 60000);
   // Watch for @mentions of the current user across all comments
   watchForMyMentions();
   // Run archive maintenance: archives resolved cards from past Sundays, purges old archives
@@ -671,6 +675,8 @@ async function initApp(){
   // Set print date
   const pd = document.getElementById('printDate');
   if(pd) pd.textContent = new Date().toLocaleString();
+  // Land on the dashboard home view
+  showDashHome();
 }
 
 // Track recent comment IDs we've already notified on, to prevent duplicate alerts
@@ -888,7 +894,7 @@ function subscribeIssues(bid){
       prevIssueMap = {};
       issues.forEach(i=>{ prevIssueMap[i.id]=i });
       isFirstLoad = false;
-      renderBoard();
+      renderCurrentView();
     });
 }
 
@@ -899,6 +905,209 @@ function subscribeIssues(bid){
 // longer than the threshold defined in AGE_WARN_MS. Card markup is
 // built as a single template string and assigned via innerHTML for
 // simplicity; volumes are small enough that this is not a perf issue.
+// ── DASHBOARD HOME ────────────────────────────────────────────
+// The landing view. Shows a tile grid where the issue board is one
+// tool among several. The board tile renders a compact read-only
+// mini board; Expand swaps to the full board view.
+
+let currentView = 'dashboard'; // 'dashboard' | 'board'
+
+function showDashHome(){
+  currentView = 'dashboard';
+  document.getElementById('dashHome').classList.remove('hidden');
+  document.getElementById('boardView').classList.add('hidden');
+  renderDashHome();
+  window.scrollTo(0,0);
+}
+
+function showBoardView(){
+  currentView = 'board';
+  document.getElementById('dashHome').classList.add('hidden');
+  document.getElementById('boardView').classList.remove('hidden');
+  renderBoard();
+  window.scrollTo(0,0);
+}
+
+// Renders whichever view is currently active. Used by the realtime
+// subscription and periodic refresh so live updates land on the
+// dashboard mini board or the full board, whichever the user is on.
+function renderCurrentView(){
+  if(currentView === 'dashboard') renderDashHome();
+  else renderBoard();
+}
+
+// Greeting that adapts to the time of day. Uses the user's name if known.
+function dashGreeting(){
+  const h = new Date().getHours();
+  const part = h < 5 ? 'Good evening' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const name = (user && !isGuest() && user.name) ? user.name.split(' ')[0] : '';
+  return name ? `${part}, ${name}` : part;
+}
+
+function renderDashHome(){
+  const greetEl = document.getElementById('dashGreet');
+  const subEl = document.getElementById('dashGreetSub');
+  if(greetEl) greetEl.textContent = dashGreeting();
+
+  // Sub line: live at-a-glance status
+  const openCount = issues.filter(i=>i.status!=='resolved').length;
+  const boardName = (boards.find(b=>b.id===boardId)||{}).title || 'board';
+  if(subEl){
+    subEl.textContent = `${boardName} · ${openCount} active issue${openCount===1?'':'s'}`;
+  }
+
+  const grid = document.getElementById('dashGrid');
+  if(!grid) return;
+
+  // Compact mini board: same filtering/sorting as the full board but
+  // read-only and capped in height. Clicking a card opens its detail.
+  const sorted = [...issues].sort((a,b)=>{
+    const pd = (PRIORITY_ORDER[a.priority]||3)-(PRIORITY_ORDER[b.priority]||3);
+    if(pd!==0) return pd;
+    const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+    const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+    return tb-ta;
+  });
+  const miniBoard = COLS.map(col=>{
+    const cards = sorted.filter(i=>i.status===col);
+    return `<div class="mini-col">
+      <div class="mini-col-hdr ${col}">
+        <span class="mini-col-name">${COL_LABELS[col]}</span>
+        <span class="mini-col-ct">${cards.length}</span>
+      </div>
+      <div class="mini-col-body">
+        ${cards.length ? cards.map(miniCard).join('') : '<div class="mini-empty">None</div>'}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Stats for the stats tile
+  const weekAgo = Date.now() - 7*24*60*60*1000;
+  const weekCount = issues.filter(i=>{
+    const t = i.createdAt?.toMillis ? i.createdAt.toMillis() : 0;
+    return t >= weekAgo;
+  }).length;
+  const critCount = issues.filter(i=>i.status!=='resolved' && i.priority==='critical').length;
+
+  // Suggestions open count (best-effort from cache if present)
+  const sugOpen = (typeof suggestionsCache !== 'undefined' && Array.isArray(suggestionsCache))
+    ? suggestionsCache.filter(s=>s.status!=='closed').length : null;
+
+  grid.innerHTML = `
+    <div class="tile tile-board">
+      <div class="tile-hdr">
+        <div class="tile-ico ico-board">${ICONS.board || ''}</div>
+        <div>
+          <div class="tile-title">Issue Board</div>
+          <div class="tile-sub">${esc(boardName)} · ${openCount} active</div>
+        </div>
+        <div class="tile-action" onclick="showBoardView()">Expand ${ICONS.expand||''}</div>
+      </div>
+      <div class="mini-board">${miniBoard}</div>
+    </div>
+
+    <div class="tile tile-tool" onclick="openReports()">
+      <div class="tile-hdr">
+        <div class="tile-ico ico-ls">${ICONS.clipboard || ''}</div>
+        <div>
+          <div class="tile-title">Line Status</div>
+          <div class="tile-sub">Create &amp; publish</div>
+        </div>
+      </div>
+      <div class="tile-links">
+        <a class="tile-link ext" href="http://das.davita.com" target="_blank" rel="noopener" onclick="event.stopPropagation()">DAS</a>
+        <span class="tile-link" onclick="event.stopPropagation();openReference();switchRefTab('lsguide')">Line Status Guide</span>
+      </div>
+    </div>
+
+    <div class="tile tile-tool" onclick="openReports();switchReportTab('eod')">
+      <div class="tile-hdr">
+        <div class="tile-ico ico-eod">${ICONS.clipboard || ''}</div>
+        <div>
+          <div class="tile-title">EOD Report</div>
+          <div class="tile-sub">End of day summary</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tile tile-tool" onclick="openToday()">
+      <div class="tile-hdr">
+        <div class="tile-ico ico-stats">${ICONS.today || ''}</div>
+        <div>
+          <div class="tile-title">Today</div>
+          <div class="tile-sub">Published reports &amp; archive</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tile tile-tool" onclick="openReference()">
+      <div class="tile-hdr">
+        <div class="tile-ico ico-ref">${ICONS.book || ''}</div>
+        <div>
+          <div class="tile-title">Reference &amp; Job Aid</div>
+          <div class="tile-sub">Error codes, guides, training</div>
+        </div>
+      </div>
+      <div class="tile-links">
+        <span class="tile-link" onclick="event.stopPropagation();openReference();switchRefTab('errors')">Error Codes</span>
+        <span class="tile-link" onclick="event.stopPropagation();openReference();switchRefTab('training')">Training</span>
+      </div>
+    </div>
+
+    <div class="tile tile-tool" onclick="openStats()">
+      <div class="tile-hdr">
+        <div class="tile-ico ico-stats">${ICONS.chart || ''}</div>
+        <div>
+          <div class="tile-title">Stats</div>
+          <div class="tile-sub">Trends &amp; recurring</div>
+        </div>
+      </div>
+      <div class="stat-strip">
+        <div class="stat-cell"><div class="stat-num red">${critCount}</div><div class="stat-lbl">Critical</div></div>
+        <div class="stat-cell"><div class="stat-num amber">${weekCount}</div><div class="stat-lbl">This week</div></div>
+        <div class="stat-cell"><div class="stat-num blue">${openCount}</div><div class="stat-lbl">Active</div></div>
+      </div>
+    </div>
+
+    <div class="tile tile-tool" onclick="openSuggestions()">
+      <div class="tile-hdr">
+        <div class="tile-ico ico-sug">${ICONS.bell || ''}</div>
+        <div>
+          <div class="tile-title">Suggestions</div>
+          <div class="tile-sub">${sugOpen!==null ? sugOpen+' open · ' : ''}Team ideas</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tile tile-tool" onclick="openArchive()">
+      <div class="tile-hdr">
+        <div class="tile-ico ico-arch">${ICONS.archive || ''}</div>
+        <div>
+          <div class="tile-title">Archive</div>
+          <div class="tile-sub">Past issues &amp; line statuses</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Compact card for the dashboard mini board. Read-only summary; click
+// opens the full detail modal (same as the board).
+function miniCard(issue){
+  const inst = [issue.instrumentType, issue.unitNumber].filter(Boolean).join(' ');
+  const tc = issue.track||'general';
+  const tl = tc==='op'?'OP':tc==='bb'?'BB':'GEN';
+  const age = fmtAge(issue.createdAt);
+  const meta = [inst, age].filter(Boolean).join(' · ');
+  return `<div class="mini-card p-${issue.priority}" onclick="openDetail('${issue.id}')">
+    <div class="mini-card-top">
+      <span class="mini-tb ${tc==='op'?'op':tc==='bb'?'bb':'gen'}">${tl}</span>
+    </div>
+    <div class="mini-card-title">${esc(issue.title)}</div>
+    ${meta ? `<div class="mini-card-meta">${esc(meta)}</div>` : ''}
+  </div>`;
+}
+
 function renderBoard(){
   const term = searchTerm.toLowerCase().trim();
   const filtered = issues.filter(i=>{
