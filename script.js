@@ -2967,25 +2967,54 @@ function wireCsvZone(){
 
 // Accepts dropped or selected CSV files and routes each to the
 // correct slot (OP or BB) based on the FlexLab analyzer ID embedded
-// in the filename: 191 indicates Optimus Prime, 192 indicates
-// Bumblebee. Files that match neither are skipped with a toast.
-// Successfully parsed rows are aggregated into hourly buckets via
-// lsProcessCsvRows() before being attached to lsState.
+// in the filename. Uses a word-boundary regex so '191' in a longer
+// number (e.g. '1912' or a date fragment '19-1') does not false-match.
+// 191 = Optimus Prime (OP), 192 = Bumblebee (BB).
 async function lsHandleCsvFiles(files){
   for(const f of files){
     if(!f.name.toLowerCase().endsWith('.csv')){
       showToast(`Skipped ${f.name} (not CSV)`);
       continue;
     }
-    const which = f.name.includes(LS_CSV_OP_TAG) ? 'op' : f.name.includes(LS_CSV_BB_TAG) ? 'bb' : null;
+    // Word-boundary regex prevents partial matches like 1912 matching 191.
+    // Check BB first since 192 can't false-match inside 191, but 191 could
+    // appear in filenames that also reference a date like "2025-01-19-2".
+    const isOp = /(?<![0-9])191(?![0-9])/.test(f.name);
+    const isBb = /(?<![0-9])192(?![0-9])/.test(f.name);
+    let which = null;
+    if(isOp && !isBb) which = 'op';
+    else if(isBb && !isOp) which = 'bb';
+    else if(isOp && isBb){
+      // Both IDs present in the filename. Fall back to whichever appears
+      // last since DAS sometimes puts both line numbers in the path but the
+      // rightmost one is the actual selected line.
+      const lastOp = f.name.lastIndexOf('191');
+      const lastBb = f.name.lastIndexOf('192');
+      which = lastOp > lastBb ? 'op' : 'bb';
+      showToast(`Both 191 and 192 found in filename. Classified as ${which.toUpperCase()} - verify it looks right.`);
+    }
     if(!which){
-      showToast(`Couldn't classify ${f.name}. Filename should contain "${LS_CSV_OP_TAG}" (OP) or "${LS_CSV_BB_TAG}" (BB).`);
+      showToast(`Couldn't classify ${f.name}. Filename should contain 191 (OP) or 192 (BB).`);
       continue;
     }
     const rows = await new Promise((resolve,reject)=>{
-      Papa.parse(f, {header:true, skipEmptyLines:true, complete:r=>resolve(r.data||[]), error:reject});
+      Papa.parse(f, {
+        header:true,
+        skipEmptyLines:true,
+        // Strip BOM characters that DAS sometimes prepends. Without this the
+        // first column header gets a hidden \uFEFF prefix and the timestamp
+        // column lookup silently returns undefined for every row, causing the
+        // entire hour to be skipped.
+        transformHeader: h => h.replace(/^\uFEFF/,'').trim(),
+        complete:r=>resolve(r.data||[]),
+        error:reject
+      });
     });
-    const processed = lsProcessCsvRows(rows);
+    const processed = lsProcessCsvRows(rows, f.name);
+    if(processed.length === 0){
+      showToast(`No data found in ${f.name}. Check the CSV format.`);
+      continue;
+    }
     if(which==='op') lsState.csvOp = {file:f, rows:processed};
     else lsState.csvBb = {file:f, rows:processed};
   }
@@ -2993,18 +3022,56 @@ async function lsHandleCsvFiles(files){
   refreshPreview();
 }
 
-function lsProcessCsvRows(rows){
+function lsProcessCsvRows(rows, filename){
+  if(!rows.length) return [];
+
+  // DAS has exported the timestamp column under at least two names
+  // depending on the export version. Try each in order and use the
+  // first one that actually has data in the first row.
+  const TIMESTAMP_KEYS = [
+    '@timestamp per 30 minutes',
+    'Timestamp per 30 minutes',
+    'timestamp per 30 minutes',
+    'Time',
+    'time',
+    'Timestamp',
+  ];
+  const COUNT_KEYS = ['Count','count','VALUE','Value','value'];
+
+  const firstRow = rows[0];
+  const actualKeys = Object.keys(firstRow);
+
+  // Find which timestamp key the file actually uses
+  let tsKey = TIMESTAMP_KEYS.find(k => actualKeys.includes(k));
+  if(!tsKey){
+    // Fall back to any key containing 'timestamp' or 'time' case-insensitively
+    tsKey = actualKeys.find(k => /timestamp|per 30/i.test(k));
+  }
+  let countKey = COUNT_KEYS.find(k => actualKeys.includes(k));
+  if(!countKey){
+    countKey = actualKeys.find(k => /^count$/i.test(k));
+  }
+
+  if(!tsKey || !countKey){
+    console.warn(`[LabTrack] CSV parse: could not identify columns in ${filename||'file'}.`);
+    console.warn('  Available columns:', actualKeys);
+    console.warn('  Expected something like "@timestamp per 30 minutes" and "Count"');
+    return [];
+  }
+
   // Aggregate 30-min counts into hourly buckets
   const hourData = Object.create(null);
   rows.forEach(row=>{
-    const time = row['@timestamp per 30 minutes'];
-    const rawCount = row['Count'];
+    const time = row[tsKey];
+    const rawCount = row[countKey];
     if(!time) return;
     const cleaned = String(rawCount).replace(/,/g,'').trim();
     const count = parseInt(cleaned,10) || 0;
-    const [hh, mm] = String(time).split(':');
-    const hour = parseInt(hh,10);
-    const minute = parseInt(mm,10);
+    // Handle both "HH:MM" and "HH:MM:SS" formats from different DAS versions
+    const parts = String(time).split(':');
+    const hour = parseInt(parts[0],10);
+    const minute = parseInt(parts[1]||'0',10);
+    if(!Number.isFinite(hour) || hour < 0 || hour > 23) return;
     const hourKey = `${String(hour).padStart(2,'0')}:00-${String(hour).padStart(2,'0')}:59`;
     const half = minute < 30 ? 'first' : 'second';
     if(!hourData[hourKey]) hourData[hourKey] = {first:0, second:0};
@@ -4562,6 +4629,131 @@ const IOM_ERROR_CODES = [
 
 let refActiveTab = 'errors';
 let ecActiveFilter = 'all';
+
+// ── GUIDED TOUR ───────────────────────────────────────────────
+// Optional walkthrough of the dashboard. Highlights one element at a
+// time with a spotlight and an explanatory popover. Launched from the
+// setup screen ("Take a quick tour") or could be wired to a help button.
+// Steps target elements by selector; missing targets are skipped so the
+// tour stays robust if the layout changes.
+
+const TOUR_STEPS = [
+  {
+    sel: '.logo',
+    title: 'Welcome to LabTrack',
+    body: 'This is your ALO dashboard. Every tool lives here as a tile. Clicking the LabTrack logo from anywhere brings you back to this home screen.'
+  },
+  {
+    sel: '.tile-board',
+    title: 'Issue Board',
+    body: 'A live snapshot of open issues across all four stages. Click any card to see details, or hit Expand to open the full board where you can create and manage issues.'
+  },
+  {
+    sel: '.tile-board .tile-action',
+    title: 'Expand the Board',
+    body: 'Opens the full issue board with filtering, search, and the ability to log new issues and move them between stages.'
+  },
+  {
+    sel: '#dashGrid .tile-tool',
+    title: 'Line Status',
+    body: 'Build and publish the Line Status report. The DAS link and the Line Status Guide are right here for quick access while you work.'
+  },
+  {
+    sel: '.tile-ico.ico-ref',
+    title: 'Reference & Job Aid',
+    body: 'Look up IOM error codes, read the Line Status Guide, or review the ALO training guide. Searchable and always one click away during a shift.'
+  },
+  {
+    sel: '#hdrTodayBtn',
+    title: 'Today',
+    body: 'See what has been published today and browse the archive of past final Line Statuses.'
+  },
+  {
+    sel: '.btn-new',
+    title: 'Log an Issue',
+    body: 'Quickly log a new issue from anywhere using this button. That is the end of the tour. You can revisit it anytime from the login screen.'
+  }
+];
+
+let tourIdx = 0;
+
+// Called from the setup screen. Dismisses the setup overlay into guest
+// mode so the dashboard is visible behind the tour, then starts it.
+function startTourFromSetup(){
+  // Enter as guest so the dashboard renders behind the tour without
+  // forcing a name/role choice first. The user can still sign in after.
+  if(typeof enterGuest === 'function') enterGuest();
+  setTimeout(()=> startTour(), 350);
+}
+
+function startTour(){
+  tourIdx = 0;
+  document.getElementById('tourOverlay').classList.add('active');
+  showTourStep();
+}
+
+function showTourStep(){
+  // Skip any steps whose target is not on the page right now
+  while(tourIdx < TOUR_STEPS.length && !document.querySelector(TOUR_STEPS[tourIdx].sel)){
+    tourIdx++;
+  }
+  if(tourIdx >= TOUR_STEPS.length){ endTour(); return; }
+
+  const step = TOUR_STEPS[tourIdx];
+  const target = document.querySelector(step.sel);
+  const rect = target.getBoundingClientRect();
+  const pad = 6;
+
+  // Position spotlight over the target
+  const spot = document.getElementById('tourSpotlight');
+  spot.style.left = (rect.left - pad) + 'px';
+  spot.style.top = (rect.top - pad) + 'px';
+  spot.style.width = (rect.width + pad*2) + 'px';
+  spot.style.height = (rect.height + pad*2) + 'px';
+
+  // Fill popover content
+  document.getElementById('tourStep').textContent = `Step ${tourIdx+1} of ${TOUR_STEPS.length}`;
+  document.getElementById('tourTitle').textContent = step.title;
+  document.getElementById('tourBody').textContent = step.body;
+  document.getElementById('tourBack').style.visibility = tourIdx === 0 ? 'hidden' : 'visible';
+  document.getElementById('tourNext').textContent = tourIdx === TOUR_STEPS.length-1 ? 'Done' : 'Next';
+
+  // Position popover: below the target if room, otherwise above
+  const pop = document.getElementById('tourPop');
+  const popW = 300, popH = pop.offsetHeight || 160;
+  let top = rect.bottom + 14;
+  if(top + popH > window.innerHeight - 12) top = Math.max(12, rect.top - popH - 14);
+  let left = rect.left;
+  if(left + popW > window.innerWidth - 12) left = window.innerWidth - popW - 12;
+  if(left < 12) left = 12;
+  pop.style.top = top + 'px';
+  pop.style.left = left + 'px';
+
+  // Scroll target into view if needed
+  if(rect.top < 60 || rect.bottom > window.innerHeight - 60){
+    target.scrollIntoView({behavior:'smooth', block:'center'});
+    setTimeout(showTourStep, 350); // reposition after scroll settles
+  }
+}
+
+function tourNext(){
+  if(tourIdx >= TOUR_STEPS.length-1){ endTour(); return; }
+  tourIdx++;
+  showTourStep();
+}
+function tourPrev(){
+  if(tourIdx === 0) return;
+  tourIdx--;
+  showTourStep();
+}
+function endTour(){
+  document.getElementById('tourOverlay').classList.remove('active');
+}
+
+// Reposition the spotlight if the window resizes mid-tour
+window.addEventListener('resize', () => {
+  if(document.getElementById('tourOverlay')?.classList.contains('active')) showTourStep();
+});
 
 function openReference(){
   document.getElementById('refPanel').classList.add('open');
