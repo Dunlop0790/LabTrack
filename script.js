@@ -214,6 +214,8 @@ const ICONS = {
   // Chain link: external links in department dropdowns (FlexLab, DAS, etc.)
   link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
+  // Kanban columns: Issue Board tile
+  board: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><rect x="3" y="4" width="4.5" height="16" rx="1"/><rect x="9.75" y="4" width="4.5" height="11" rx="1"/><rect x="16.5" y="4" width="4.5" height="14" rx="1"/></svg>',
   // Open book: Reference / Job Aid panel
   book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
   // Arrow left: back to dashboard
@@ -994,97 +996,101 @@ function renderDashHome(){
     ? suggestionsCache.filter(s=>s.status!=='closed').length : null;
 
   grid.innerHTML = `
-    <div class="tile tile-board">
-      <div class="tile-hdr">
-        <div class="tile-ico ico-board">${ICONS.board || ''}</div>
-        <div>
-          <div class="tile-title">Issue Board</div>
-          <div class="tile-sub">${esc(boardName)} · ${openCount} active</div>
+    <div class="dash-board-col">
+      <div class="tile tile-board">
+        <div class="tile-hdr">
+          <div class="tile-ico ico-board">${ICONS.board || ''}</div>
+          <div>
+            <div class="tile-title">Issue Board</div>
+            <div class="tile-sub">${esc(boardName)} · ${openCount} active</div>
+          </div>
+          <div class="tile-action" onclick="showBoardView()">Expand ${ICONS.expand||''}</div>
         </div>
-        <div class="tile-action" onclick="showBoardView()">Expand ${ICONS.expand||''}</div>
-      </div>
-      <div class="mini-board">${miniBoard}</div>
-    </div>
-
-    <div class="tile tile-tool" onclick="openReports()">
-      <div class="tile-hdr">
-        <div class="tile-ico ico-ls">${ICONS.clipboard || ''}</div>
-        <div>
-          <div class="tile-title">Line Status</div>
-          <div class="tile-sub">Create &amp; publish</div>
-        </div>
-      </div>
-      <div class="tile-links">
-        <a class="tile-link ext" href="http://das.davita.com" target="_blank" rel="noopener" onclick="event.stopPropagation()">DAS</a>
-        <span class="tile-link" onclick="event.stopPropagation();openReference();switchRefTab('lsguide')">Line Status Guide</span>
+        <div class="mini-board">${miniBoard}</div>
       </div>
     </div>
 
-    <div class="tile tile-tool" onclick="openReports();switchReportTab('eod')">
-      <div class="tile-hdr">
-        <div class="tile-ico ico-eod">${ICONS.clipboard || ''}</div>
-        <div>
-          <div class="tile-title">EOD Report</div>
-          <div class="tile-sub">End of day summary</div>
+    <div class="dash-tools-col">
+      <div class="tile tile-tool" onclick="openReports('ls')">
+        <div class="tile-hdr">
+          <div class="tile-ico ico-ls">${ICONS.clipboard || ''}</div>
+          <div>
+            <div class="tile-title">Line Status</div>
+            <div class="tile-sub">Create &amp; publish</div>
+          </div>
+        </div>
+        <div class="tile-links">
+          <a class="tile-link ext" href="http://das.davita.com" target="_blank" rel="noopener" onclick="event.stopPropagation()">DAS</a>
+          <span class="tile-link" onclick="event.stopPropagation();openReference();switchRefTab('lsguide')">Line Status Guide</span>
         </div>
       </div>
-    </div>
 
-    <div class="tile tile-tool" onclick="openToday()">
-      <div class="tile-hdr">
-        <div class="tile-ico ico-stats">${ICONS.today || ''}</div>
-        <div>
-          <div class="tile-title">Today</div>
-          <div class="tile-sub">Published reports &amp; archive</div>
+      <div class="tile tile-tool" onclick="openReports('eod')">
+        <div class="tile-hdr">
+          <div class="tile-ico ico-eod">${ICONS.clipboard || ''}</div>
+          <div>
+            <div class="tile-title">EOD Report</div>
+            <div class="tile-sub">End of day summary</div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="tile tile-tool" onclick="openReference()">
-      <div class="tile-hdr">
-        <div class="tile-ico ico-ref">${ICONS.book || ''}</div>
-        <div>
-          <div class="tile-title">Reference &amp; Job Aid</div>
-          <div class="tile-sub">Error codes, guides, training</div>
+      <div class="tile tile-tool" onclick="openToday()">
+        <div class="tile-hdr">
+          <div class="tile-ico ico-stats">${ICONS.today || ''}</div>
+          <div>
+            <div class="tile-title">Today</div>
+            <div class="tile-sub">Published reports &amp; archive</div>
+          </div>
         </div>
       </div>
-      <div class="tile-links">
-        <span class="tile-link" onclick="event.stopPropagation();openReference();switchRefTab('errors')">Error Codes</span>
-        <span class="tile-link" onclick="event.stopPropagation();openReference();switchRefTab('training')">Training</span>
-      </div>
-    </div>
 
-    <div class="tile tile-tool" onclick="openStats()">
-      <div class="tile-hdr">
-        <div class="tile-ico ico-stats">${ICONS.chart || ''}</div>
-        <div>
-          <div class="tile-title">Stats</div>
-          <div class="tile-sub">Trends &amp; recurring</div>
+      <div class="tile tile-tool" onclick="openReference()">
+        <div class="tile-hdr">
+          <div class="tile-ico ico-ref">${ICONS.book || ''}</div>
+          <div>
+            <div class="tile-title">Reference &amp; Job Aid</div>
+            <div class="tile-sub">Error codes, guides, training</div>
+          </div>
+        </div>
+        <div class="tile-links">
+          <span class="tile-link" onclick="event.stopPropagation();openReference();switchRefTab('errors')">Error Codes</span>
+          <span class="tile-link" onclick="event.stopPropagation();openReference();switchRefTab('training')">Training</span>
         </div>
       </div>
-      <div class="stat-strip">
-        <div class="stat-cell"><div class="stat-num red">${critCount}</div><div class="stat-lbl">Critical</div></div>
-        <div class="stat-cell"><div class="stat-num amber">${weekCount}</div><div class="stat-lbl">This week</div></div>
-        <div class="stat-cell"><div class="stat-num blue">${openCount}</div><div class="stat-lbl">Active</div></div>
-      </div>
-    </div>
 
-    <div class="tile tile-tool" onclick="openSuggestions()">
-      <div class="tile-hdr">
-        <div class="tile-ico ico-sug">${ICONS.bell || ''}</div>
-        <div>
-          <div class="tile-title">Suggestions</div>
-          <div class="tile-sub">${sugOpen!==null ? sugOpen+' open · ' : ''}Team ideas</div>
+      <div class="tile tile-tool" onclick="openStats()">
+        <div class="tile-hdr">
+          <div class="tile-ico ico-stats">${ICONS.chart || ''}</div>
+          <div>
+            <div class="tile-title">Stats</div>
+            <div class="tile-sub">Trends &amp; recurring</div>
+          </div>
+        </div>
+        <div class="stat-strip">
+          <div class="stat-cell"><div class="stat-num red">${critCount}</div><div class="stat-lbl">Critical</div></div>
+          <div class="stat-cell"><div class="stat-num amber">${weekCount}</div><div class="stat-lbl">This week</div></div>
+          <div class="stat-cell"><div class="stat-num blue">${openCount}</div><div class="stat-lbl">Active</div></div>
         </div>
       </div>
-    </div>
 
-    <div class="tile tile-tool" onclick="openArchive()">
-      <div class="tile-hdr">
-        <div class="tile-ico ico-arch">${ICONS.archive || ''}</div>
-        <div>
-          <div class="tile-title">Archive</div>
-          <div class="tile-sub">Past issues &amp; line statuses</div>
+      <div class="tile tile-tool" onclick="openSuggestions()">
+        <div class="tile-hdr">
+          <div class="tile-ico ico-sug">${ICONS.bell || ''}</div>
+          <div>
+            <div class="tile-title">Suggestions</div>
+            <div class="tile-sub">${sugOpen!==null ? sugOpen+' open · ' : ''}Team ideas</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tile tile-tool" onclick="openArchive()">
+        <div class="tile-hdr">
+          <div class="tile-ico ico-arch">${ICONS.archive || ''}</div>
+          <div>
+            <div class="tile-title">Archive</div>
+            <div class="tile-sub">Past issues &amp; line statuses</div>
+          </div>
         </div>
       </div>
     </div>
@@ -2336,7 +2342,7 @@ let lsState = {
 
 let currentReportTab = 'ls';
 
-function openReports(){
+function openReports(tab){
   document.getElementById('reportsPanel').classList.add('open');
   updateHeaderActiveStates();
   // Restore persisted lsState from localStorage if available.
@@ -2357,7 +2363,8 @@ function openReports(){
   }
   // Default date if blank
   if(!lsState.date) lsState.date = formatTodayLong();
-  switchReportTab(currentReportTab);
+  // Open the requested tab if given, otherwise the last-used tab.
+  switchReportTab(tab || currentReportTab);
 }
 
 function closeReports(){
@@ -4372,20 +4379,22 @@ function todayLoadIntoForm(kind){
     const pub = todayPublished.ls;
     if(!pub) return;
     const data = JSON.parse(pub.data);
+    closeToday();
+    openReports('ls');
+    // Apply the published data AFTER opening (openReports restores from
+    // localStorage, so we overwrite with the published record here).
     Object.assign(lsState, data);
     lsState.csvOp = null; // CSV file objects are not stored
     lsState.csvBb = null;
-    closeToday();
-    openReports();
     switchReportTab('ls');
     showToast('Loaded into form. Make changes, then click Publish to update.');
   } else if(kind==='eod'){
     const pub = todayPublished.eod;
     if(!pub) return;
     const data = JSON.parse(pub.data);
-    Object.assign(eodState, data);
     closeToday();
-    openReports();
+    openReports('eod');
+    Object.assign(eodState, data);
     switchReportTab('eod');
     showToast('Loaded into form. Make changes, then click Publish to update.');
   }

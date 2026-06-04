@@ -214,13 +214,21 @@ select.fc option[value="general"]{color:#64748b}
 .dash-greet{margin-bottom:18px}
 .dash-greet h1{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:3px}
 .dash-greet p{font-size:13px;color:var(--muted)}
-/* Grid: left column is wider for the board tile. Rows size to their
-   content (auto) so tiles never clip their inner labels or links. The
-   board tile spans two rows so it sits taller than the small tool tiles
-   beside it, but its height comes from its own content, not a fixed row. */
-.dash-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;align-items:start}
-@media(max-width:980px){.dash-grid{grid-template-columns:1fr 1fr}.tile-board{grid-column:1/-1;grid-row:auto}}
-@media(max-width:620px){.dash-grid{grid-template-columns:1fr}}
+/* Dashboard layout: board on the left, tools in a grid on the right.
+   Using flex for the top split (rather than one big grid with row spans)
+   avoids the uneven vertical gaps that row-spanning created. The tools
+   column is its own 2-wide grid whose rows size to their own content. */
+.dash-grid{display:flex;gap:14px;align-items:flex-start}
+.dash-board-col{flex:2 1 0;min-width:0}
+.dash-tools-col{flex:3 1 0;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-content:start}
+.dash-tools-col .tile{align-self:start}
+@media(max-width:980px){
+  .dash-grid{flex-direction:column}
+  .dash-board-col,.dash-tools-col{flex:1 1 auto;width:100%}
+}
+@media(max-width:620px){
+  .dash-tools-col{grid-template-columns:1fr}
+}
 
 .tile{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-sm)}
 .tile-hdr{padding:13px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
@@ -232,9 +240,7 @@ select.fc option[value="general"]{color:#64748b}
 .tile-action:hover{background:var(--accent-soft)}
 .tile-action svg{width:12px;height:12px}
 
-/* Board tile spans two grid rows so it reads as the primary tile. Its
-   mini board scrolls internally if there are many cards. */
-.tile-board{grid-row:span 2}
+/* Board tile: its mini board scrolls internally if there are many cards. */
 .mini-board{display:flex;gap:8px;padding:12px;overflow:hidden;flex:1;min-height:260px;max-height:460px}
 .mini-col{flex:1;background:var(--col-bg);border-radius:8px;display:flex;flex-direction:column;min-width:0}
 .mini-col-hdr{padding:8px 10px;display:flex;align-items:center;gap:6px;border-bottom:2px solid}
