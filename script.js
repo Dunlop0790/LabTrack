@@ -2549,9 +2549,28 @@ function renderLineStatus(){
             <button class="ls-add-btn" style="font-size:11px;padding:3px 9px" onclick="lsRefreshNotes()">Refresh from Board</button>
           </div>
           <label class="ls-lbl" style="display:block;margin-top:8px">BB</label>
-          <textarea class="ls-textarea" placeholder="BB issues, notes..." oninput="lsUpdate('bbNotes',this.value)">${esc(lsState.bbNotes)}</textarea>
+          <div class="ls-notes-toolbar">
+            <button type="button" class="ls-hl-btn" onclick="lsApplyHighlight('bbNotesEdit','#fef08a')" title="Highlight yellow">&#9635; Yellow</button>
+            <button type="button" class="ls-hl-btn" onclick="lsApplyHighlight('bbNotesEdit','#bfdbfe')" title="Highlight blue">&#9635; Blue</button>
+            <button type="button" class="ls-hl-btn" onclick="lsApplyHighlight('bbNotesEdit','#bbf7d0')" title="Highlight green">&#9635; Green</button>
+            <button type="button" class="ls-hl-btn ls-hl-clear" onclick="lsApplyHighlight('bbNotesEdit',null)" title="Remove highlight">Clear</button>
+          </div>
+          <div class="ls-textarea ls-notes-edit" id="bbNotesEdit" contenteditable="true"
+            data-placeholder="BB issues, notes..."
+            oninput="lsUpdate('bbNotes',this.innerHTML)"
+          >${lsState.bbNotes||''}</div>
+
           <label class="ls-lbl" style="display:block;margin-top:8px">OP</label>
-          <textarea class="ls-textarea" placeholder="OP issues, notes..." oninput="lsUpdate('opNotes',this.value)">${esc(lsState.opNotes)}</textarea>
+          <div class="ls-notes-toolbar">
+            <button type="button" class="ls-hl-btn" onclick="lsApplyHighlight('opNotesEdit','#fef08a')" title="Highlight yellow">&#9635; Yellow</button>
+            <button type="button" class="ls-hl-btn" onclick="lsApplyHighlight('opNotesEdit','#bfdbfe')" title="Highlight blue">&#9635; Blue</button>
+            <button type="button" class="ls-hl-btn" onclick="lsApplyHighlight('opNotesEdit','#bbf7d0')" title="Highlight green">&#9635; Green</button>
+            <button type="button" class="ls-hl-btn ls-hl-clear" onclick="lsApplyHighlight('opNotesEdit',null)" title="Remove highlight">Clear</button>
+          </div>
+          <div class="ls-textarea ls-notes-edit" id="opNotesEdit" contenteditable="true"
+            data-placeholder="OP issues, notes..."
+            oninput="lsUpdate('opNotes',this.innerHTML)"
+          >${lsState.opNotes||''}</div>
         </div>
 
         ${!isFinal ? `
@@ -3190,29 +3209,7 @@ function renderLsHTML(){
   const fmt = n => typeof n === 'number' ? n.toLocaleString() : (n || '');
 
   const T_RESET = 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;';
-  const TD_BASE = 'border:1px solid #000;padding:4px 7px;font-size:11px;font-family:Calibri,Arial,sans-serif;text-align:center;vertical-align:middle;';
-  const TH_BASE = TD_BASE + 'font-weight:bold;';
-  const TH_WHITE = TH_BASE + 'background:#FFFFFF;';
-  const BLUE = 'background:#ADD8E6;';
-  const YELLOW = 'background:#FFDE2A;';
-  const RED = 'background:#FF5B5B;';
-  const C_BB = 'color:#D9A300;mso-color-alt:#D9A300;';
-  const C_OP = 'color:#C00000;mso-color-alt:#C00000;';
-  const C_SEC = 'color:#1F4E79;mso-color-alt:#1F4E79;';
-
-  // Helper: td/th with explicit width attribute AND inline style width so
-  // Outlook honours it (colgroup/col is ignored by Outlook on paste).
-  const th = (w, style, content, extra) => `<th width="${w}"${extra||''} style="${style}width:${w}px;">${content}</th>`;
-  const td = (w, style, content, extra) => `<td width="${w}"${extra||''} style="${style}width:${w}px;">${content}</td>`;
-
-  const SECH = (txt) => `<p style="${C_SEC}font-weight:bold;margin:8px 0 2px 0;font-family:Calibri,Arial,sans-serif;font-size:13px"><b>${txt}</b></p>`;
-  const BBH  = (txt) => `<p style="${C_BB}font-weight:bold;margin:4px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px"><b>${txt}</b></p>`;
-  const OPH  = (txt) => `<p style="${C_OP}font-weight:bold;margin:4px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px"><b>${txt}</b></p>`;
-  const SPACE = '<div style="height:8px;line-height:8px">&nbsp;</div>';
-
-  let html = '';
-
-  // Final table: 7 core columns × 64px = 448px, plus optional ROM column (100px)
+  const TD_BASE = 'border:1px solid #000;padding:2px 5px;font-size:11px;font-family:Calibri,Arial,sans-serif;text-align:center;vertical-align:middle;';
   if(final){
     const deleted = new Set(lsState.deletedSlots || []);
     const romNotes = lsState.romNotes || {};
@@ -3221,25 +3218,25 @@ function renderLsHTML(){
     const totalW = hasRom ? 548 : 448;
     html += `<table width="${totalW}" cellpadding="0" cellspacing="0" style="${T_RESET}width:${totalW}px;">` +
       `<thead><tr>` +
-      th(64, TH_BASE+BLUE,   'Time') +
-      th(64, TH_BASE+YELLOW, 'BB Total') +
-      th(64, TH_BASE+RED,    'OP Total') +
-      th(64, TH_BASE+BLUE,   'Hourly Total') +
-      th(64, TH_BASE+BLUE,   'Running Total') +
-      th(64, TH_BASE+BLUE,   'Projected Remaining') +
-      th(64, TH_BASE+BLUE,   'Projected') +
+      th(85, TH_BASE+BLUE,   'Time') +
+      th(57, TH_BASE+YELLOW, 'BB Total') +
+      th(57, TH_BASE+RED,    'OP Total') +
+      th(60, TH_BASE+BLUE,   'Hourly Total') +
+      th(60, TH_BASE+BLUE,   'Running Total') +
+      th(72, TH_BASE+BLUE,   'Projected Remaining') +
+      th(57, TH_BASE+BLUE,   'Projected') +
       (hasRom ? th(100, TH_BASE+BLUE, 'ROM Samples') : '') +
       `</tr></thead><tbody>`;
     visibleRows.forEach(r=>{
       const rom = romNotes[r.time] || '';
       html += `<tr>` +
-        td(64, TD_BASE+BLUE+'font-weight:bold;', `<b>${esc(r.time)}</b>`) +
-        td(64, TD_BASE, fmt(r.bb)) +
-        td(64, TD_BASE, fmt(r.op)) +
-        td(64, TD_BASE, fmt(r.hourly)) +
-        td(64, TD_BASE, fmt(r.running)) +
-        td(64, TD_BASE, fmt(r.remaining)) +
-        td(64, TD_BASE, fmt(r.projected)) +
+        td(85, TD_BASE+BLUE+'font-weight:bold;white-space:nowrap;', `<b>${esc(r.time)}</b>`) +
+        td(57, TD_BASE, fmt(r.bb)) +
+        td(57, TD_BASE, fmt(r.op)) +
+        td(60, TD_BASE, fmt(r.hourly)) +
+        td(60, TD_BASE, fmt(r.running)) +
+        td(72, TD_BASE, fmt(r.remaining)) +
+        td(57, TD_BASE, fmt(r.projected)) +
         (hasRom ? td(100, TD_BASE+'text-align:left;', esc(rom)) : '') +
       `</tr>`;
     });
@@ -3280,11 +3277,11 @@ function renderLsHTML(){
   }
 
   // BB / OP notes
-  if(lsState.bbNotes.trim()){
-    html += BBH('BB:') + `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Calibri,Arial,sans-serif">${noteLines(lsState.bbNotes)}</ul>`;
+  if(lsState.bbNotes && lsState.bbNotes.trim()){
+    html += BBH('BB:') + `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Calibri,Arial,sans-serif">${notesToEmailHtml(lsState.bbNotes)}</ul>`;
   }
-  if(lsState.opNotes.trim()){
-    html += OPH('OP:') + `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Calibri,Arial,sans-serif">${noteLines(lsState.opNotes)}</ul>`;
+  if(lsState.opNotes && lsState.opNotes.trim()){
+    html += OPH('OP:') + `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Calibri,Arial,sans-serif">${notesToEmailHtml(lsState.opNotes)}</ul>`;
   }
   if(lsState.bbNotes.trim() || lsState.opNotes.trim()) html += SPACE;
 
@@ -3456,6 +3453,74 @@ function renderLsHTML(){
   }
 
   return html;
+}
+
+// Applies or removes a highlight background on the current text selection
+// inside the specified contenteditable notes div. Uses execCommand('backColor')
+// which produces inline background-color spans that survive Outlook paste.
+// Pass null as color to remove highlighting (sets background to transparent).
+function lsApplyHighlight(elId, color){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  el.focus();
+  // A small delay ensures the element has focus before execCommand fires.
+  // Without this, the selection can be lost when the button is clicked.
+  setTimeout(()=>{
+    document.execCommand('backColor', false, color || 'transparent');
+    // Persist the updated HTML
+    const field = elId === 'bbNotesEdit' ? 'bbNotes' : 'opNotes';
+    lsState[field] = el.innerHTML;
+    lsSavePersist();
+    refreshPreview();
+  }, 10);
+}
+
+// Converts note content to email-ready list items.
+// Handles both plain text (legacy) and HTML (contenteditable with highlights).
+// Highlighted spans are preserved with inline background-color so they
+// survive Outlook's paste sanitizer. Transparent/white highlights are
+// stripped since they add no value in the output.
+function notesToEmailHtml(content){
+  if(!content || !content.trim()) return '';
+  const hasHtml = /<[a-z]/i.test(content);
+  if(!hasHtml){
+    // Plain text path: split on newlines, wrap each line in a list item
+    return content.split('\n').filter(l=>l.trim())
+      .map(l=>`<li style="font-family:Calibri,Arial,sans-serif;font-size:11px">${esc(l.trim())}</li>`).join('');
+  }
+  // HTML path: parse contenteditable output into lines then list items.
+  // contenteditable uses <div> or <br> for line breaks; we preserve any
+  // inline spans (highlights) inside each line.
+  const temp = document.createElement('div');
+  temp.innerHTML = content;
+  const lines = [];
+  // Collect top-level text and element nodes as individual lines
+  temp.childNodes.forEach(node => {
+    if(node.nodeType === Node.TEXT_NODE){
+      const t = node.textContent.trim();
+      if(t) lines.push(t);
+    } else if(node.nodeName === 'DIV' || node.nodeName === 'P'){
+      const inner = node.innerHTML.replace(/<br\s*\/?>/gi,'').trim();
+      if(inner) lines.push(inner);
+    } else if(node.nodeName === 'BR'){
+      // skip bare BRs
+    } else {
+      // Inline element (span with highlight etc.) at root level
+      const outer = node.outerHTML.trim();
+      if(outer) lines.push(outer);
+    }
+  });
+  // If contenteditable put everything in a single root div, recurse into its children
+  if(lines.length === 0 && temp.childNodes.length === 1){
+    return notesToEmailHtml(temp.firstChild.innerHTML||'');
+  }
+  return lines
+    .filter(l => l.trim() && l !== '<br>')
+    .map(l => {
+      // Sanitize transparent highlights - they serve no purpose in email
+      const clean = l.replace(/background-color:\s*(transparent|rgba\(0,\s*0,\s*0,\s*0\)|white|#fff|#ffffff)/gi,'');
+      return `<li style="font-family:Calibri,Arial,sans-serif;font-size:11px">${clean}</li>`;
+    }).join('');
 }
 
 function noteLines(text){

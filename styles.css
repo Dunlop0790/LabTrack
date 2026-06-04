@@ -184,11 +184,41 @@ select.fc option[value="general"]{color:#64748b}
 /* ── DASHBOARD HOME ──
    Landing view. Tile grid where the issue board is one tool among many. */
 .hidden{display:none !important}
+
+/* Setup screen "take a tour" link */
+.setup-tour-link{margin-top:12px;font-size:12px;color:var(--accent-text);cursor:pointer;font-weight:600}
+.setup-tour-link:hover{text-decoration:underline}
+
+/* ── GUIDED TOUR ──
+   A dimmed overlay with a cut-out spotlight on the highlighted element
+   and a popover explaining it. The spotlight uses a huge box-shadow to
+   darken everything outside its rounded rectangle. */
+.tour-overlay{position:fixed;inset:0;z-index:600;display:none;pointer-events:none}
+.tour-overlay.active{display:block}
+.tour-spotlight{position:absolute;border-radius:10px;box-shadow:0 0 0 9999px rgba(15,23,42,.62);transition:all .25s ease;pointer-events:none}
+.tour-pop{position:absolute;width:300px;max-width:calc(100vw - 32px);background:var(--card-bg);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.3);padding:16px;pointer-events:auto;transition:all .25s ease;z-index:601}
+.tour-pop-step{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
+.tour-pop-title{font-size:15px;font-weight:700;letter-spacing:-.2px;margin-bottom:6px}
+.tour-pop-body{font-size:13px;line-height:1.5;color:var(--text);margin-bottom:14px}
+.tour-pop-actions{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tour-skip{background:transparent;border:none;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;padding:6px 4px}
+.tour-skip:hover{color:var(--text)}
+.tour-nav{display:flex;gap:6px}
+.tour-back,.tour-next{font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;padding:6px 14px;border-radius:6px;border:1px solid var(--border);transition:all .12s}
+.tour-back{background:transparent;color:var(--text)}
+.tour-back:hover{background:var(--hover-bg)}
+.tour-next{background:var(--navy);color:#fff;border-color:var(--navy)}
+.tour-next:hover{background:var(--navy2)}
+
 .dash{max-width:1400px;margin:0 auto;padding:20px;width:100%}
 .dash-greet{margin-bottom:18px}
 .dash-greet h1{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:3px}
 .dash-greet p{font-size:13px;color:var(--muted)}
-.dash-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;grid-auto-rows:min-content}
+/* Grid: left column is wider for the board tile. Rows size to their
+   content (auto) so tiles never clip their inner labels or links. The
+   board tile spans two rows so it sits taller than the small tool tiles
+   beside it, but its height comes from its own content, not a fixed row. */
+.dash-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;align-items:start}
 @media(max-width:980px){.dash-grid{grid-template-columns:1fr 1fr}.tile-board{grid-column:1/-1;grid-row:auto}}
 @media(max-width:620px){.dash-grid{grid-template-columns:1fr}}
 
@@ -198,12 +228,14 @@ select.fc option[value="general"]{color:#64748b}
 .tile-ico svg{width:16px;height:16px}
 .tile-title{font-size:14px;font-weight:700;letter-spacing:-.2px}
 .tile-sub{font-size:11px;color:var(--muted);margin-top:1px}
-.tile-action{margin-left:auto;font-size:11px;font-weight:600;color:var(--accent-text);cursor:pointer;padding:4px 10px;border-radius:5px;transition:background .12s;display:flex;align-items:center;gap:4px}
+.tile-action{margin-left:auto;font-size:11px;font-weight:600;color:var(--accent-text);cursor:pointer;padding:4px 10px;border-radius:5px;transition:background .12s;display:flex;align-items:center;gap:4px;white-space:nowrap}
 .tile-action:hover{background:var(--accent-soft)}
 .tile-action svg{width:12px;height:12px}
 
+/* Board tile spans two grid rows so it reads as the primary tile. Its
+   mini board scrolls internally if there are many cards. */
 .tile-board{grid-row:span 2}
-.mini-board{display:flex;gap:8px;padding:12px;overflow:hidden;flex:1;max-height:440px}
+.mini-board{display:flex;gap:8px;padding:12px;overflow:hidden;flex:1;min-height:260px;max-height:460px}
 .mini-col{flex:1;background:var(--col-bg);border-radius:8px;display:flex;flex-direction:column;min-width:0}
 .mini-col-hdr{padding:8px 10px;display:flex;align-items:center;gap:6px;border-bottom:2px solid}
 .mini-col-hdr.open{border-color:var(--col-open)}
@@ -659,6 +691,19 @@ html.dark .fix-box-lbl{color:#4ade80}
 .ls-add-btn{font-size:12px;padding:5px 10px;background:#3b82f6;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:600}
 .ls-add-btn:hover{background:#2563eb}
 .ls-textarea{width:100%;min-height:60px;font-size:13px;padding:8px 10px;border:1.5px solid var(--border);border-radius:6px;background:var(--input-bg);color:var(--text);font-family:inherit;resize:vertical}
+/* contenteditable notes div: matches textarea appearance */
+.ls-notes-edit{outline:none;overflow-y:auto;max-height:200px;white-space:pre-wrap;line-height:1.5;box-sizing:border-box;cursor:text}
+.ls-notes-edit:focus{border-color:var(--border);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+/* Placeholder text via CSS for contenteditable */
+.ls-notes-edit:empty::before{content:attr(data-placeholder);color:var(--muted);pointer-events:none}
+/* Highlight toolbar */
+.ls-notes-toolbar{display:flex;gap:5px;margin-top:6px;margin-bottom:4px;flex-wrap:wrap}
+.ls-hl-btn{font-size:11px;font-weight:600;padding:3px 9px;border-radius:4px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);cursor:pointer;font-family:inherit;transition:background .1s,border-color .1s}
+.ls-hl-btn:hover{border-color:#aaa}
+.ls-hl-btn:nth-child(1){border-left:3px solid #fef08a}
+.ls-hl-btn:nth-child(2){border-left:3px solid #bfdbfe}
+.ls-hl-btn:nth-child(3){border-left:3px solid #bbf7d0}
+.ls-hl-clear{color:var(--muted);font-size:10px}
 .ls-textarea:focus{border-color:#3b82f6;outline:none}
 .ls-bim-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:5px}
 .ls-bim-col{display:flex;flex-direction:column;gap:4px}
