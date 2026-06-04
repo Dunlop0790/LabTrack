@@ -736,7 +736,7 @@ async function loadRoster(){
   // Live updates so new users show up immediately
   db.collection('roster').onSnapshot(snap=>{
     roster = snap.docs.map(d=>({name:d.id, ...d.data()}));
-  });
+  }, err=>{ console.warn('[LabTrack] roster listener:', err.code); });
 }
 
 async function ensureUserInRoster(){
@@ -897,7 +897,7 @@ function subscribeIssues(bid){
       issues.forEach(i=>{ prevIssueMap[i.id]=i });
       isFirstLoad = false;
       renderCurrentView();
-    });
+    }, err=>{ console.warn('[LabTrack] issues listener:', err.code); });
 }
 
 // ── RENDER BOARD ──────────────────────────────────────────────
@@ -4382,7 +4382,7 @@ function startTodaySubscriptions(){
            && todayPublished.ls.lastEditedBy !== user?.name){
           showToast(`${todayPublished.ls.lastEditedBy || todayPublished.ls.publishedBy} updated the Line Status.`);
         }
-      });
+      }, err=>{ console.warn('[LabTrack] today-ls listener:', err.code); });
   }
   if(!todayEodSub){
     todayEodSub = db.collection('publishedReports').doc(`eod_${key}`)
@@ -4391,21 +4391,17 @@ function startTodaySubscriptions(){
         if(currentTodayTab==='eod' && document.getElementById('todayPanel')?.classList.contains('open')){
           renderTodayEod();
         }
-      });
+      }, err=>{ console.warn('[LabTrack] today-eod listener:', err.code); });
   }
   if(!todayRevSub){
     todayRevSub = db.collection('publishedReports').doc(`ls_${key}`)
       .collection('revisions').orderBy('at','desc').limit(50)
       .onSnapshot(snap => {
-        // Combine LS and EOD revisions; we'll re-fetch EOD revisions
-        // separately below. For simplicity in this version we only
-        // subscribe to the LS document's revisions; EOD revisions are
-        // loaded on demand when the History tab is opened.
         todayRevisions = snap.docs.map(d => ({id:d.id, kind:'ls', ...d.data()}));
         if(currentTodayTab==='hist' && document.getElementById('todayPanel')?.classList.contains('open')){
           renderTodayHistory();
         }
-      });
+      }, err=>{ console.warn('[LabTrack] today-rev listener:', err.code); });
   }
 }
 
@@ -5194,7 +5190,7 @@ function renderSuggestions(){
     .onSnapshot(snap => {
       const items = snap.docs.map(d => ({id:d.id, ...d.data()}));
       populateSuggestList(items);
-    });
+    }, err=>{ console.warn('[LabTrack] suggestions listener:', err.code); });
 }
 
 function populateSuggestList(items){
