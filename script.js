@@ -3330,6 +3330,26 @@ function renderLsHTML(){
 
   const T_RESET = 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;';
   const TD_BASE = 'border:1px solid #000;padding:2px 5px;font-size:11px;font-family:Calibri,Arial,sans-serif;text-align:center;vertical-align:middle;';
+  const TH_BASE = TD_BASE + 'font-weight:bold;';
+  const TH_WHITE = TH_BASE + 'background:#FFFFFF;';
+  const BLUE = 'background:#ADD8E6;';
+  const YELLOW = 'background:#FFDE2A;';
+  const RED = 'background:#FF5B5B;';
+  const C_BB = 'color:#D9A300;mso-color-alt:#D9A300;';
+  const C_OP = 'color:#C00000;mso-color-alt:#C00000;';
+  const C_SEC = 'color:#1F4E79;mso-color-alt:#1F4E79;';
+
+  const th = (w, style, content, extra) => `<th width="${w}"${extra||''} style="${style}width:${w}px;">${content}</th>`;
+  const td = (w, style, content, extra) => `<td width="${w}"${extra||''} style="${style}width:${w}px;">${content}</td>`;
+
+  const SECH = (txt) => `<p style="${C_SEC}font-weight:bold;margin:8px 0 2px 0;font-family:Calibri,Arial,sans-serif;font-size:13px"><b>${txt}</b></p>`;
+  const BBH  = (txt) => `<p style="${C_BB}font-weight:bold;margin:4px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px"><b>${txt}</b></p>`;
+  const OPH  = (txt) => `<p style="${C_OP}font-weight:bold;margin:4px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px"><b>${txt}</b></p>`;
+  const SPACE = '<div style="height:8px;line-height:8px">&nbsp;</div>';
+
+  let html = '';
+
+  // Final table: Time col 85px (nowrap), data cols narrower to keep total 448px
   if(final){
     const deleted = new Set(lsState.deletedSlots || []);
     const romNotes = lsState.romNotes || {};
