@@ -2381,7 +2381,16 @@ function lsRestoreState(saved){
     if(!(key in saved)) return;            // keep default if not saved
     const def = lsState[key];
     const val = saved[key];
-    if(Array.isArray(def)){
+    if(key === 'startup'){
+      // startup must be an array of row objects with the expected fields.
+      // Anything else is rejected so the render's .map and deep reads are safe.
+      if(Array.isArray(val) && val.every(r => r && typeof r === 'object' && 'dept' in r)){
+        lsState.startup = val.map(r => ({
+          dept: String(r.dept||''), bb: String(r.bb||''), op: String(r.op||''),
+          full: !!r.full, partial: !!r.partial
+        }));
+      }
+    } else if(Array.isArray(def)){
       if(Array.isArray(val)) lsState[key] = val;   // arrays: take saved
     } else if(isPlainObject(def)){
       if(isPlainObject(val)){
@@ -2430,9 +2439,10 @@ function renderLineStatus(){
     console.error('renderLineStatus failed:', e);
     // Show a recoverable message rather than a silent blank panel. The
     // reset button clears the persisted form state, which is the usual
-    // cause if a stale or corrupt saved payload slipped through.
+    // cause if a stale or corrupt saved payload slipped through. The
+    // error text is surfaced too so the underlying cause is visible.
     body.innerHTML = `
-      <div style="padding:24px;max-width:480px">
+      <div style="padding:24px;max-width:560px">
         <div style="font-size:15px;font-weight:700;margin-bottom:8px">The Line Status form could not load</div>
         <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px">
           This is usually caused by saved form data from an older version.
@@ -2440,24 +2450,58 @@ function renderLineStatus(){
           published reports and archive are not affected.
         </div>
         <button class="btn-clear" onclick="lsResetPersisted()">Reset saved form state</button>
+        <pre style="margin-top:16px;padding:12px;background:var(--hover-bg);border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--text);white-space:pre-wrap;overflow-x:auto">${esc(String(e && e.stack ? e.stack : e))}</pre>
       </div>`;
   }
 }
 
+// Returns a fresh default Line Status state. Single source of truth so
+// init and reset cannot drift apart. Reset uses this to rebuild EVERY
+// field (not a hand-picked subset), which is what makes the recovery
+// button reliable even if a deeply malformed field caused the failure.
+function lsDefaultState(){
+  return {
+    date: '',
+    projected: '',
+    csvOp: null,
+    csvBb: null,
+    bucketCount: '',
+    bucketTime: '',
+    bucketNotes: '',
+    relabelBb: '',
+    relabelOp: '',
+    oos: {bb_hemo:[], bb_special:[], bb_auto:[], op_hemo:[], op_special:[], op_auto:[]},
+    oosNotes: {bb_hemo:'', bb_special:'', bb_auto:'', op_hemo:'', op_special:'', op_auto:''},
+    overloads: {bb_hemo:'', bb_special:'', bb_auto:'', op_hemo:'', op_special:'', op_auto:''},
+    overloadNotes: '',
+    bim: {bb:Array(10).fill(''), op:Array(10).fill('')},
+    startup: [
+      {dept:'Hematology', bb:'', op:'', full:false, partial:false},
+      {dept:'A1Cs Atellica', bb:'', op:'', full:false, partial:false},
+      {dept:'IM Atellicas', bb:'', op:'', full:false, partial:false},
+      {dept:'CHE Atellicas', bb:'', op:'', full:false, partial:false}
+    ],
+    unpacking: {ongoing:false, completed:false, lh_flx:false, lh_fedex:false, lh_ups:false, lh_wc:false},
+    bbNotes: '',
+    opNotes: '',
+    isFinal: false,
+    deletedSlots: [],
+    romNotes: {},
+    rollover: {
+      dates:['','','','',''], proj:['','','','',''], rom:['','','','',''],
+      wbb:['','','','',''], hvs:['','','','',''], wbbProc:['','','','',''],
+      bb:['','','','',''], op:['','','','',''], relabel:['','','','',''],
+      load:['','','','',''], bims:['','','','','']
+    }
+  };
+}
+
 // Clears the persisted Line Status state and rebuilds the form fresh.
-// Used as the recovery action if the form ever fails to render.
+// Used as the recovery action if the form ever fails to render. Replaces
+// the ENTIRE lsState with a clean default so no malformed field survives.
 function lsResetPersisted(){
   localStorage.removeItem('lt_lsState');
-  lsState.csvOp = null;
-  lsState.csvBb = null;
-  // Reset nested structures to their defaults
-  lsState.oos = {bb_hemo:[], bb_special:[], bb_auto:[], op_hemo:[], op_special:[], op_auto:[]};
-  lsState.overloads = {bb_hemo:'', bb_special:'', bb_auto:'', op_hemo:'', op_special:'', op_auto:''};
-  lsState.oosNotes = {bb_hemo:'', bb_special:'', bb_auto:'', op_hemo:'', op_special:'', op_auto:''};
-  lsState.bim = {bb:Array(10).fill(''), op:Array(10).fill('')};
-  lsState.rollover = {dates:['','','','',''],proj:['','','','',''],rom:['','','','',''],wbb:['','','','',''],hvs:['','','','',''],wbbProc:['','','','',''],bb:['','','','',''],op:['','','','',''],relabel:['','','','',''],load:['','','','',''],bims:['','','','','']};
-  lsState.bbNotes = '';
-  lsState.opNotes = '';
+  lsState = lsDefaultState();
   showToast('Form state reset.');
   renderLineStatus();
 }
