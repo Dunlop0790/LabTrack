@@ -214,34 +214,40 @@ select.fc option[value="general"]{color:#64748b}
 .dash-greet{margin-bottom:18px}
 .dash-greet h1{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:3px}
 .dash-greet p{font-size:13px;color:var(--muted)}
-/* Dashboard layout: board on the left, tools in a grid on the right.
-   Using flex for the top split (rather than one big grid with row spans)
-   avoids the uneven vertical gaps that row-spanning created. The tools
-   column is its own 2-wide grid whose rows size to their own content. */
-.dash-grid{display:flex;gap:16px;align-items:flex-start}
-.dash-board-col{flex:1 1 0;min-width:0}
-.dash-tools-col{flex:1 1 0;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-content:start}
-.dash-tools-col .tile{align-self:start}
+/* Dashboard layout:
+   Left column: Issue Board (fills height) + Stats (wide, below board)
+   Right column: 6 equal-height tiles in a 2x3 grid
+   The whole dashboard is a flex row so the left and right columns
+   can size independently. The right column uses a fixed 3-row grid
+   so all 6 tiles are the same height. */
+.dash-grid{display:flex;gap:16px;align-items:stretch}
+.dash-left-col{flex:0 0 auto;width:44%;min-width:0;display:flex;flex-direction:column;gap:16px}
+.dash-right-col{flex:1 1 0;min-width:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:16px}
+.dash-right-col .tile{height:100%}
 @media(max-width:1100px){
   .dash-grid{flex-direction:column}
-  .dash-board-col,.dash-tools-col{flex:1 1 auto;width:100%}
+  .dash-left-col{width:100%}
+  .dash-right-col{grid-template-rows:auto}
 }
 @media(max-width:620px){
-  .dash-tools-col{grid-template-columns:1fr}
+  .dash-right-col{grid-template-columns:1fr}
 }
 
 .tile{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-sm)}
-.tile-hdr{padding:13px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.tile-hdr{padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
 .tile-ico{width:30px;height:30px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .tile-ico svg{width:16px;height:16px}
 .tile-title{font-size:14px;font-weight:700;letter-spacing:-.2px}
-.tile-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.tile-sub{font-size:12px;color:var(--muted);margin-top:2px}
 .tile-action{margin-left:auto;font-size:11px;font-weight:600;color:var(--accent-text);cursor:pointer;padding:4px 10px;border-radius:5px;transition:background .12s;display:flex;align-items:center;gap:4px;white-space:nowrap}
 .tile-action:hover{background:var(--accent-soft)}
 .tile-action svg{width:12px;height:12px}
+/* Right-col tiles: content area fills remaining height and centers vertically */
+.dash-right-col .tile-body{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 16px 14px}
 
-/* Board tile: its mini board scrolls internally if there are many cards. */
-.mini-board{display:flex;gap:8px;padding:12px;overflow:hidden;flex:1;min-height:260px;max-height:460px}
+/* Board tile: mini board fills available height */
+.tile-board{flex:1}
+.mini-board{display:flex;gap:8px;padding:12px;flex:1;overflow:hidden;min-height:220px}
 .mini-col{flex:1;background:var(--col-bg);border-radius:8px;display:flex;flex-direction:column;min-width:0}
 .mini-col-hdr{padding:8px 10px;display:flex;align-items:center;gap:6px;border-bottom:2px solid}
 .mini-col-hdr.open{border-color:var(--col-open)}
@@ -268,7 +274,7 @@ select.fc option[value="general"]{color:#64748b}
 
 .tile-tool{cursor:pointer;transition:border-color .12s,box-shadow .12s}
 .tile-tool:hover{border-color:#bcc7d6;box-shadow:var(--shadow-md)}
-.tile-links{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 14px}
+.tile-links{display:flex;flex-wrap:wrap;gap:6px}
 .tile-link{font-size:11px;font-weight:600;padding:4px 9px;border-radius:5px;background:var(--hover-bg);color:var(--text);text-decoration:none;cursor:pointer;transition:background .1s;display:inline-flex;align-items:center;gap:3px}
 .tile-link:hover{background:var(--border)}
 .tile-link.ext::after{content:'\2197';font-size:9px;opacity:.6}

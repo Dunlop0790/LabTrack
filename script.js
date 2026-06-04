@@ -996,7 +996,7 @@ function renderDashHome(){
     ? suggestionsCache.filter(s=>s.status!=='closed').length : null;
 
   grid.innerHTML = `
-    <div class="dash-board-col">
+    <div class="dash-left-col">
       <div class="tile tile-board">
         <div class="tile-hdr">
           <div class="tile-ico ico-board">${ICONS.board || ''}</div>
@@ -1007,56 +1007,6 @@ function renderDashHome(){
           <div class="tile-action" onclick="showBoardView()">Expand ${ICONS.expand||''}</div>
         </div>
         <div class="mini-board">${miniBoard}</div>
-      </div>
-    </div>
-
-    <div class="dash-tools-col">
-      <div class="tile tile-tool" onclick="openReports('ls')">
-        <div class="tile-hdr">
-          <div class="tile-ico ico-ls">${ICONS.clipboard || ''}</div>
-          <div>
-            <div class="tile-title">Line Status</div>
-            <div class="tile-sub">Create &amp; publish</div>
-          </div>
-        </div>
-        <div class="tile-links">
-          <a class="tile-link ext" href="http://das.davita.com" target="_blank" rel="noopener" onclick="event.stopPropagation()">DAS</a>
-          <span class="tile-link" onclick="event.stopPropagation();openReference();switchRefTab('lsguide')">Line Status Guide</span>
-        </div>
-      </div>
-
-      <div class="tile tile-tool" onclick="openReports('eod')">
-        <div class="tile-hdr">
-          <div class="tile-ico ico-eod">${ICONS.clipboard || ''}</div>
-          <div>
-            <div class="tile-title">EOD Report</div>
-            <div class="tile-sub">End of day summary</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="tile tile-tool" onclick="openToday()">
-        <div class="tile-hdr">
-          <div class="tile-ico ico-stats">${ICONS.today || ''}</div>
-          <div>
-            <div class="tile-title">Today</div>
-            <div class="tile-sub">Published reports &amp; archive</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="tile tile-tool" onclick="openReference()">
-        <div class="tile-hdr">
-          <div class="tile-ico ico-ref">${ICONS.book || ''}</div>
-          <div>
-            <div class="tile-title">Reference &amp; Job Aid</div>
-            <div class="tile-sub">Error codes, guides, training</div>
-          </div>
-        </div>
-        <div class="tile-links">
-          <span class="tile-link" onclick="event.stopPropagation();openReference();switchRefTab('errors')">Error Codes</span>
-          <span class="tile-link" onclick="event.stopPropagation();openReference();switchRefTab('training')">Training</span>
-        </div>
       </div>
 
       <div class="tile tile-tool" onclick="openStats()">
@@ -1073,6 +1023,63 @@ function renderDashHome(){
           <div class="stat-cell"><div class="stat-num blue">${openCount}</div><div class="stat-lbl">Active</div></div>
         </div>
       </div>
+    </div>
+
+    <div class="dash-right-col">
+
+      <div class="tile tile-tool" onclick="openReports('ls')">
+        <div class="tile-hdr">
+          <div class="tile-ico ico-ls">${ICONS.clipboard || ''}</div>
+          <div>
+            <div class="tile-title">Line Status</div>
+            <div class="tile-sub">Create &amp; publish</div>
+          </div>
+        </div>
+        <div class="tile-body">
+          <div class="tile-links">
+            <a class="tile-link ext" href="http://das.davita.com" target="_blank" rel="noopener" onclick="event.stopPropagation()">DAS</a>
+            <span class="tile-link" onclick="event.stopPropagation();openReference();switchRefTab('lsguide')">Line Status Guide</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tile tile-tool" onclick="openReports('eod')">
+        <div class="tile-hdr">
+          <div class="tile-ico ico-eod">${ICONS.clipboard || ''}</div>
+          <div>
+            <div class="tile-title">EOD Report</div>
+            <div class="tile-sub">End of day summary</div>
+          </div>
+        </div>
+        <div class="tile-body"></div>
+      </div>
+
+      <div class="tile tile-tool" onclick="openToday()">
+        <div class="tile-hdr">
+          <div class="tile-ico ico-stats">${ICONS.today || ''}</div>
+          <div>
+            <div class="tile-title">Today</div>
+            <div class="tile-sub">Published reports &amp; archive</div>
+          </div>
+        </div>
+        <div class="tile-body"></div>
+      </div>
+
+      <div class="tile tile-tool" onclick="openReference()">
+        <div class="tile-hdr">
+          <div class="tile-ico ico-ref">${ICONS.book || ''}</div>
+          <div>
+            <div class="tile-title">Reference &amp; Job Aid</div>
+            <div class="tile-sub">Error codes, guides, training</div>
+          </div>
+        </div>
+        <div class="tile-body">
+          <div class="tile-links">
+            <span class="tile-link" onclick="event.stopPropagation();openReference();switchRefTab('errors')">Error Codes</span>
+            <span class="tile-link" onclick="event.stopPropagation();openReference();switchRefTab('training')">Training</span>
+          </div>
+        </div>
+      </div>
 
       <div class="tile tile-tool" onclick="openSuggestions()">
         <div class="tile-hdr">
@@ -1082,6 +1089,7 @@ function renderDashHome(){
             <div class="tile-sub">${sugOpen!==null ? sugOpen+' open · ' : ''}Team ideas</div>
           </div>
         </div>
+        <div class="tile-body"></div>
       </div>
 
       <div class="tile tile-tool" onclick="openArchive()">
@@ -1092,7 +1100,9 @@ function renderDashHome(){
             <div class="tile-sub">Past issues &amp; line statuses</div>
           </div>
         </div>
+        <div class="tile-body"></div>
       </div>
+
     </div>
   `;
 }
