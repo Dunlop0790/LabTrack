@@ -3114,49 +3114,35 @@ function wireCsvZone(){
   renderCsvFiles();
 }
 
-// Accepts dropped or selected CSV files and routes each to the
-// correct slot (OP or BB) based on the FlexLab analyzer ID embedded
-// in the filename. Uses a word-boundary regex so '191' in a longer
-// number (e.g. '1912' or a date fragment '19-1') does not false-match.
-// 191 = Optimus Prime (OP), 192 = Bumblebee (BB).
+// Accepts dropped or selected CSV files and routes each to the correct
+// slot (OP or BB) based on the FlexLab line number in the filename.
+// 191 = OP, 192 = BB. Simple substring match is intentional: DAS
+// filenames embed the line number but not necessarily as a standalone
+// word, so a strict word-boundary regex rejects valid files.
 async function lsHandleCsvFiles(files){
   for(const f of files){
     if(!f.name.toLowerCase().endsWith('.csv')){
       showToast(`Skipped ${f.name} (not CSV)`);
       continue;
     }
-    // Word-boundary regex prevents partial matches like 1912 matching 191.
-    // Check BB first since 192 can't false-match inside 191, but 191 could
-    // appear in filenames that also reference a date like "2025-01-19-2".
-    const isOp = /(?<![0-9])191(?![0-9])/.test(f.name);
-    const isBb = /(?<![0-9])192(?![0-9])/.test(f.name);
-    let which = null;
-    if(isOp && !isBb) which = 'op';
-    else if(isBb && !isOp) which = 'bb';
-    else if(isOp && isBb){
-      // Both IDs present in the filename. Fall back to whichever appears
-      // last since DAS sometimes puts both line numbers in the path but the
-      // rightmost one is the actual selected line.
-      const lastOp = f.name.lastIndexOf('191');
-      const lastBb = f.name.lastIndexOf('192');
-      which = lastOp > lastBb ? 'op' : 'bb';
-      showToast(`Both 191 and 192 found in filename. Classified as ${which.toUpperCase()} - verify it looks right.`);
-    }
+    const which = f.name.includes(LS_CSV_OP_TAG) ? 'op'
+                : f.name.includes(LS_CSV_BB_TAG) ? 'bb'
+                : null;
     if(!which){
-      showToast(`Couldn't classify ${f.name}. Filename should contain 191 (OP) or 192 (BB).`);
+      showToast(`Couldn't classify ${f.name}. Filename should contain "${LS_CSV_OP_TAG}" (OP) or "${LS_CSV_BB_TAG}" (BB).`);
       continue;
     }
-    const rows = await new Promise((resolve,reject)=>{
+    const rows = await new Promise((resolve, reject) => {
       Papa.parse(f, {
-        header:true,
-        skipEmptyLines:true,
-        // Strip BOM characters that DAS sometimes prepends. Without this the
-        // first column header gets a hidden \uFEFF prefix and the timestamp
-        // column lookup silently returns undefined for every row, causing the
-        // entire hour to be skipped.
-        transformHeader: h => h.replace(/^\uFEFF/,'').trim(),
-        complete:r=>resolve(r.data||[]),
-        error:reject
+        header: true,
+        skipEmptyLines: true,
+        // Strip BOM characters that DAS sometimes prepends to exported
+        // CSVs. Without this the first column header gets a hidden
+        // \uFEFF prefix and the timestamp lookup silently returns
+        // undefined for every row, causing hours to be skipped.
+        transformHeader: h => h.replace(/^\uFEFF/, '').trim(),
+        complete: r => resolve(r.data || []),
+        error: reject
       });
     });
     const processed = lsProcessCsvRows(rows, f.name);
@@ -3164,8 +3150,8 @@ async function lsHandleCsvFiles(files){
       showToast(`No data found in ${f.name}. Check the CSV format.`);
       continue;
     }
-    if(which==='op') lsState.csvOp = {file:f, rows:processed};
-    else lsState.csvBb = {file:f, rows:processed};
+    if(which === 'op') lsState.csvOp = {file: f, rows: processed};
+    else lsState.csvBb = {file: f, rows: processed};
   }
   renderCsvFiles();
   refreshPreview();
