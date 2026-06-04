@@ -2345,26 +2345,55 @@ let currentReportTab = 'ls';
 function openReports(tab){
   document.getElementById('reportsPanel').classList.add('open');
   updateHeaderActiveStates();
-  // Restore persisted lsState from localStorage if available.
-  // This means whatever the last person filled in stays on the form
-  // so repeat information does not need to be re-entered each shift.
-  // CSV file handles are not serialisable so they are always blank on
-  // restore; everything else (notes, values, OOS lists, rollover) survives.
+  // Restore persisted lsState from localStorage if available, but do it
+  // DEFENSIVELY. A shallow Object.assign would let a malformed saved
+  // object (e.g. an oos block missing a sub-key) replace a good default
+  // and break renderLineStatus. lsRestoreState merges field by field and
+  // only accepts a saved value when it matches the shape of the default.
   const saved = localStorage.getItem('lt_lsState');
   if(saved){
     try {
-      const restored = JSON.parse(saved);
-      // Merge into lsState so any new keys added since the last save
-      // still get their defaults rather than being undefined.
-      Object.assign(lsState, restored);
-      lsState.csvOp = null;
-      lsState.csvBb = null;
-    } catch(e){ console.warn('lsState restore failed:', e); }
+      lsRestoreState(JSON.parse(saved));
+    } catch(e){
+      console.warn('lsState restore failed, clearing corrupt state:', e);
+      localStorage.removeItem('lt_lsState');
+    }
   }
+  lsState.csvOp = null;
+  lsState.csvBb = null;
   // Default date if blank
   if(!lsState.date) lsState.date = formatTodayLong();
   // Open the requested tab if given, otherwise the last-used tab.
   switchReportTab(tab || currentReportTab);
+}
+
+// Merges a saved state object into lsState without ever destroying the
+// default structure. For plain values, the saved value is taken. For
+// objects and arrays, the type must match the default or the default is
+// kept. Nested objects (oos, overloads, rollover, etc.) are merged key
+// by key so a saved block that is missing keys cannot leave gaps that
+// later throw when accessed. This is what makes a stale or partial
+// localStorage payload safe to load.
+function lsRestoreState(saved){
+  if(!saved || typeof saved !== 'object') return;
+  const isPlainObject = v => v && typeof v === 'object' && !Array.isArray(v);
+  Object.keys(lsState).forEach(key => {
+    if(!(key in saved)) return;            // keep default if not saved
+    const def = lsState[key];
+    const val = saved[key];
+    if(Array.isArray(def)){
+      if(Array.isArray(val)) lsState[key] = val;   // arrays: take saved
+    } else if(isPlainObject(def)){
+      if(isPlainObject(val)){
+        // Merge sub-keys, keeping any default sub-key the saved data lacks
+        Object.keys(def).forEach(sub => {
+          if(sub in val) def[sub] = val[sub];
+        });
+      }
+    } else {
+      lsState[key] = val;                  // primitives: take saved
+    }
+  });
 }
 
 function closeReports(){
@@ -2393,13 +2422,52 @@ function formatTodayLong(){
   return `${days[d.getDay()]}, ${months[d.getMonth()]} ${day}${suffix}, ${d.getFullYear()}`;
 }
 
+function renderLineStatus(){
+  const body = document.getElementById('reportsBody');
+  try {
+    renderLineStatusInner(body);
+  } catch(e){
+    console.error('renderLineStatus failed:', e);
+    // Show a recoverable message rather than a silent blank panel. The
+    // reset button clears the persisted form state, which is the usual
+    // cause if a stale or corrupt saved payload slipped through.
+    body.innerHTML = `
+      <div style="padding:24px;max-width:480px">
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px">The Line Status form could not load</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px">
+          This is usually caused by saved form data from an older version.
+          Resetting the saved state clears it and rebuilds the form. Your
+          published reports and archive are not affected.
+        </div>
+        <button class="btn-clear" onclick="lsResetPersisted()">Reset saved form state</button>
+      </div>`;
+  }
+}
+
+// Clears the persisted Line Status state and rebuilds the form fresh.
+// Used as the recovery action if the form ever fails to render.
+function lsResetPersisted(){
+  localStorage.removeItem('lt_lsState');
+  lsState.csvOp = null;
+  lsState.csvBb = null;
+  // Reset nested structures to their defaults
+  lsState.oos = {bb_hemo:[], bb_special:[], bb_auto:[], op_hemo:[], op_special:[], op_auto:[]};
+  lsState.overloads = {bb_hemo:'', bb_special:'', bb_auto:'', op_hemo:'', op_special:'', op_auto:''};
+  lsState.oosNotes = {bb_hemo:'', bb_special:'', bb_auto:'', op_hemo:'', op_special:'', op_auto:''};
+  lsState.bim = {bb:Array(10).fill(''), op:Array(10).fill('')};
+  lsState.rollover = {dates:['','','','',''],proj:['','','','',''],rom:['','','','',''],wbb:['','','','',''],hvs:['','','','',''],wbbProc:['','','','',''],bb:['','','','',''],op:['','','','',''],relabel:['','','','',''],load:['','','','',''],bims:['','','','','']};
+  lsState.bbNotes = '';
+  lsState.opNotes = '';
+  showToast('Form state reset.');
+  renderLineStatus();
+}
+
 // Render the full Line Status form + preview.
 // When isFinal is checked, only the sections relevant to a final
 // shift report are shown: projection table, BB/OP notes, rollover
 // template, and OOS analyzers. All other sections (startup times,
 // buckets to load, relabel, overloads, BIM read rates) are hidden.
-function renderLineStatus(){
-  const body = document.getElementById('reportsBody');
+function renderLineStatusInner(body){
   const isFinal = lsState.isFinal;
 
   // OOS combobox datalist options: flat list of every instrument ID
@@ -2742,7 +2810,8 @@ function comboInput(listId, options, val, onInput, cls){
 }
 
 function renderOosTags(key){
-  return lsState.oos[key].map(v=>`<span class="ls-tag">${esc(v)}<span class="ls-tag-x" onclick="lsRemoveOos('${key}','${esc(v)}')">×</span></span>`).join('') || '<span style="color:var(--muted);font-size:11px">none</span>';
+  const list = (lsState.oos && Array.isArray(lsState.oos[key])) ? lsState.oos[key] : [];
+  return list.map(v=>`<span class="ls-tag">${esc(v)}<span class="ls-tag-x" onclick="lsRemoveOos('${key}','${esc(v)}')">×</span></span>`).join('') || '<span style="color:var(--muted);font-size:11px">none</span>';
 }
 
 // State updaters
