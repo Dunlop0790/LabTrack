@@ -3160,58 +3160,66 @@ async function lsHandleCsvFiles(files){
 function lsProcessCsvRows(rows, filename){
   if(!rows.length) return [];
 
-  // DAS has exported the timestamp column under at least two names
-  // depending on the export version. Try each in order and use the
-  // first one that actually has data in the first row.
-  const TIMESTAMP_KEYS = [
-    '@timestamp per 30 minutes',
-    'Timestamp per 30 minutes',
-    'timestamp per 30 minutes',
-    'Time',
-    'time',
-    'Timestamp',
-  ];
-  const COUNT_KEYS = ['Count','count','VALUE','Value','value'];
-
+  // Match the original generator: the timestamp column is
+  // '@timestamp per 30 minutes' and the count column is 'Count'. Those
+  // exact names are tried FIRST and are what DAS actually exports. The
+  // extra fallbacks below only kick in if those exact columns are absent,
+  // so normal files behave identically to the original generator.
   const firstRow = rows[0];
   const actualKeys = Object.keys(firstRow);
 
-  // Find which timestamp key the file actually uses
-  let tsKey = TIMESTAMP_KEYS.find(k => actualKeys.includes(k));
-  if(!tsKey){
-    // Fall back to any key containing 'timestamp' or 'time' case-insensitively
-    tsKey = actualKeys.find(k => /timestamp|per 30/i.test(k));
+  let tsKey = '@timestamp per 30 minutes';
+  if(!actualKeys.includes(tsKey)){
+    tsKey = ['Timestamp per 30 minutes','timestamp per 30 minutes','Time','time','Timestamp']
+      .find(k => actualKeys.includes(k))
+      || actualKeys.find(k => /timestamp|per 30/i.test(k));
   }
-  let countKey = COUNT_KEYS.find(k => actualKeys.includes(k));
-  if(!countKey){
-    countKey = actualKeys.find(k => /^count$/i.test(k));
+  let countKey = 'Count';
+  if(!actualKeys.includes(countKey)){
+    countKey = ['count','VALUE','Value','value'].find(k => actualKeys.includes(k))
+      || actualKeys.find(k => /^count$/i.test(k));
   }
 
   if(!tsKey || !countKey){
     console.warn(`[LabTrack] CSV parse: could not identify columns in ${filename||'file'}.`);
     console.warn('  Available columns:', actualKeys);
-    console.warn('  Expected something like "@timestamp per 30 minutes" and "Count"');
+    console.warn('  Expected "@timestamp per 30 minutes" and "Count"');
     return [];
   }
 
-  // Aggregate 30-min counts into hourly buckets
+  // Aggregate 30-min counts into hourly buckets. This mirrors the
+  // original generator's processCsvRows + toHourSlot exactly: no hour
+  // validation, no row dropping beyond the empty-timestamp guard. Adding
+  // a hour-range check here previously caused valid hours to vanish.
   const hourData = Object.create(null);
+  let skipped = 0;
+  const skippedSamples = [];
   rows.forEach(row=>{
     const time = row[tsKey];
     const rawCount = row[countKey];
-    if(!time) return;
+    if(!time){
+      skipped++;
+      if(skippedSamples.length < 5) skippedSamples.push(JSON.stringify(row));
+      return;
+    }
     const cleaned = String(rawCount).replace(/,/g,'').trim();
-    const count = parseInt(cleaned,10) || 0;
-    // Handle both "HH:MM" and "HH:MM:SS" formats from different DAS versions
+    const n = parseInt(cleaned,10);
+    const count = Number.isFinite(n) ? n : 0;
     const parts = String(time).split(':');
     const hour = parseInt(parts[0],10);
-    const minute = parseInt(parts[1]||'0',10);
-    if(!Number.isFinite(hour) || hour < 0 || hour > 23) return;
+    const minute = parseInt(parts[1],10);
     const hourKey = `${String(hour).padStart(2,'0')}:00-${String(hour).padStart(2,'0')}:59`;
     const half = minute < 30 ? 'first' : 'second';
     if(!hourData[hourKey]) hourData[hourKey] = {first:0, second:0};
     hourData[hourKey][half] += count;
   });
+  // Diagnostic: log what was parsed so a recurrence of dropped hours can
+  // be traced. Shows the column names used, the hour buckets produced,
+  // and any rows skipped for an empty timestamp.
+  const buckets = Object.keys(hourData).sort();
+  console.log(`[LabTrack] CSV ${filename||''}: ts="${tsKey}" count="${countKey}", `
+    + `${rows.length} rows -> ${buckets.length} hour buckets`, buckets);
+  if(skipped) console.warn(`[LabTrack] ${skipped} row(s) skipped for empty timestamp. Samples:`, skippedSamples);
   return Object.entries(hourData).map(([slot, h])=>[slot, h.first, h.second, h.first+h.second]);
 }
 
