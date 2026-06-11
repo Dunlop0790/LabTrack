@@ -140,13 +140,13 @@ function isAging(issue){
 
 // ── TOOLTIP HELPER ────────────────────────────────────────────
 // Generates the HTML for a tooltip trigger bubble and its content box.
-// Usage: tt('Your explanation text here') inside any label or heading.
+// Usage: tooltip('Your explanation text here') inside any label or heading.
 // The bubble shows on hover (desktop) and toggles on tap (mobile).
 // text: plain string, no HTML markup. Flip: set true to open downward
 // when the trigger is near the top of the viewport.
-function tt(text, flip){
+function tooltip(text, flip){
   const safeText = esc(text);
-  return `<span class="tt-wrap${flip?' tt-flip':''}"><button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button><span class="tt-box">${safeText}</span></span>`;
+  return `<span class="tooltip-wrap${flip?' tooltip-flip':''}"><button class="tooltip-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button><span class="tooltip-box">${safeText}</span></span>`;
 }
 
 // Tap-toggle for mobile: clicking the ? button opens/closes the tooltip.
@@ -155,11 +155,11 @@ function ttToggle(e){
   e.stopPropagation();
   const btn = e.currentTarget;
   const wasOpen = btn.classList.contains('open');
-  document.querySelectorAll('.tt-btn.open').forEach(b => b.classList.remove('open'));
+  document.querySelectorAll('.tooltip-btn.open').forEach(b => b.classList.remove('open'));
   if(!wasOpen) btn.classList.add('open');
 }
 document.addEventListener('click', () => {
-  document.querySelectorAll('.tt-btn.open').forEach(b => b.classList.remove('open'));
+  document.querySelectorAll('.tooltip-btn.open').forEach(b => b.classList.remove('open'));
 });
 
 // ── ICONS ─────────────────────────────────────────────────────
@@ -239,12 +239,12 @@ function injectStaticIcons(root){
   // after the element's existing text content so labels read naturally.
   scope.querySelectorAll('[data-tooltip]').forEach(el => {
     // Skip if already injected (e.g. injectStaticIcons called twice)
-    if(el.querySelector('.tt-wrap')) return;
+    if(el.querySelector('.tooltip-wrap')) return;
     const text = el.getAttribute('data-tooltip');
     if(!text) return;
     const wrap = document.createElement('span');
-    wrap.className = 'tt-wrap';
-    wrap.innerHTML = `<button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button><span class="tt-box">${esc(text)}</span>`;
+    wrap.className = 'tooltip-wrap';
+    wrap.innerHTML = `<button class="tooltip-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button><span class="tooltip-box">${esc(text)}</span>`;
     el.appendChild(wrap);
   });
   const setupIco = scope.querySelector('#setupIcon');
@@ -473,34 +473,6 @@ function closeHam(){
   if(menu) menu.classList.remove('open');
 }
 
-// Department dropdown toggle. Multiple departments can be added over
-// time (e.g. ALO, Siemens, Leads); only one is open at a time. The
-// trigger button and menu share a parent .dept-dropdown wrapper that
-// gets the .open class to control visibility and chevron rotation.
-function toggleDeptDropdown(deptKey){
-  const wrapper = document.querySelector(`.dept-dropdown[data-dropdown="${deptKey}"]`);
-  if(!wrapper) return;
-  const wasOpen = wrapper.classList.contains('open');
-  // Close all department dropdowns first so opening another one auto-closes the previous
-  closeDeptDropdowns();
-  // If the clicked dropdown was closed, open it. (If it was already
-  // open, the closeAll call above has already closed it, which is the
-  // intended toggle-off behavior.)
-  if(!wasOpen) wrapper.classList.add('open');
-}
-
-function closeDeptDropdowns(){
-  document.querySelectorAll('.dept-dropdown.open').forEach(d => d.classList.remove('open'));
-}
-
-// Close any open department dropdown when clicking outside it. Same
-// pattern as the hamburger menu; runs in the same global click handler
-// space but inspects different DOM ancestors.
-document.addEventListener('click', (e)=>{
-  if(e.target.closest('.dept-dropdown')) return;
-  closeDeptDropdowns();
-});
-
 // Close hamburger when clicking outside
 document.addEventListener('click', (e)=>{
   const menu = document.getElementById('hamMenu');
@@ -509,7 +481,7 @@ document.addEventListener('click', (e)=>{
   menu.classList.remove('open');
 });
 
-// Updates the .active class on tier 2 header buttons to reflect which
+// Updates the .active class on header tool buttons to reflect which
 // panel (if any) is currently open. Called from each panel's open/close
 // handler so the header always shows the user's current navigation
 // context, even when a panel is on top of the board view.
@@ -558,8 +530,8 @@ function describeActivity(h){
 }
 
 // ── USER SETUP ────────────────────────────────────────────────
-// First-launch identity capture. The user picks a role (ALO, Lead,
-// Siemens) and selects or types their first name. Identity is stored
+// First-launch identity capture. The user picks a role and selects or
+// types their first name. The role gates write permissions. Identity is stored
 // in localStorage and reused on subsequent visits. There is no
 // authentication; the chosen identity is used as the author tag on
 // comments, history entries, and report snapshots only.
@@ -766,7 +738,7 @@ function groupedRoster(filterTerm){
 }
 
 // ── BOARDS ────────────────────────────────────────────────────
-// Multiple independent issue boards (one per shift, role group, or
+// Multiple independent issue boards (one per team, group, or
 // project, at the team's discretion). Boards are top-level documents
 // with only a title and creation timestamp. Issues reference their
 // parent board via the boardId field. Switching boards rebinds the
@@ -1117,7 +1089,7 @@ function miniCard(issue){
   const meta = [inst, age].filter(Boolean).join(' · ');
   return `<div class="mini-card p-${issue.priority}" onclick="openDetail('${issue.id}')">
     <div class="mini-card-top">
-      <span class="mini-tb ${tc==='op'?'op':tc==='bb'?'bb':'gen'}">${tl}</span>
+      <span class="mini-track-badge ${tc==='op'?'op':tc==='bb'?'bb':'gen'}">${tl}</span>
     </div>
     <div class="mini-card-title">${esc(issue.title)}</div>
     ${meta ? `<div class="mini-card-meta">${esc(meta)}</div>` : ''}
@@ -1171,16 +1143,16 @@ function renderCard(issue){
   const priorityTitles = {critical:'Critical: line is down or a major process is stopped.',urgent:'Urgent: line is running but degraded, needs attention soon.',moderate:'Moderate: something to watch, not currently blocking.',low:'Low: non-urgent, address when time allows.'};
   return `<div class="card ${tc} p-${issue.priority} s-${issue.status} ${aging?'aging':''}" onclick="openDetail('${issue.id}')" ${agingTitle}>
     <div class="card-top">
-      <span class="pbadge ${issue.priority}" title="${priorityTitles[issue.priority]||''}">${issue.priority}</span>
-      <span class="tbadge ${tc}">${tl}</span>
+      <span class="priority-badge ${issue.priority}" title="${priorityTitles[issue.priority]||''}">${issue.priority}</span>
+      <span class="track-badge ${tc}">${tl}</span>
     </div>
     <div class="card-title">${esc(issue.title)}</div>
     ${inst?`<div class="card-inst">${esc(inst)}</div>`:''}
     <div class="card-bot">
       ${issue.assignee
-        ? `<div class="a-chip"><div class="a-dot">${ai}</div>${esc(issue.assignee)}</div>`
+        ? `<div class="assignee-chip"><div class="assignee-dot">${ai}</div>${esc(issue.assignee)}</div>`
         : '<span style="font-size:11px;color:#94a3b8">Unassigned</span>'}
-      ${cc>0?`<div class="cc">${ICONS.comment} ${cc}</div>`:''}
+      ${cc>0?`<div class="card-comment-count">${ICONS.comment} ${cc}</div>`:''}
     </div>
     ${age && issue.status!=='resolved' ? `<div class="card-time ${aging?'warn':''}">${aging?ICONS.warning+' ':''}Open ${age}</div>` : ''}
   </div>`;
@@ -1245,7 +1217,7 @@ async function openDetail(issueId){
     .orderBy('createdAt')
     .onSnapshot(snap=>{
       const cs=snap.docs.map(d=>({id:d.id,...d.data()}));
-      const el=document.getElementById('clist');
+      const el=document.getElementById('comment-list');
       if(!el) return;
       el.innerHTML = cs.length ? cs.map(c=>renderComment(c, issueId)).join('') : '<div style="color:#94a3b8;font-size:13px">No updates yet.</div>';
       el.scrollTop=el.scrollHeight;
@@ -1264,10 +1236,10 @@ function renderComment(c, issueId){
       <span class="react-emoji">${r.emoji}</span>${users.length?`<span class="react-cnt">${users.length}</span>`:''}
     </button>`;
   }).join('');
-  return `<div class="ci">
-    <div class="ci-author">${esc(c.author)} <span style="font-weight:400;color:var(--muted)">(${c.role||''})</span></div>
-    <div class="ci-text">${text}</div>
-    <div class="ci-time">${fmtTime(c.createdAt)}</div>
+  return `<div class="comment-item">
+    <div class="comment-author">${esc(c.author)} <span style="font-weight:400;color:var(--muted)">(${c.role||''})</span></div>
+    <div class="comment-text">${text}</div>
+    <div class="comment-time">${fmtTime(c.createdAt)}</div>
     <div class="reactions">${reactHtml}</div>
   </div>`;
 }
@@ -1293,23 +1265,23 @@ function buildDetailHTML(i){
   const trackName = i.track==='op'?'Optimus Prime':i.track==='bb'?'Bumblebee':'General';
   const tl = `<span class="dot ${trackDot}"></span>${trackName}`;
   return `
-  <div class="mhdr">
+  <div class="modal-header">
     <div style="flex:1">
       <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-        <span class="pbadge ${i.priority}">${i.priority}</span>
+        <span class="priority-badge ${i.priority}">${i.priority}</span>
         <span style="font-size:11px;background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:4px;font-weight:600">${tl}</span>
         ${inst?`<span style="font-size:11px;background:#f0fdf4;color:#15803d;padding:2px 8px;border-radius:4px;font-weight:700;font-family:monospace">${esc(inst)}</span>`:''}
       </div>
-      <div class="mtitle">${esc(i.title)}</div>
+      <div class="modal-title">${esc(i.title)}</div>
       <div style="font-size:11px;color:#94a3b8;margin-top:4px">
         Logged by ${esc(i.createdBy)} · ${fmtTime(i.createdAt)}
         ${i.status!=='resolved' && fmtAge(i.createdAt) ? ` · <span style="${isAging(i)?'color:#dc2626;font-weight:600':''}">Open ${fmtAge(i.createdAt)}</span>` : ''}
       </div>
     </div>
-    <button class="mclose" onclick="closeDetail()">×</button>
+    <button class="modal-close-btn" onclick="closeDetail()">×</button>
   </div>
 
-  <div class="dbody">
+  <div class="detail-body">
     <div>
       <div class="sec-lbl">Description</div>
       <div class="desc-box">${i.description ? esc(i.description) : '<span style="color:#94a3b8">No description.</span>'}</div>
@@ -1335,16 +1307,16 @@ function buildDetailHTML(i){
       </div>
 
       <div class="sec-lbl" style="margin-bottom:9px">Updates & Comments</div>
-      <div class="clist" id="clist"><div style="color:#94a3b8;font-size:13px">Loading…</div></div>
+      <div class="comment-list" id="comment-list"><div style="color:#94a3b8;font-size:13px">Loading…</div></div>
       <div class="cinput-row" style="position:relative">
-        <textarea class="fc" id="ctext" maxlength="280" placeholder="Add an update or note… (use @ to mention someone)"
+        <textarea class="filter-chip" id="ctext" maxlength="280" placeholder="Add an update or note… (use @ to mention someone)"
                   oninput="onCommentInput(event)"
                   onkeydown="onCommentKeydown(event)"></textarea>
         <div class="mention-list" id="mentionList"></div>
       </div>
       <div class="cinput-meta">
-        <div class="ccount"><span id="ccnt">0</span>/280</div>
-        <button class="btn btn-p" style="padding:6px 13px;font-size:12px" onclick="postComment('${i.id}')">Post Update</button>
+        <div class="comment-count"><span id="ccnt">0</span>/280</div>
+        <button class="btn btn-primary" style="padding:6px 13px;font-size:12px" onclick="postComment('${i.id}')">Post Update</button>
       </div>
 
       <div class="history-toggle" onclick="toggleHistory('${i.id}')" id="histToggle">
@@ -1354,49 +1326,49 @@ function buildDetailHTML(i){
     </div>
 
     <div class="sidebar">
-      <div class="sb-sec">
-        <div class="sb-lbl">Status</div>
-        <select class="fc" onchange="updateField('${i.id}','status',this.value)">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Status</div>
+        <select class="filter-chip" onchange="updateField('${i.id}','status',this.value)">
           ${COLS.map(s=>`<option value="${s}" ${i.status===s?'selected':''}>${COL_LABELS[s]}</option>`).join('')}
         </select>
       </div>
-      <div class="sb-sec">
-        <div class="sb-lbl">Priority</div>
-        <select class="fc" onchange="updateField('${i.id}','priority',this.value)">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Priority</div>
+        <select class="filter-chip" onchange="updateField('${i.id}','priority',this.value)">
           <option value="critical" ${i.priority==='critical'?'selected':''}>● Critical</option>
           <option value="urgent" ${i.priority==='urgent'?'selected':''}>● Urgent</option>
           <option value="moderate" ${i.priority==='moderate'?'selected':''}>● Moderate</option>
           <option value="low" ${i.priority==='low'?'selected':''}>● Low</option>
         </select>
       </div>
-      <div class="sb-sec">
-        <div class="sb-lbl">Assigned To</div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Assigned To</div>
         <div class="assign-wrap">
           <div class="assign-row">
-            <input class="fc" id="dAssign" value="${esc(i.assignee||'')}" placeholder="Unassigned" autocomplete="off"
+            <input class="filter-chip" id="dAssign" value="${esc(i.assignee||'')}" placeholder="Unassigned" autocomplete="off"
                    oninput="showAssignDropdown('dAssign','dAssignList',this.value)"
                    onfocus="showAssignDropdown('dAssign','dAssignList',this.value)"
                    onblur="setTimeout(()=>hideAssignDropdown('dAssignList'),180)" />
-            <button class="btn-me" onclick="claimIssue('${i.id}')">Me</button>
+            <button class="btn-mention-me" onclick="claimIssue('${i.id}')">Me</button>
           </div>
           <div class="assign-list" id="dAssignList"></div>
         </div>
-        <button class="btn btn-g" style="margin-top:6px;width:100%;font-size:12px" onclick="saveAssign('${i.id}')">Save Assignee</button>
+        <button class="btn btn-ghost" style="margin-top:6px;width:100%;font-size:12px" onclick="saveAssign('${i.id}')">Save Assignee</button>
       </div>
-      <div class="sb-sec">
-        <div class="sb-lbl">Track</div>
-        <div class="sb-val">${tl}</div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Track</div>
+        <div class="sidebar-value">${tl}</div>
       </div>
-      ${inst?`<div class="sb-sec"><div class="sb-lbl">Instrument</div><div class="sb-val" style="font-family:monospace">${esc(inst)}</div></div>`:''}
-      <div class="sb-sec">
-        <div class="sb-lbl">Move to Board</div>
-        <select class="fc" onchange="moveIssueToBoard('${i.id}',this.value);this.value=''">
+      ${inst?`<div class="sidebar-section"><div class="sidebar-label">Instrument</div><div class="sidebar-value" style="font-family:monospace">${esc(inst)}</div></div>`:''}
+      <div class="sidebar-section">
+        <div class="sidebar-label">Move to Board</div>
+        <select class="filter-chip" onchange="moveIssueToBoard('${i.id}',this.value);this.value=''">
           <option value="">Select board...</option>
           ${boards.filter(b=>b.id!==boardId).map(b=>`<option value="${b.id}">${esc(b.title)}</option>`).join('')}
         </select>
       </div>
-      <div class="sb-del">
-        <button class="btn btn-d" style="width:100%;font-size:12px" onclick="deleteIssue('${i.id}')">Delete Issue</button>
+      <div class="sidebar-delete">
+        <button class="btn btn-danger" style="width:100%;font-size:12px" onclick="deleteIssue('${i.id}')">Delete Issue</button>
       </div>
     </div>
   </div>`;
@@ -1419,11 +1391,11 @@ function showFixInput(issueId, current){
     <div class="fix-box">
       <div class="fix-box-lbl">How it was fixed</div>
       <div class="cinput-row" style="position:relative;margin-top:6px">
-        <textarea class="fc" id="fixText" placeholder="Briefly describe what fixed this issue. This will be visible to the whole team in the resolved view and the archive." style="min-height:72px;font-size:13px">${esc(current||'')}</textarea>
+        <textarea class="filter-chip" id="fixText" placeholder="Briefly describe what fixed this issue. This will be visible to the whole team in the resolved view and the archive." style="min-height:72px;font-size:13px">${esc(current||'')}</textarea>
       </div>
       <div style="display:flex;gap:8px;margin-top:7px;justify-content:flex-end">
-        <button class="btn btn-g" style="font-size:12px;padding:5px 12px" onclick="cancelFixInput('${issueId}')">Cancel</button>
-        <button class="btn btn-p" style="font-size:12px;padding:5px 12px" onclick="saveFixDescription('${issueId}')">Save Fix</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="cancelFixInput('${issueId}')">Cancel</button>
+        <button class="btn btn-primary" style="font-size:12px;padding:5px 12px" onclick="saveFixDescription('${issueId}')">Save Fix</button>
       </div>
     </div>
   `;
@@ -1538,7 +1510,7 @@ function toggleHistory(issueId){
       .onSnapshot(snap=>{
         const items = snap.docs.map(d=>d.data());
         list.innerHTML = items.length
-          ? items.map(h=>`<div class="h-entry">${describeActivity(h)} <span class="h-time">· ${fmtTime(h.createdAt)}</span></div>`).join('')
+          ? items.map(h=>`<div class="history-entry">${describeActivity(h)} <span class="history-time">· ${fmtTime(h.createdAt)}</span></div>`).join('')
           : '<div style="color:#94a3b8;font-size:12px">No history yet.</div>';
       });
   }
@@ -1620,8 +1592,8 @@ function onSearch(val){
 
 // ── ASSIGNEE AUTOCOMPLETE ──────────────────────────────────────
 // Dropdown suggester for the assignee field on the new issue form.
-// Matches against the full roster grouped by role (Leads first, then
-// ALOs, then Siemens). Closes on outside click or Escape.
+// Matches against the full roster, grouped by role. Closes on outside
+// click or Escape.
 function showAssignDropdown(inputId, listId, term){
   const list = document.getElementById(listId);
   if(!list) return;
@@ -1637,7 +1609,7 @@ function showAssignDropdown(inputId, listId, term){
       html += `<div class="assign-group-hdr">${ROLE_LABELS[role]}</div>`;
       grouped[role].forEach(name=>{
         html += `<div class="assign-item" onclick="pickAssignee('${inputId}','${listId}','${esc(name).replace(/'/g,"\\'")}')">
-          <div class="a-dot">${initials(name)}</div>${esc(name)}
+          <div class="assignee-dot">${initials(name)}</div>${esc(name)}
         </div>`;
       });
     });
@@ -1741,7 +1713,7 @@ function showMentionList(matches, textarea, atPos){
   list.style.top = (textarea.offsetTop + textarea.offsetHeight + 3) + 'px';
   list.style.left = textarea.offsetLeft + 'px';
   list.innerHTML = matches.map((r,i)=>`<div class="mention-item ${i===0?'active':''}" onmousedown="event.preventDefault();insertMention('${esc(r.name).replace(/'/g,"\\'")}',${atPos})">
-    <div class="a-dot">${initials(r.name)}</div>${esc(r.name)}<span class="mention-role">${r.role||''}</span>
+    <div class="assignee-dot">${initials(r.name)}</div>${esc(r.name)}<span class="mention-role">${r.role||''}</span>
   </div>`).join('');
   list.classList.add('open');
 }
@@ -1798,7 +1770,7 @@ async function toggleReaction(issueId, commentId, key){
   await ref.update({reactions});
 }
 
-// ── BUNCH 3: ARCHIVE / STATS / CSV ─────────────────────────────
+// ── ARCHIVE / STATS / CSV ─────────────────────────────────────
 // Subsystems for historical data: weekly archive of resolved issues,
 // stats dashboard with rollup metrics, and CSV export from both views.
 // Archive maintenance runs once per session if conditions are met
@@ -1958,8 +1930,8 @@ function renderArchive(){
     const boardName = board ? board.title : '(deleted board)';
     return `<div class="arch-card ${tc}" onclick="openArchiveDetail('${a.id}')">
       <div class="arch-card-top">
-        <span class="pbadge ${a.priority}">${a.priority||''}</span>
-        <span class="tbadge ${tc}">${tl}</span>
+        <span class="priority-badge ${a.priority}">${a.priority||''}</span>
+        <span class="track-badge ${tc}">${tl}</span>
         ${inst?`<span style="font-size:10px;background:#f0fdf4;color:#15803d;padding:1px 6px;border-radius:3px;font-weight:700;font-family:monospace">${esc(inst)}</span>`:''}
       </div>
       <div class="arch-card-title">${esc(a.title||'')}</div>
@@ -1989,23 +1961,23 @@ async function openArchiveDetail(archId){
   const history = hsSnap.docs.map(d=>d.data());
 
   modal.innerHTML = `
-    <div class="mhdr">
+    <div class="modal-header">
       <div style="flex:1">
         <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-          <span class="pbadge ${a.priority}">${a.priority||''}</span>
+          <span class="priority-badge ${a.priority}">${a.priority||''}</span>
           <span style="font-size:11px;background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:4px;font-weight:600">${trackName}</span>
           ${inst?`<span style="font-size:11px;background:#f0fdf4;color:#15803d;padding:2px 8px;border-radius:4px;font-weight:700;font-family:monospace">${esc(inst)}</span>`:''}
           <span style="font-size:11px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-weight:700">ARCHIVED</span>
         </div>
-        <div class="mtitle">${esc(a.title||'')}</div>
+        <div class="modal-title">${esc(a.title||'')}</div>
         <div style="font-size:11px;color:#94a3b8;margin-top:4px">
           Board: ${esc(board?board.title:'(deleted)')} · Logged by ${esc(a.createdBy||'?')} · ${fmtTime(a.createdAt)} · Archived ${fmtTime(a.archivedAt)}
         </div>
       </div>
-      <button class="mclose" onclick="closeDetail()">×</button>
+      <button class="modal-close-btn" onclick="closeDetail()">×</button>
     </div>
 
-    <div class="dbody">
+    <div class="detail-body">
       <div>
         <div class="sec-lbl">Description</div>
         <div class="desc-box">${a.description ? esc(a.description) : '<span style="color:#94a3b8">No description.</span>'}</div>
@@ -2024,24 +1996,24 @@ async function openArchiveDetail(archId){
         `}
 
         <div class="sec-lbl" style="margin-bottom:9px">Comments (${comments.length})</div>
-        <div class="clist">
-          ${comments.length ? comments.map(c=>`<div class="ci">
-            <div class="ci-author">${esc(c.author)} <span style="font-weight:400;color:var(--muted)">(${c.role||''})</span></div>
-            <div class="ci-text">${parseMentions(c.text||'')}</div>
-            <div class="ci-time">${fmtTime(c.createdAt)}</div>
+        <div class="comment-list">
+          ${comments.length ? comments.map(c=>`<div class="comment-item">
+            <div class="comment-author">${esc(c.author)} <span style="font-weight:400;color:var(--muted)">(${c.role||''})</span></div>
+            <div class="comment-text">${parseMentions(c.text||'')}</div>
+            <div class="comment-time">${fmtTime(c.createdAt)}</div>
           </div>`).join('') : '<div style="color:#94a3b8;font-size:13px">No comments.</div>'}
         </div>
 
         ${history.length ? `<div class="sec-lbl" style="margin-top:18px;margin-bottom:9px">History</div>
-          <div>${history.map(h=>`<div class="h-entry">${describeActivity(h)} <span class="h-time">· ${fmtTime(h.createdAt)}</span></div>`).join('')}</div>` : ''}
+          <div>${history.map(h=>`<div class="history-entry">${describeActivity(h)} <span class="history-time">· ${fmtTime(h.createdAt)}</span></div>`).join('')}</div>` : ''}
       </div>
 
       <div class="sidebar">
-        <div class="sb-sec"><div class="sb-lbl">Final Status</div><div class="sb-val">Resolved</div></div>
-        <div class="sb-sec"><div class="sb-lbl">Priority</div><div class="sb-val">${PRIORITY_LABELS[a.priority]||a.priority||''}</div></div>
-        <div class="sb-sec"><div class="sb-lbl">Resolved By</div><div class="sb-val">${esc(a.assignee||'Unassigned')}</div></div>
-        <div class="sb-sec"><div class="sb-lbl">Track</div><div class="sb-val">${trackName}</div></div>
-        ${inst?`<div class="sb-sec"><div class="sb-lbl">Instrument</div><div class="sb-val" style="font-family:monospace">${esc(inst)}</div></div>`:''}
+        <div class="sidebar-section"><div class="sidebar-label">Final Status</div><div class="sidebar-value">Resolved</div></div>
+        <div class="sidebar-section"><div class="sidebar-label">Priority</div><div class="sidebar-value">${PRIORITY_LABELS[a.priority]||a.priority||''}</div></div>
+        <div class="sidebar-section"><div class="sidebar-label">Resolved By</div><div class="sidebar-value">${esc(a.assignee||'Unassigned')}</div></div>
+        <div class="sidebar-section"><div class="sidebar-label">Track</div><div class="sidebar-value">${trackName}</div></div>
+        ${inst?`<div class="sidebar-section"><div class="sidebar-label">Instrument</div><div class="sidebar-value" style="font-family:monospace">${esc(inst)}</div></div>`:''}
       </div>
     </div>
   `;
@@ -2125,7 +2097,7 @@ function renderStats(){
 
   // Recurring problems: same instrument + unit + track appearing 3+ times.
   // Track is included so OP and BB issues on the same unit are counted
-  // separately (BIM 1 OP and BIM 1 BB are different patterns). General
+  // separately by track since the same unit on each track is distinct. General
   // track issues are not side-specific so track is omitted for those.
   const recurMap = {};
   all.forEach(i=>{
@@ -2271,13 +2243,13 @@ function exportCSV(source){
   showToast(`Exported ${rows.length} row(s).`);
 }
 
-// ── BUNCH 5: REPORTS / LINE STATUS ─────────────────────────────
+// ── REPORTS / LINE STATUS ─────────────────────────────────────
 // Reports panel and Line Status form builder. The Reports panel hosts
 // three tabs: Line Status (this section), Saved Snapshots, and EOD.
 // Line Status accepts FlexLab CSV exports for OP and BB, processes
 // them into a formatted hourly summary table, and combines that with
 // a structured form for all the supporting fields (buckets, OOS
-// analyzers, overloads, BIM read rates, startup times, unpacking,
+// out-of-service units, overloads, read rates, startup times, unpacking,
 // and BB/OP notes). The output renders as fully inline-styled HTML
 // for clean copy-paste into Outlook.
 // Configuration: instrument lists per cell, ranges, etc.
@@ -2518,9 +2490,8 @@ function lsResetPersisted(){
 
 // Render the full Line Status form + preview.
 // When isFinal is checked, only the sections relevant to a final
-// shift report are shown: projection table, BB/OP notes, rollover
-// template, and OOS analyzers. All other sections (startup times,
-// buckets to load, relabel, overloads, BIM read rates) are hidden.
+// final report are shown: projection table, notes, rollover template,
+// and out-of-service units. All other sections are hidden.
 function renderLineStatusInner(body){
   const isFinal = lsState.isFinal;
 
@@ -2636,7 +2607,7 @@ function renderLineStatusInner(body){
           <div class="ls-csv-files" id="lsCsvFiles"></div>
           <div class="ls-row" style="margin-top:10px">
             <span class="ls-lbl">Projected:</span>
-            <input class="ls-mini w90" id="lsProjected" type="number" placeholder="e.g. 110890" value="${esc(lsState.projected)}" oninput="lsUpdate('projected',this.value)" />
+            <input class="ls-mini col-width-90" id="lsProjected" type="number" placeholder="e.g. 110890" value="${esc(lsState.projected)}" oninput="lsUpdate('projected',this.value)" />
             <span class="ls-lbl">Date:</span>
             <input class="ls-mini" style="flex:1" id="lsDate" value="${esc(lsState.date)}" oninput="lsUpdate('date',this.value)" />
           </div>
@@ -2668,9 +2639,9 @@ function renderLineStatusInner(body){
         <div class="ls-section">
           <div class="ls-sec-title" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px">
             <span>BB / OP Notes</span>
-            <span class="tt-wrap">
-              <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
-              <span class="tt-box">${tt('Pulls open issues from the selected board and fills in the BB and OP notes fields. Pick a board from the dropdown first if you want to pull from something other than the one you are currently viewing. You can edit the result after it populates.')}</span>
+            <span class="tooltip-wrap">
+              <button class="tooltip-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
+              <span class="tooltip-box">${tooltip('Pulls open issues from the selected board and fills in the BB and OP notes fields. Pick a board from the dropdown first if you want to pull from something other than the one you are currently viewing. You can edit the result after it populates.')}</span>
             </span>
             <select class="ls-mini" style="margin-left:auto" id="lsSourceBoard" onchange="lsSourceBoard=this.value">
               ${boards.map(b=>`<option value="${b.id}"${b.id===boardId?' selected':''}>${esc(b.title)}</option>`).join('')}
@@ -2733,9 +2704,9 @@ function renderLineStatusInner(body){
         <div class="ls-section">
           <div class="ls-sec-title">Buckets to Load</div>
           <div class="ls-row">
-            ${comboInput('dl_bucketCount', LS_BUCKET_COUNTS, lsState.bucketCount, "lsUpdate('bucketCount',this.value)", 'w70')}
+            ${comboInput('dl_bucketCount', LS_BUCKET_COUNTS, lsState.bucketCount, "lsUpdate('bucketCount',this.value)", 'col-width-70')}
             <span>@</span>
-            ${comboInput('dl_bucketTime', LS_TIME_SLOTS, lsState.bucketTime, "lsUpdate('bucketTime',this.value)", 'w90')}
+            ${comboInput('dl_bucketTime', LS_TIME_SLOTS, lsState.bucketTime, "lsUpdate('bucketTime',this.value)", 'col-width-90')}
           </div>
           <textarea class="ls-textarea" placeholder="Optional notes (e.g. '3 Buckets of sorted HEMO')" oninput="lsUpdate('bucketNotes',this.value)" style="margin-top:8px">${esc(lsState.bucketNotes)}</textarea>
         </div>
@@ -2819,22 +2790,22 @@ function renderLineStatusInner(body){
 
         <div class="ls-actions">
           <button class="btn-clear" onclick="lsClear()">Clear All</button>
-          <span class="tt-wrap tt-flip">
+          <span class="tooltip-wrap tooltip-flip">
             <button class="btn-snap" onclick="lsSaveSnapshot()">Save Snapshot</button>
-            <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
-            <span class="tt-box">Saves a draft of this form so you can reload it later from the Saved Snapshots tab.</span>
+            <button class="tooltip-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
+            <span class="tooltip-box">Saves a draft of this form so you can reload it later from the Saved Snapshots tab.</span>
           </span>
-          <span class="tt-wrap tt-flip">
+          <span class="tooltip-wrap tooltip-flip">
             <button class="btn-copy" onclick="lsCopy()">Copy to Clipboard</button>
-            <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
-            <span class="tt-box">Copies the formatted report so you can paste it directly into an Outlook email. Tables and layout are preserved on paste.</span>
+            <button class="tooltip-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
+            <span class="tooltip-box">Copies the formatted report so you can paste it directly into an Outlook email. Tables and layout are preserved on paste.</span>
           </span>
-          <span class="tt-wrap tt-flip">
+          <span class="tooltip-wrap tooltip-flip">
             <button class="btn-publish ${isFinal?'btn-publish-final':''}" onclick="lsPublish()" title="Publish this report so the team can view it under the Today tab">
               ${isFinal ? 'Publish Final' : 'Publish'}
             </button>
-            <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
-            <span class="tt-box">Posts the current report to the Today tab where the whole team can see it in real time. If Final is checked, it is also saved permanently to the LS Archive.</span>
+            <button class="tooltip-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
+            <span class="tooltip-box">Posts the current report to the Today tab where the whole team can see it in real time. If Final is checked, it is also saved permanently to the LS Archive.</span>
           </span>
         </div>
       </div>
@@ -2846,11 +2817,6 @@ function renderLineStatusInner(body){
     </div>
   `;
   wireCsvZone();
-}
-
-// Helper: render <option> list
-function optList(arr, selected){
-  return arr.map(v=>`<option value="${v}" ${String(selected)===String(v)?'selected':''}>${v}</option>`).join('');
 }
 
 // Renders an <input> + <datalist> combo so the user can either pick
@@ -2931,22 +2897,6 @@ function lsToggleUnpack(field){
   renderLineStatus();
   lsSavePersist();
 }
-function lsAddOos(key){
-  const sel = document.getElementById('oosSel_'+key);
-  if(sel?.value && !lsState.oos[key].includes(sel.value)){
-    lsState.oos[key].push(sel.value);
-    renderLineStatus();
-    lsSavePersist();
-  }
-}
-function lsAddOosCustom(key, value){
-  const v = value.trim();
-  if(v && !lsState.oos[key].includes(v)){
-    lsState.oos[key].push(v);
-    renderLineStatus();
-    lsSavePersist();
-  }
-}
 function lsRemoveOos(key, value){
   lsState.oos[key] = lsState.oos[key].filter(v=>v!==value);
   renderLineStatus();
@@ -2984,7 +2934,7 @@ function lsDeleteSlot(time){
   refreshPreview();
 }
 
-// Sets the ROM note for a specific time slot.
+// Sets the per-row note for a specific time slot in the projection table.
 function lsSetRom(time, val){
   if(!lsState.romNotes) lsState.romNotes = {};
   lsState.romNotes[time] = val;
@@ -3088,13 +3038,13 @@ function lsClear(){
 }
 
 // ── CSV PROCESSING (adapted from original Automated Line Status) ─────
-// CSV ingest pipeline ported from the team's standalone Automated Line
+// CSV ingest pipeline ported from a standalone spreadsheet
 // Status tool. Each FlexLab export contains 30-minute count buckets;
 // these are aggregated into hourly totals (first half + second half =
 // hourly), then merged across both files into the final summary table
-// with running totals and projected remaining. Shift-start hour is
+// with running totals and projected remaining. The start hour is
 // inferred by finding the rotation that produces the longest run of
-// consecutive hours, which correctly handles night shifts that cross
+// consecutive hours, which correctly handles schedules that cross
 // midnight.
 function wireCsvZone(){
   const zone = document.getElementById('lsCsvZone');
@@ -3117,7 +3067,7 @@ function wireCsvZone(){
 // Accepts dropped or selected CSV files and routes each to the correct
 // slot (OP or BB) based on the FlexLab line number in the filename.
 // 191 = OP, 192 = BB. Simple substring match is intentional: DAS
-// filenames embed the line number but not necessarily as a standalone
+// filenames embed the identifier but not necessarily as a standalone
 // word, so a strict word-boundary regex rejects valid files.
 async function lsHandleCsvFiles(files){
   for(const f of files){
@@ -3254,7 +3204,7 @@ function lsBuildFinalTable(){
   if(!opData.length && !bbData.length) return null;
 
   const allSlots = new Set([...opData.map(r=>r[0]), ...bbData.map(r=>r[0])]);
-  // Infer shift start hour by finding the start that produces longest consecutive run
+  // Infer the start hour by finding the start that produces the longest consecutive run
   const startHour = lsInferShiftStart(allSlots);
   const sortedSlots = Array.from(allSlots).sort((a,b)=>{
     let ha = parseInt(String(a).split(':')[0],10);
@@ -3288,18 +3238,18 @@ function lsBuildFinalTable(){
   return out;
 }
 
-// Infers the shift start hour from a set of timestamp slots.
+// Infers the start hour from a set of timestamp slots.
 // FlexLab CSVs use 24-hour times in chronological order, but the same
-// time format is used for both day shifts (07:00 to 19:00) and night
-// shifts that cross midnight (e.g. 19:00 to 04:00 next day). When a
-// night shift's data is sorted naively, midnight-crossing causes the
+// time format is used both for ranges within one day and for ranges
+// that cross midnight (e.g. 19:00 to 04:00 next day). When data that
+// crosses midnight is sorted naively, the wraparound causes the
 // earliest hours to appear LAST instead of first.
 //
 // The algorithm rotates each candidate start hour to position 0 (by
 // subtracting 24 from any hour at or after the candidate start) and
 // scores how many adjacent hours are consecutive after the rotation.
-// The highest-scoring rotation is the actual shift start. This
-// handles all valid shift configurations without hardcoding times.
+// The highest-scoring rotation is the actual start hour. This handles
+// any time range without hardcoding specific hours.
 function lsInferShiftStart(slots){
   if(!slots.size) return 7;
   let best = 7, bestScore = -1;
@@ -3532,8 +3482,8 @@ function renderLsHTML(){
     html += SPACE;
   }
 
-  // BIM Read Rates: 4 columns side by side (70+90+70+90 = 320px)
-  // Label columns are 70px so "IOM 1" / "IOM 2" never wrap.
+  // Read rates table: 4 columns side by side (70+90+70+90 = 320px).
+  // Label columns are 70px so the longest labels never wrap.
   // BB and OP each span their two columns as a unified colored header.
   const hasBim = lsState.bim.bb.some(v=>v) || lsState.bim.op.some(v=>v);
   if(hasBim){
@@ -3667,9 +3617,6 @@ function notesToEmailHtml(content){
     }).join('');
 }
 
-function noteLines(text){
-  return text.split('\n').filter(l=>l.trim()).map(l=>`<li>${esc(l.trim())}</li>`).join('');
-}
 
 // Copy preview HTML to clipboard as rich content (so it pastes into email clients formatted)
 async function lsCopy(){
@@ -3820,8 +3767,8 @@ async function purgeSnapshotsDaily(){
 // ── EOD TAB ────────────────────────────────────────────────────
 // End-of-Day report builder. Mirrors the official Automated Line EOD
 // Report Word template structure: staffing, remaining samples (in
-// freezer and on line), BB/OP issues split by category (BIM, general,
-// HVS), maintenance task completion, instrument issues, and bulleted
+// remaining samples, issues split by category, maintenance task
+// completion, instrument issues, and bulleted
 // notes. Issues can be auto-pulled from any board's active cards via
 // the board picker. Output uses the same email-friendly inline-style
 // approach as Line Status for clean copy-paste.
@@ -3897,17 +3844,17 @@ function renderEOD(){
           <div class="ls-sec-title">Staffing</div>
           <div class="ls-row">
             <span class="ls-lbl">Staffing %:</span>
-            <input class="ls-mini w90" value="${esc(eodState.staffingPct)}" oninput="eodUpdate('staffingPct',this.value)" />
+            <input class="ls-mini col-width-90" value="${esc(eodState.staffingPct)}" oninput="eodUpdate('staffingPct',this.value)" />
           </div>
           <div class="ls-row" style="margin-top:8px">
             <div class="ls-x-cell ${eodState.callOutChecked?'checked':''}" onclick="eodToggle('callOutChecked')">${eodState.callOutChecked?'X':''}</div>
             <span style="font-weight:600;font-size:12px">Call out / sick call:</span>
-            <input class="ls-mini w70" value="${esc(eodState.callOutCount)}" placeholder="# TMs" oninput="eodUpdate('callOutCount',this.value)" />
+            <input class="ls-mini col-width-70" value="${esc(eodState.callOutCount)}" placeholder="# TMs" oninput="eodUpdate('callOutCount',this.value)" />
           </div>
           <div class="ls-row">
             <div class="ls-x-cell ${eodState.scheduledPtoChecked?'checked':''}" onclick="eodToggle('scheduledPtoChecked')">${eodState.scheduledPtoChecked?'X':''}</div>
             <span style="font-weight:600;font-size:12px">Scheduled PTO:</span>
-            <input class="ls-mini w70" value="${esc(eodState.scheduledPtoCount)}" placeholder="# TMs" oninput="eodUpdate('scheduledPtoCount',this.value)" />
+            <input class="ls-mini col-width-70" value="${esc(eodState.scheduledPtoCount)}" placeholder="# TMs" oninput="eodUpdate('scheduledPtoCount',this.value)" />
           </div>
         </div>
 
@@ -3922,7 +3869,7 @@ function renderEOD(){
           </div>
           <div class="ls-row" style="margin-top:8px">
             <span class="ls-lbl">No. of Samples:</span>
-            <input class="ls-mini w90" value="${esc(eodState.freezerSamplesNum)}" oninput="eodUpdate('freezerSamplesNum',this.value)" />
+            <input class="ls-mini col-width-90" value="${esc(eodState.freezerSamplesNum)}" oninput="eodUpdate('freezerSamplesNum',this.value)" />
           </div>
           <div class="ls-row">
             <span class="ls-lbl">Sample Type(s):</span>
@@ -3996,7 +3943,7 @@ function renderEOD(){
                 ${boards.map(b=>`<option value="${b.id}" ${eodSourceBoard===b.id?'selected':''}>${esc(b.title)}</option>`).join('')}
               </select>
               <button class="ls-add-btn" style="font-size:11px;padding:3px 9px" onclick="eodRefreshIssues()">Refresh from Board</button>
-              ${tt('Pulls open issues from the selected board and fills in the BB and OP issue sections, sorted by instrument type (BIM, HVS, or general). Pick a board from the dropdown first if needed. You can edit the result after it populates.')}
+              ${tooltip('Pulls open issues from the selected board and fills in the BB and OP issue sections, sorted by instrument type (BIM, HVS, or general). Pick a board from the dropdown first if needed. You can edit the result after it populates.')}
             </div>
           </div>
           <div class="ls-cell-hdr bb" style="margin-top:6px">BB - BIM Issues</div>
@@ -4048,20 +3995,20 @@ function renderEOD(){
 
         <div class="ls-actions">
           <button class="btn-clear" onclick="eodClear()">Clear All</button>
-          <span class="tt-wrap tt-flip">
+          <span class="tooltip-wrap tooltip-flip">
             <button class="btn-snap" onclick="eodSaveSnapshot()">Save Snapshot</button>
-            <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
-            <span class="tt-box">Saves a draft of this form so you can reload it later from the Saved Snapshots tab.</span>
+            <button class="tooltip-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
+            <span class="tooltip-box">Saves a draft of this form so you can reload it later from the Saved Snapshots tab.</span>
           </span>
-          <span class="tt-wrap tt-flip">
+          <span class="tooltip-wrap tooltip-flip">
             <button class="btn-copy" onclick="eodCopy()">Copy to Clipboard</button>
-            <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
-            <span class="tt-box">Copies the formatted report so you can paste it directly into an Outlook email. Tables and layout are preserved on paste.</span>
+            <button class="tooltip-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
+            <span class="tooltip-box">Copies the formatted report so you can paste it directly into an Outlook email. Tables and layout are preserved on paste.</span>
           </span>
-          <span class="tt-wrap tt-flip">
+          <span class="tooltip-wrap tooltip-flip">
             <button class="btn-publish" onclick="eodPublish()" title="Publish this EOD so the team can view it under the Today tab">Publish</button>
-            <button class="tt-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
-            <span class="tt-box">Posts the current EOD to the Today tab where the whole team can see it in real time. Anyone can edit and republish to correct information without sending a follow-up email.</span>
+            <button class="tooltip-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
+            <span class="tooltip-box">Posts the current EOD to the Today tab where the whole team can see it in real time. Anyone can edit and republish to correct information without sending a follow-up email.</span>
           </span>
         </div>
       </div>
@@ -4089,12 +4036,12 @@ function refreshEodPreview(){
   if(el) el.innerHTML = renderEodHTML();
 }
 
-// Auto-pull BB/OP issues from active LabTrack cards. We split BIM-related, HVS-related,
+// Auto-pull issues from active cards. We split them by category tag,
 // and general issues into the right sections based on the instrument tag on each card.
 // Pulls active (non-resolved) issues from the selected source board
 // and routes each into the correct EOD section based on its instrument
-// type: cards tagged with BIM go to the BIM Issues row, HVS-tagged
-// cards go to the HVS row, and the remainder go to the general Issues
+// so each tagged category fills its matching row and the remainder
+// go to the general Issues
 // row. Tracks (BB vs OP) determine which side of the report each
 // issue lands on. Empty sections fall back to 'N/A' rather than
 // blanking out, matching how the team manually fills the form today.
@@ -4179,7 +4126,7 @@ function renderEodHTML(){
     '</td>' +
   '</tr>';
 
-  // Row 3: Remaining in freezer YES/NO
+  // Row 3: Remaining stored samples YES/NO
   html += '<tr>' +
     '<td style="' + TH_L + '"><b>Remaining samples (in freezer)</b></td>' +
     '<td style="' + TD + '" colspan="2">' + x(eodState.remainingFreezerYes) + ' <b>YES</b></td>' +
@@ -4297,7 +4244,7 @@ async function eodSaveSnapshot(){
   showToast('EOD snapshot saved.');
 }
 
-// ── BUNCH 6: TODAY / PUBLISH SYSTEM ────────────────────────────
+// ── TODAY / PUBLISH SYSTEM ────────────────────────────────────
 // Live shared view of the most recent published Line Status and EOD
 // for the current day. The Publish button on the report forms writes
 // the form state to a single per-day record in Firestore (one for
@@ -4306,7 +4253,7 @@ async function eodSaveSnapshot(){
 // version read-only and provides an "Edit & republish" affordance.
 //
 // This addresses the "live updating shared status" use case raised by
-// the Lead team: instead of follow-up emails to correct or update an
+// instead of follow-up emails to correct or update an
 // earlier Line Status, the publisher (or anyone) can edit the live
 // record and the team sees the new version immediately.
 
@@ -4539,7 +4486,7 @@ function todayLoadIntoForm(kind){
 // revision row is appended in either case.
 // Returns the YYYY-MM-DD date key to attribute this Line Status to,
 // using a 05:30 EST cutoff. A report published at or before 05:30 EST
-// is attributed to the previous calendar day because late-shift final
+// is attributed to the previous calendar day because late finals
 // line statuses are often sent just after midnight but still belong
 // operationally to the previous day (e.g. a Saturday final sent at
 // 02:30 Sunday should be filed under Saturday).
@@ -4600,7 +4547,7 @@ async function lsPublish(){
   }
 
   // If marked Final, write to the permanent lsArchive collection.
-  // Uses the day key with 05:30 EST cutoff so late-shift finals are
+  // Uses the day key with 05:30 EST cutoff so late finals are
   // attributed to the correct calendar day.
   if(isFinal){
     const archKey = lsArchiveDayKey();
@@ -4674,7 +4621,7 @@ async function eodPublish(){
 
 // Withdraws a published report from the Today panel. Used when something
 // was published in error or contains content that shouldn't remain
-// visible to the team (wrong shift, stale info, etc.). Withdrawal is
+// visible to the team (stale or incorrect info). Withdrawal is
 // audit-tracked: a reason is captured from the user and recorded in
 // the revision log alongside the withdrawer's name. The published
 // document is deleted from publishedReports/ but the revision history
@@ -4762,7 +4709,7 @@ async function purgePublishedReportsDaily(){
 // ── SUGGESTIONS ───────────────────────────────────────────────
 // A lightweight team feedback channel. Anyone signed in can post a
 // suggestion, thumbs-up others' ideas, and see what the team is
-// thinking. Leads can mark items closed. Firestore collection:
+// thinking. Users with the manager role can mark items closed. Firestore collection:
 // suggestions/{id} with fields: text, author, role, createdAt,
 // status ('open'|'closed'), closedBy, closedAt, thumbs (string[]).
 
@@ -4771,10 +4718,10 @@ let suggestSub = null;
 // ── REFERENCE / JOB AID ───────────────────────────────────────
 // Static on-shift reference material. No Firestore, no network: the
 // data lives in the code so it loads instantly and works offline once
-// the page is cached. Three resources behind tabs: IOM error code
-// lookup, the Line Status how-to, and the ALO training guide.
+// the page is cached. Three resources behind tabs: error code lookup,
+// the Line Status how-to, and the training guide.
 
-// IOM error codes from the 2025 reference sheet. Each entry:
+// Error codes from the reference sheet. Each entry:
 // [code, description, details, solutionClass, solutionLabel].
 // solutionClass drives the badge color (backon/relabel/problem/siemens).
 const IOM_ERROR_CODES = [
@@ -5047,7 +4994,7 @@ function renderLsGuide(){
         <li>In Flex Sample Events Over Time, click the three dots on the right side, then press Inspect</li>
         <li>Download the formatted CSV</li>
       </ul>
-      <div class="gnote">Repeat the line-selection steps for the opposite line's data.</div>
+      <div class="guide-note">Repeat the line-selection steps for the opposite line's data.</div>
       <h3>Loading into the Creator</h3>
       <ul>
         <li>Drag and drop the CSV into the "CSV Files" area at the top of the Line Status creator</li>
@@ -5062,7 +5009,7 @@ function renderLsGuide(){
         <li>Remove any resolved issues from previous line statuses so it is clear they are no longer an issue</li>
         <li>Note any actions taken when describing an issue (sorting, using the ROM, moving samples to the opposite line)</li>
       </ul>
-      <div class="gnote">Line status communicates to the lab, upper management, and the Engineers. Be as descriptive as possible.</div>
+      <div class="guide-note">Line status communicates to the lab, upper management, and the Engineers. Be as descriptive as possible.</div>
     </div>
   `;
 }
@@ -5072,7 +5019,7 @@ function renderTrainingGuide(){
     <div class="guide">
       <h2>ALO Training Guide</h2>
 
-      <div class="gweek">
+      <div class="guide-week">
         <h3>Week 1: Track Layout, Basic Module Functions, DMS</h3>
         <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Scheduled as float for undivided attention to learning the track layout.</p>
         <ul>
@@ -5091,7 +5038,7 @@ function renderTrainingGuide(){
         </ul>
       </div>
 
-      <div class="gweek">
+      <div class="guide-week">
         <h3>Week 2: Real Interactions and Recovery through DMS</h3>
         <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Scheduled to a line for real interactions with modules and recoveries.</p>
         <ul>
@@ -5103,7 +5050,7 @@ function renderTrainingGuide(){
         </ul>
       </div>
 
-      <div class="gweek">
+      <div class="guide-week">
         <h3>Week 3: Prioritization and Communication</h3>
         <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Scheduled to the opposite line to learn its layout and positioning.</p>
         <ul>
@@ -5115,7 +5062,7 @@ function renderTrainingGuide(){
         </ul>
       </div>
 
-      <div class="gweek">
+      <div class="guide-week">
         <h3>Week 4: Decision-Making and Confidence Building</h3>
         <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Scheduled to a line to practice ALO knowledge under supervision.</p>
         <ul>
@@ -5126,7 +5073,7 @@ function renderTrainingGuide(){
         </ul>
       </div>
 
-      <div class="gweek">
+      <div class="guide-week">
         <h3>Week 5: Line Status and Critical Thinking</h3>
         <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Scheduled as first float to practice supporting other ALOs and Line Status. Use the Line Status Guide to train.</p>
         <ul>
@@ -5138,7 +5085,7 @@ function renderTrainingGuide(){
         </ul>
       </div>
 
-      <div class="gweek">
+      <div class="guide-week">
         <h3>Week 6: Maintenance and Final Validation</h3>
         <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Assigned to second float to train on maintenance.</p>
         <ul>
@@ -5149,7 +5096,7 @@ function renderTrainingGuide(){
         </ul>
       </div>
 
-      <div class="gweek">
+      <div class="guide-week">
         <h3>Weeks 7 and 8: Decision-Making and Confidence Building</h3>
         <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Scheduled to a line to practice ALO knowledge.</p>
         <ul>
@@ -5180,7 +5127,7 @@ function renderSuggestions(){
       <div class="sug-form-lbl">Post a suggestion</div>
       <textarea id="sugText" maxlength="600" placeholder="Feature requests, workflow ideas, things that could work better..."></textarea>
       <div class="sug-form-row">
-        <button class="btn btn-p" style="font-size:13px;padding:7px 16px" onclick="submitSuggestion()">Post</button>
+        <button class="btn btn-primary" style="font-size:13px;padding:7px 16px" onclick="submitSuggestion()">Post</button>
       </div>
     </div>
     <div id="sugList"><div style="color:var(--muted);font-style:italic;font-size:13px;padding:10px 0">Loading...</div></div>
@@ -5204,8 +5151,7 @@ function populateSuggestList(items){
   const open = items.filter(s => s.status !== 'closed');
   const closed = items.filter(s => s.status === 'closed');
 
-  // Leads can close/reopen; everyone can see the button but only
-  // Leads and ALOs get the action. Guests are blocked at the write gate.
+  // Signed-in users can close or reopen; guests are blocked at the write gate.
   const canClose = ['Lead','ALO'].includes(user?.role);
 
   function cardHTML(s){
@@ -5283,8 +5229,8 @@ async function toggleSuggestThumb(suggId, userName, currentlyVoted){
   }
 }
 
-// Closes or reopens a suggestion. Only Leads and ALOs reach this via
-// the UI; the button is hidden for Siemens and Guest users.
+// Closes or reopens a suggestion. Hidden from guest users; the write
+// gate blocks anyone without an identity.
 async function setSuggestClosed(suggId, close){
   if(!requireIdentity('close suggestions')) return;
   const update = close
@@ -5293,15 +5239,15 @@ async function setSuggestClosed(suggId, close){
   await db.collection('suggestions').doc(suggId).update(update);
 }
 
-// ── LS ARCHIVE (Bunch 7) ──────────────────────────────────────
+// ── LS ARCHIVE ───────────────────────────────────────────────
 // Viewer for permanent final Line Status records. Organized by month
 // then by week (Sunday to Saturday) so the team can quickly find a
-// specific shift's final report. Only Line Statuses published with
+// specific day's final report. Only Line Statuses published with
 // the Final toggle are stored here.
 //
 // Day attribution uses the 05:30 EST cutoff: a final sent at 02:30
 // Sunday is stored under Saturday's date key so it sits in the right
-// shift's week bucket.
+// matching week bucket.
 
 async function renderLsArchive(){
   const body = document.getElementById('reportsBody');
@@ -5415,7 +5361,7 @@ async function openLsArchiveEntry(dateKey){
       <div class="panel-hdr">
         <div class="panel-title">Final Line Status</div>
         <div style="font-size:13px;color:var(--muted);margin-left:10px">${esc(dateKey)} · Published by ${esc(entry.publishedBy||'?')}</div>
-        <button class="mclose" style="margin-left:auto" onclick="this.closest('.panel-overlay').remove()">×</button>
+        <button class="modal-close-btn" style="margin-left:auto" onclick="this.closest('.panel-overlay').remove()">×</button>
       </div>
       <div class="panel-body">
         <div class="ls-render">${entry.renderedHtml || '<i style="color:var(--muted)">No content stored.</i>'}</div>

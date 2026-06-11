@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260104h">
+  <link rel="stylesheet" href="styles.css?v=20260104j">
 </head>
 <body>
 
@@ -26,14 +26,14 @@
     <div class="setup-icon" id="setupIcon"></div>
     <div class="setup-title">Welcome to LabTrack</div>
     <div class="setup-sub">Select your name and role to get started. Choose Guest to browse without making changes.</div>
-    <div class="fg" style="text-align:left">
-      <label class="flbl">Your Name</label>
-      <select class="fc" id="setupName">
+    <div class="form-group" style="text-align:left">
+      <label class="form-label">Your Name</label>
+      <select class="filter-chip" id="setupName">
         <option value="">Select your name...</option>
       </select>
     </div>
-    <div class="fg" style="text-align:left" id="roleSection">
-      <label class="flbl">Your Role</label>
+    <div class="form-group" style="text-align:left" id="roleSection">
+      <label class="form-label">Your Role</label>
       <div class="roles">
         <div class="role-opt" id="roleALO" onclick="selectRole('ALO')">
           <div class="role-name">ALO</div>
@@ -49,8 +49,8 @@
         </div>
       </div>
     </div>
-    <button class="btn btn-p" style="width:100%;padding:11px;margin-bottom:8px" onclick="saveUser()">Get Started</button>
-    <button class="btn btn-g" style="width:100%;padding:10px" onclick="enterGuest()">Browse as Guest</button>
+    <button class="btn btn-primary" style="width:100%;padding:11px;margin-bottom:8px" onclick="saveUser()">Get Started</button>
+    <button class="btn btn-ghost" style="width:100%;padding:10px" onclick="enterGuest()">Browse as Guest</button>
     <div class="setup-tour-link" onclick="startTourFromSetup()">New here? Take a quick tour</div>
   </div>
 </div>
@@ -78,37 +78,37 @@
 <!-- ── NEW ISSUE OVERLAY ── -->
 <div class="overlay hidden" id="newIssueOverlay">
   <div class="modal">
-    <div class="mhdr">
-      <div class="mtitle">Log New Issue</div>
-      <button class="mclose" onclick="closeNewIssue()">×</button>
+    <div class="modal-header">
+      <div class="modal-title">Log New Issue</div>
+      <button class="modal-close-btn" onclick="closeNewIssue()">×</button>
     </div>
-    <div class="fg">
-      <label class="flbl">Issue Title *</label>
-      <input class="fc" id="issueTitle" placeholder="Brief description of the issue" />
+    <div class="form-group">
+      <label class="form-label">Issue Title *</label>
+      <input class="filter-chip" id="issueTitle" placeholder="Brief description of the issue" />
     </div>
-    <div class="frow">
-      <div class="fg">
-        <label class="flbl" data-tooltip="Critical: line is down or a major process is stopped. Urgent: line is running but degraded and needs attention soon. Moderate: something to keep an eye on, not blocking. Low: non-urgent, can be addressed when time allows.">Priority *</label>
-        <select class="fc" id="issuePriority">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" data-tooltip="Critical: line is down or a major process is stopped. Urgent: line is running but degraded and needs attention soon. Moderate: something to keep an eye on, not blocking. Low: non-urgent, can be addressed when time allows.">Priority *</label>
+        <select class="filter-chip" id="issuePriority">
           <option value="critical">● Critical</option>
           <option value="urgent">● Urgent</option>
           <option value="moderate" selected>● Moderate</option>
           <option value="low">● Low</option>
         </select>
       </div>
-      <div class="fg">
-        <label class="flbl">Track *</label>
-        <select class="fc" id="issueTrack">
+      <div class="form-group">
+        <label class="form-label">Track *</label>
+        <select class="filter-chip" id="issueTrack">
           <option value="op">● Optimus Prime (OP)</option>
           <option value="bb">● Bumblebee (BB)</option>
           <option value="general">● General / Both</option>
         </select>
       </div>
     </div>
-    <div class="frow">
-      <div class="fg">
-        <label class="flbl">Instrument Type</label>
-        <select class="fc" id="issueInstrument">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Instrument Type</label>
+        <select class="filter-chip" id="issueInstrument">
           <option value="">Select...</option>
           <option value="HVS">HVS</option>
           <option value="ROM400">ROM400</option>
@@ -129,28 +129,28 @@
           <option value="other">Other</option>
         </select>
       </div>
-      <div class="fg">
-        <label class="flbl">Unit Number</label>
-        <input class="fc" id="issueUnit" placeholder="e.g. 3, 7, 22..." />
+      <div class="form-group">
+        <label class="form-label">Unit Number</label>
+        <input class="filter-chip" id="issueUnit" placeholder="e.g. 3, 7, 22..." />
       </div>
     </div>
-    <div class="fg">
-      <label class="flbl" data-tooltip="Who is actively working this issue. You can leave this blank and assign later from the card. Start typing to search the team roster.">Assign To</label>
+    <div class="form-group">
+      <label class="form-label" data-tooltip="Who is actively working this issue. You can leave this blank and assign later from the card. Start typing to search the team roster.">Assign To</label>
       <div class="assign-wrap">
-        <input class="fc" id="issueAssignee" placeholder="Type to search names…" autocomplete="off"
+        <input class="filter-chip" id="issueAssignee" placeholder="Type to search names…" autocomplete="off"
                oninput="showAssignDropdown('issueAssignee','issueAssignList',this.value)"
                onfocus="showAssignDropdown('issueAssignee','issueAssignList',this.value)"
                onblur="setTimeout(()=>hideAssignDropdown('issueAssignList'),180)" />
         <div class="assign-list" id="issueAssignList"></div>
       </div>
     </div>
-    <div class="fg">
-      <label class="flbl">Description / Notes</label>
-      <textarea class="fc" id="issueDesc" placeholder="Error codes, symptoms, steps already taken..."></textarea>
+    <div class="form-group">
+      <label class="form-label">Description / Notes</label>
+      <textarea class="filter-chip" id="issueDesc" placeholder="Error codes, symptoms, steps already taken..."></textarea>
     </div>
-    <div class="brow">
-      <button class="btn btn-g" onclick="closeNewIssue()">Cancel</button>
-      <button class="btn btn-p" onclick="submitNewIssue()">Log Issue</button>
+    <div class="detail-button-row">
+      <button class="btn btn-ghost" onclick="closeNewIssue()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitNewIssue()">Log Issue</button>
     </div>
   </div>
 </div>
@@ -163,17 +163,17 @@
 <!-- ── NEW BOARD OVERLAY ── -->
 <div class="overlay hidden" id="newBoardOverlay">
   <div class="modal" style="max-width:360px">
-    <div class="mhdr">
-      <div class="mtitle">New Board</div>
-      <button class="mclose" onclick="closeNewBoard()">×</button>
+    <div class="modal-header">
+      <div class="modal-title">New Board</div>
+      <button class="modal-close-btn" onclick="closeNewBoard()">×</button>
     </div>
-    <div class="fg">
-      <label class="flbl">Board Name</label>
-      <input class="fc" id="newBoardName" placeholder="e.g. Siemens Internal, Night Shift..." />
+    <div class="form-group">
+      <label class="form-label">Board Name</label>
+      <input class="filter-chip" id="newBoardName" placeholder="e.g. Siemens Internal, Night Shift..." />
     </div>
-    <div class="brow">
-      <button class="btn btn-g" onclick="closeNewBoard()">Cancel</button>
-      <button class="btn btn-p" onclick="submitNewBoard()">Create Board</button>
+    <div class="detail-button-row">
+      <button class="btn btn-ghost" onclick="closeNewBoard()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitNewBoard()">Create Board</button>
     </div>
   </div>
 </div>
@@ -181,18 +181,19 @@
 <!-- ── TOAST ── -->
 <div class="toast" id="toast"></div>
 
-<!-- ── HEADER (three-tier layout) ── -->
+<!-- ── HEADER ── -->
 <header>
 
-  <!-- Tier 1: identity, board context, primary view, global toggles, user.
-       This is the "always orient yourself" tier: who am I, what board am I
-       on, where do I most often want to go, and how is the app configured. -->
+  <!-- Header bar: identity, board context, primary navigation, global
+       toggles, and user. Lets the reader orient at a glance: who am I,
+       what board am I on, where do I most often go, and how is the app
+       configured. -->
   <div class="hdr-tier1">
     <div class="logo" onclick="showDashHome()" style="cursor:pointer" title="Back to dashboard">Lab<span>Track</span></div>
     <div class="board-context">
       <span class="board-context-lbl">Board</span>
       <select class="board-sel" id="boardSel" onchange="switchBoard(this.value)"></select>
-      <button class="btn-nb" onclick="openNewBoard()">+ New</button>
+      <button class="btn-new-board" onclick="openNewBoard()">+ New</button>
       <button class="btn-del-board" onclick="deleteBoard()" title="Delete current board">×</button>
     </div>
     <div class="hdr-right">
@@ -217,8 +218,9 @@
   <div class="ham-item" onclick="closeHam();openNewBoard()"><span class="ham-ico" data-icon="plus"></span>New Board</div>
   <div class="ham-item" onclick="closeHam();deleteBoard()"><span class="ham-ico" data-icon="close"></span>Delete Board</div>
   <div class="ham-item" onclick="closeHam();openToday()"><span class="ham-ico" data-icon="today"></span>Today</div>
-  <!-- ALO group on mobile: rendered as section header + indented items.
-       External links use anchor tags so they work as native links on tap. -->
+  <!-- Grouped tools in the menu: a section header followed by indented
+       items. External links use anchor tags so they work as native
+       links on tap. -->
   <div class="ham-section">ALO</div>
   <div class="ham-item ham-sub" onclick="closeHam();openReports()"><span class="ham-ico" data-icon="clipboard"></span>Reports</div>
   <a class="ham-item ham-sub" href="http://das.davita.com" target="_blank" rel="noopener" onclick="closeHam()"><span class="ham-ico" data-icon="link"></span>DAS</a>
@@ -257,14 +259,14 @@
 </div>
 
 <!-- ── FILTER BAR ── -->
-<div class="fbar">
-  <span class="flabel">Track</span>
+<div class="filter-bar">
+  <span class="filter-bar-label">Track</span>
   <span class="chip c-all" id="fAll" onclick="setTF('all')">All</span>
   <span class="chip" id="fOP" onclick="setTF('op')"><span class="dot dot-op"></span>OP</span>
   <span class="chip" id="fBB" onclick="setTF('bb')"><span class="dot dot-bb"></span>BB</span>
   <span class="chip" id="fGen" onclick="setTF('general')"><span class="dot dot-gen"></span>General</span>
-  <div class="fdivider"></div>
-  <span class="flabel">Priority</span>
+  <div class="filter-divider"></div>
+  <span class="filter-bar-label">Priority</span>
   <span class="chip c-all" id="pAll" onclick="setPF('all')">All</span>
   <span class="chip" id="pCrit" onclick="setPF('critical')">Critical</span>
   <span class="chip" id="pUrg" onclick="setPF('urgent')">Urgent</span>
@@ -297,7 +299,7 @@
       <select class="week-pick" id="archBoard" onchange="renderArchive()" style="min-width:160px"></select>
       <input class="search-input" id="archSearch" placeholder="Search archived…" oninput="renderArchive()" style="margin-left:0;width:200px;padding-left:11px" />
       <button class="btn-tool" style="background:#3b82f6;color:#fff;border-color:#3b82f6;margin-left:auto" onclick="exportCSV('archive')">Export CSV</button>
-      <button class="mclose" onclick="closeArchive()">×</button>
+      <button class="modal-close-btn" onclick="closeArchive()">×</button>
     </div>
     <div class="panel-body">
       <div class="arch-list" id="archList"></div>
@@ -317,13 +319,13 @@
         <option value="90">Last 90 days</option>
       </select>
       <button class="btn-tool" style="background:#3b82f6;color:#fff;border-color:#3b82f6;margin-left:auto" onclick="exportCSV('stats')">Export CSV</button>
-      <button class="mclose" onclick="closeStats()">×</button>
+      <button class="modal-close-btn" onclick="closeStats()">×</button>
     </div>
     <div class="panel-body" id="statsBody"></div>
   </div>
 </div>
 
-<!-- ── REPORTS PANEL (Bunch 5) ── -->
+<!-- ── REPORTS PANEL ── -->
 <div class="panel-overlay" id="reportsPanel">
   <div class="panel" style="max-width:1400px">
     <div class="panel-hdr">
@@ -334,19 +336,19 @@
         <div class="reports-tab" id="rTabEod" onclick="switchReportTab('eod')">EOD</div>
         <div class="reports-tab" id="rTabLsArch" onclick="switchReportTab('lsarch')">LS Archive</div>
       </div>
-      <button class="mclose" style="margin-left:auto" onclick="closeReports()">×</button>
+      <button class="modal-close-btn" style="margin-left:auto" onclick="closeReports()">×</button>
     </div>
     <div class="panel-body" id="reportsBody"></div>
   </div>
 </div>
 
-<!-- ── TODAY PANEL (Bunch 6) ── -->
+<!-- ── TODAY PANEL ── -->
 <!--
   The Today panel is a read-only view of the most recent published Line
-  Status and EOD reports for the day. It exists so anyone on the team
-  (especially Leads) can see the current operational state at a glance
-  without digging through email or asking the publisher to forward.
-  Editing-after-publish is supported with a full revision history.
+  Status and EOD reports for the day. It lets anyone on the team see the
+  current state at a glance without digging through email or asking the
+  publisher to forward. Editing after publish is supported with a full
+  revision history.
 -->
 <div class="panel-overlay" id="todayPanel">
   <div class="panel" style="max-width:1100px">
@@ -357,7 +359,7 @@
         <div class="reports-tab" id="tTabEod" onclick="switchTodayTab('eod')">EOD</div>
         <div class="reports-tab" id="tTabHist" onclick="switchTodayTab('hist')">Revision History</div>
       </div>
-      <button class="mclose" style="margin-left:auto" onclick="closeToday()">×</button>
+      <button class="modal-close-btn" style="margin-left:auto" onclick="closeToday()">×</button>
     </div>
     <div class="panel-body" id="todayBody"></div>
   </div>
@@ -366,24 +368,24 @@
 <!-- ── SUGGESTIONS PANEL ──
      A lightweight channel for the team to post feature requests,
      workflow improvements, or general feedback. Anyone signed in can
-     post. Thumbs-up counts let ideas surface organically. Leads can
-     mark items closed once acted on or declined.
+     post. Thumbs-up counts let ideas surface organically. Users with
+     the manager role can mark items closed once acted on or declined.
 -->
 <div class="panel-overlay" id="suggestPanel">
   <div class="panel" style="max-width:700px">
     <div class="panel-hdr">
       <div class="panel-title">Suggestions</div>
-      <button class="mclose" style="margin-left:auto" onclick="closeSuggestions()">×</button>
+      <button class="modal-close-btn" style="margin-left:auto" onclick="closeSuggestions()">×</button>
     </div>
     <div class="panel-body" id="suggestBody"></div>
   </div>
 </div>
 
 <!-- ── REFERENCE / JOB AID PANEL ──
-     Consolidated on-shift reference material: IOM error code lookup,
-     the Line Status how-to guide, and the ALO training guide. Tabbed
-     so each resource has its own space. All content is static (no
-     Firestore) so it loads instantly and works offline once cached.
+     Consolidated reference material: error code lookup, the Line Status
+     how-to guide, and the training guide. Tabbed so each resource has
+     its own space. All content is static (no Firestore) so it loads
+     instantly and works offline once cached.
 -->
 <div class="panel-overlay" id="refPanel">
   <div class="panel" style="max-width:1000px">
@@ -394,7 +396,7 @@
         <div class="reports-tab" id="refTabLsGuide" onclick="switchRefTab('lsguide')">Line Status Guide</div>
         <div class="reports-tab" id="refTabTraining" onclick="switchRefTab('training')">ALO Training Guide</div>
       </div>
-      <button class="mclose" onclick="closeReference()">×</button>
+      <button class="modal-close-btn" onclick="closeReference()">×</button>
     </div>
     <div class="panel-body" id="refBody"></div>
   </div>
@@ -406,6 +408,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-<script src="script.js?v=20260104h"></script>
+<script src="script.js?v=20260104j"></script>
 </body>
 </html>

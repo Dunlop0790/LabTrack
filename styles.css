@@ -23,18 +23,18 @@ html.dark{
 }
 /* Dark mode: pbadges remain outlined (no fill); tbadges use slightly
    darker solid colors so they don't glow on the darker card background. */
-html.dark .pbadge.critical{color:#fca5a5;border-color:#fca5a5}
-html.dark .pbadge.urgent{color:#fdba74;border-color:#fdba74}
-html.dark .pbadge.moderate{color:#67e8f9;border-color:#67e8f9}
-html.dark .pbadge.monitor{color:#67e8f9;border-color:#67e8f9}
-html.dark .pbadge.low{color:#9ca3af;border-color:#9ca3af}
-html.dark .tbadge.op{background:#b91c1c;color:#fff}
-html.dark .tbadge.bb{background:#d97706;color:#1e293b}
-html.dark .tbadge.general{background:#64748b;color:#fff}
-html.dark select.fc option{background:var(--input-bg);color:var(--text)}
+html.dark .priority-badge.critical{color:#fca5a5;border-color:#fca5a5}
+html.dark .priority-badge.urgent{color:#fdba74;border-color:#fdba74}
+html.dark .priority-badge.moderate{color:#67e8f9;border-color:#67e8f9}
+html.dark .priority-badge.monitor{color:#67e8f9;border-color:#67e8f9}
+html.dark .priority-badge.low{color:#9ca3af;border-color:#9ca3af}
+html.dark .track-badge.op{background:#b91c1c;color:#fff}
+html.dark .track-badge.bb{background:#d97706;color:#1e293b}
+html.dark .track-badge.general{background:#64748b;color:#fff}
+html.dark select.filter-chip option{background:var(--input-bg);color:var(--text)}
 html.dark .desc-box{background:#0f172a}
-html.dark .ci{background:#0f172a}
-html.dark .h-entry b{color:var(--text)}
+html.dark .comment-item{background:#0f172a}
+html.dark .history-entry b{color:var(--text)}
 html.dark .stat-card{background:#0f172a}
 html.dark .arch-card{background:#0f172a}
 html.dark .mention{background:#1e3a5f;color:#93c5fd}
@@ -47,52 +47,29 @@ body{font-family:'Geist','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',san
    text everywhere else. */
 input,select,textarea,button,optgroup,option{font-family:inherit;font-size:inherit}
 
-/* ── HEADER (three-tier layout) ──
-   Tier 1 (top, navy): logo, board picker, primary navigation (Today),
-                       and global toggles (theme, sound, godzilla, user).
-   Tier 2 (middle, navy2): tools and panels (Reports, Archive, Stats, Print).
-                           Each button highlights when its panel is open.
-   Tier 3 (filter bar): track filters, priority filters, search.
-   On mobile, tiers 1 and 2 collapse into the hamburger menu; tier 3
-   (the most-used filters) stays visible. */
+/* ── HEADER ──
+   The header bar (navy): logo, board picker, primary navigation (Today),
+   and global toggles (theme, sound, godzilla, user). Tools and panels
+   (Reports, Archive, Stats) are reached from the dashboard tiles rather
+   than the header. Below the header sits the filter bar (track filters,
+   priority filters, search). On mobile the header collapses into the
+   hamburger menu; the filter bar stays visible. */
 header{background:var(--navy);color:#fff;flex-shrink:0;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25);font-family:'Geist','Inter',sans-serif}
-.hdr-tier1,.hdr-tier2{display:flex;align-items:center;gap:12px;padding:0 18px}
-.hdr-tier1{height:48px;background:var(--navy);border-bottom:1px solid rgba(255,255,255,.06)}
-.hdr-tier2{height:40px;background:var(--navy2);gap:6px}
+.hdr-tier1{display:flex;align-items:center;gap:12px;padding:0 18px;height:48px;background:var(--navy);border-bottom:1px solid rgba(255,255,255,.06)}
 .logo{font-size:17px;font-weight:700;letter-spacing:-.3px;white-space:nowrap;font-family:'Geist','Inter',sans-serif}
 .logo span{color:#60a5fa;font-weight:800}
 .board-context{display:flex;align-items:center;gap:8px;margin-left:6px}
 .board-context-lbl{font-size:10px;font-weight:600;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.6px}
 .board-sel{background:var(--navy2);border:1px solid rgba(255,255,255,.18);color:#fff;padding:5px 10px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;min-width:150px;max-width:200px;font-family:'Geist','Inter',sans-serif}
-.btn-nb{background:transparent;border:1px dashed rgba(255,255,255,.35);color:rgba(255,255,255,.75);padding:5px 11px;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap;font-family:inherit;font-weight:500}
-.btn-nb:hover{border-color:rgba(255,255,255,.6);color:#fff}
+.btn-new-board{background:transparent;border:1px dashed rgba(255,255,255,.35);color:rgba(255,255,255,.75);padding:5px 11px;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap;font-family:inherit;font-weight:500}
+.btn-new-board:hover{border-color:rgba(255,255,255,.6);color:#fff}
 .btn-del-board{background:transparent;border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.55);width:26px;height:26px;border-radius:6px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
 .btn-del-board:hover{background:rgba(220,38,38,.2);border-color:rgba(220,38,38,.5);color:#fff}
 .hdr-right{margin-left:auto;display:flex;align-items:center;gap:8px}
-.hdr-tier2 .hdr-right{gap:6px}
-/* Tier 1 buttons: a touch larger and weightier than tier 2 */
+/* Header buttons */
 .hdr-tier1 .btn-tool{font-weight:600;font-size:13px;padding:6px 12px}
-/* Tier 2 buttons: lighter weight, more compact */
-.hdr-tier2 .btn-tool{font-weight:500;font-size:12px;padding:5px 11px}
 .btn-tool.active{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.4)}
 
-/* ── DEPARTMENT DROPDOWNS (tier 2) ──
-   A trigger button that opens a menu of related items below it.
-   The menu is absolute-positioned and pinned to the trigger via the
-   relative-positioned wrapper. Items can be either internal panels
-   (onclick) or external links (href). Same look for both. */
-.dept-dropdown{position:relative}
-.dept-trigger{display:inline-flex;align-items:center;gap:4px}
-.dept-chev{transition:transform .15s ease;opacity:.7}
-.dept-dropdown.open .dept-chev{transform:rotate(180deg)}
-.dept-dropdown.open .dept-trigger{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.4)}
-.dept-menu{position:absolute;top:calc(100% + 6px);left:0;min-width:170px;background:var(--card-bg);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-md);overflow:hidden;display:none;z-index:140}
-.dept-dropdown.open .dept-menu{display:block}
-.dept-item{display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;text-decoration:none;border-bottom:1px solid var(--border);font-family:inherit;background:transparent}
-.dept-item:last-child{border-bottom:none}
-.dept-item:hover{background:var(--hover-bg);color:#3b82f6}
-.dept-item .dept-ico{display:inline-flex;align-items:center;justify-content:center;color:var(--muted);width:16px;height:16px;flex-shrink:0}
-.dept-item:hover .dept-ico{color:#3b82f6}
 .user-badge{display:inline-flex;align-items:center;gap:7px;cursor:pointer;padding:3px 10px 3px 4px;border-radius:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);font-size:13px;font-weight:500}
 .user-badge:hover{background:rgba(255,255,255,.14)}
 .avatar{width:24px;height:24px;border-radius:50%;background:#3b82f6;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
@@ -105,11 +82,13 @@ header{background:var(--navy);color:#fff;flex-shrink:0;position:sticky;top:0;z-i
 .btn-new{background:#3b82f6;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:-.1px}
 .btn-new:hover{background:#2563eb}
 .hamburger{background:transparent;border:none;color:#fff;cursor:pointer;padding:0 4px;display:none;align-items:center;justify-content:center;line-height:0}
-.btn-nb:hover{background:rgba(255,255,255,.1)}
+.btn-new-board:hover{background:rgba(255,255,255,.1)}
 
-/* ── FILTER BAR ── */
-.fbar{display:flex;align-items:center;gap:6px;padding:8px 18px;background:var(--card-bg);border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0}
-.flabel{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-right:2px}
+/* ── FILTER BAR ──
+   The strip under the header on the expanded board view: track and
+   priority filter chips, the Track/Priority captions, and the search box. */
+.filter-bar{display:flex;align-items:center;gap:6px;padding:8px 18px;background:var(--card-bg);border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0}
+.filter-bar-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-right:2px}
 .chip{font-size:12px;padding:3px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--card-bg);color:var(--text);cursor:pointer;font-weight:500;transition:all .12s;user-select:none}
 .chip:hover{border-color:#93c5fd;background:var(--accent-soft)}
 .chip.c-all{border-color:#3b82f6;background:#3b82f6;color:#fff}
@@ -120,7 +99,7 @@ header{background:var(--navy);color:#fff;flex-shrink:0;position:sticky;top:0;z-i
 .chip.c-urgent{border-color:var(--urgent);background:var(--urgent);color:#fff}
 .chip.c-moderate{border-color:var(--moderate-c);background:var(--moderate-c);color:#fff}
 .chip.c-low{border-color:var(--low);background:var(--low);color:#fff}
-.fdivider{width:1px;height:18px;background:var(--border);margin:0 3px}
+.filter-divider{width:1px;height:18px;background:var(--border);margin:0 3px}
 .search-wrap{position:relative;margin-left:auto}
 .search-input{font-size:12px;padding:5px 10px 5px 28px;border:1.5px solid var(--border);border-radius:20px;background:var(--input-bg);color:var(--text);outline:none;width:200px;transition:all .15s}
 .search-input:focus{border-color:#3b82f6;width:250px}
@@ -132,31 +111,37 @@ header{background:var(--navy);color:#fff;flex-shrink:0;position:sticky;top:0;z-i
 .history-toggle:hover{text-decoration:underline}
 .history-list{margin-top:8px;border-top:1px solid var(--border);padding-top:10px;display:none;max-height:160px;overflow-y:auto}
 .history-list.open{display:block}
-.h-entry{font-size:11px;color:var(--muted);padding:3px 0;line-height:1.5}
-.h-entry b{color:var(--text);font-weight:600}
-.h-time{color:#94a3b8;font-size:10px}
+.history-entry{font-size:11px;color:var(--muted);padding:3px 0;line-height:1.5}
+.history-entry b{color:var(--text);font-weight:600}
+.history-time{color:#94a3b8;font-size:10px}
 
-/* ── ASSIGNEE AUTOCOMPLETE ── */
+/* ── ASSIGNEE AUTOCOMPLETE ──
+   The name suggestion dropdown that appears when typing in the Assignee
+   field on the new issue and detail forms. */
 .assign-wrap{position:relative}
 .assign-list{position:absolute;top:100%;left:0;right:0;background:var(--card-bg);border:1.5px solid var(--border);border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:240px;overflow-y:auto;z-index:50;margin-top:3px;display:none}
 .assign-list.open{display:block}
 .assign-group-hdr{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:7px 11px 4px;background:var(--panel-bg);border-bottom:1px solid var(--border);position:sticky;top:0}
 .assign-item{padding:7px 11px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--text)}
 .assign-item:hover,.assign-item.active{background:var(--accent-soft)}
-.assign-item .a-dot{width:20px;height:20px;font-size:10px}
+.assign-item .assignee-dot{width:20px;height:20px;font-size:10px}
 .assign-item.unassign{color:var(--muted);font-style:italic;border-bottom:1px solid var(--border)}
 .assign-empty{padding:11px;font-size:12px;color:var(--muted);text-align:center}
 
-/* ── MENTIONS ── */
+/* ── MENTIONS ──
+   @name highlights inside comment text, and the My Mentions filter
+   button state in the comment area. */
 .mention{background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:3px;font-weight:600;font-size:.95em}
 .mention-list{position:absolute;background:var(--card-bg);border:1.5px solid var(--border);border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:180px;overflow-y:auto;z-index:60;min-width:180px;display:none}
 .mention-list.open{display:block}
 .mention-item{padding:6px 11px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:7px;color:var(--text)}
 .mention-item:hover,.mention-item.active{background:var(--accent-soft)}
-.mention-item .a-dot{width:18px;height:18px;font-size:9px}
+.mention-item .assignee-dot{width:18px;height:18px;font-size:9px}
 .mention-role{font-size:10px;color:var(--muted);margin-left:auto}
 
-/* ── REACTIONS ── */
+/* ── REACTIONS ──
+   Emoji reaction buttons and counters attached to each comment in the
+   issue detail view. */
 .reactions{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
 .react-btn{font-size:11px;padding:2px 7px;border:1px solid var(--border);border-radius:12px;background:var(--card-bg);color:var(--text);cursor:pointer;display:inline-flex;align-items:center;gap:3px;transition:all .12s}
 .react-btn:hover{background:var(--hover-bg);border-color:#94a3b8}
@@ -167,20 +152,18 @@ header{background:var(--navy);color:#fff;flex-shrink:0;position:sticky;top:0;z-i
 .dot-op{background:var(--op)}
 .dot-bb{background:var(--bb)}
 .dot-gen{background:#94a3b8}
-.dot-critical{background:var(--critical)}
-.dot-urgent{background:var(--urgent)}
-.dot-moderate{background:var(--moderate-c)}
-.dot-low{background:var(--low)}
 .chip.c-op .dot,.chip.c-bb .dot,.chip.c-gen .dot,.chip.c-critical .dot,.chip.c-urgent .dot,.chip.c-moderate .dot,.chip.c-low .dot{background:rgba(255,255,255,.95)}
-select.fc option[value="critical"]{color:var(--critical)}
-select.fc option[value="urgent"]{color:var(--urgent)}
-select.fc option[value="moderate"]{color:var(--moderate-c)}
-select.fc option[value="low"]{color:var(--low)}
-select.fc option[value="op"]{color:var(--op)}
-select.fc option[value="bb"]{color:var(--bb)}
-select.fc option[value="general"]{color:#64748b}
+select.filter-chip option[value="critical"]{color:var(--critical)}
+select.filter-chip option[value="urgent"]{color:var(--urgent)}
+select.filter-chip option[value="moderate"]{color:var(--moderate-c)}
+select.filter-chip option[value="low"]{color:var(--low)}
+select.filter-chip option[value="op"]{color:var(--op)}
+select.filter-chip option[value="bb"]{color:var(--bb)}
+select.filter-chip option[value="general"]{color:#64748b}
 
-/* ── BOARD ── */
+/* ── BOARD ──
+   The full expanded kanban board: column containers, column headers
+   with counts, and the scrolling card area inside each column. */
 /* ── DASHBOARD HOME ──
    Landing view. Tile grid where the issue board is one tool among many. */
 .hidden{display:none !important}
@@ -264,10 +247,10 @@ select.fc option[value="general"]{color:#64748b}
 .mini-card.p-moderate,.mini-card.p-monitor{border-left-color:var(--moderate-c)}
 .mini-card.p-low{border-left-color:var(--low)}
 .mini-card-top{display:flex;align-items:center;gap:4px;margin-bottom:3px}
-.mini-tb{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:1px 5px;border-radius:2px}
-.mini-tb.op{background:var(--op);color:#fff}
-.mini-tb.bb{background:var(--bb);color:#fff}
-.mini-tb.gen{background:#94a3b8;color:#fff}
+.mini-track-badge{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:1px 5px;border-radius:2px}
+.mini-track-badge.op{background:var(--op);color:#fff}
+.mini-track-badge.bb{background:var(--bb);color:#fff}
+.mini-track-badge.gen{background:#94a3b8;color:#fff}
 .mini-card-title{font-size:11px;font-weight:500;line-height:1.35;color:var(--text)}
 .mini-card-meta{font-size:9px;color:var(--muted);margin-top:3px}
 .mini-empty{font-size:10px;color:var(--muted);font-style:italic;padding:8px 6px;text-align:center}
@@ -320,9 +303,11 @@ html.dark .ico-sug{background:#7f1d1d;color:#fca5a5}
 .col-cards{padding:8px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:7px}
 .col-empty{text-align:center;padding:18px 8px;color:#94a3b8;font-size:12px;font-style:italic}
 
-/* ── CARD ── */
+/* ── CARD ──
+   Issue cards on the expanded board: layout, priority edge stripe,
+   track badge, assignee chip, comment count, and age indicator. */
 /* Card design: priority drives the left edge stripe; track is conveyed by
-   the solid-color tbadge pill. No top border accent, no hover lift.
+   the solid-color track-badge pill. No top border accent, no hover lift.
    Instead a subtle background shift on hover for a quieter feel. */
 .card{
   background:var(--card-bg);
@@ -355,49 +340,53 @@ html.dark .card.s-resolved.p-critical{border-left-color:#7f1d1d}
 html.dark .card.s-resolved.p-urgent{border-left-color:#7c2d12}
 html.dark .card.s-resolved.p-moderate,html.dark .card.s-resolved.p-monitor{border-left-color:#0c4a6e}
 html.dark .card.s-resolved.p-low{border-left-color:#475569}
-/* Track color removed from card border-left; lives on the tbadge only.
+/* Track color removed from card border-left; lives on the track-badge only.
    Keep the legacy selectors as no-ops so existing rendered HTML doesn't
    regress (they will just be overridden by the priority rules above). */
 .card.op,.card.bb,.card.general{}
 
 /* Priority badge: smaller and less visually loud. The left edge stripe
    is now the primary signal; this stays as a redundant text label. */
-.pbadge{font-size:9px;font-weight:600;padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.4px;background:transparent;color:var(--muted);border:1px solid var(--border)}
-.pbadge.critical{color:var(--critical);border-color:var(--critical)}
-.pbadge.urgent{color:var(--urgent);border-color:var(--urgent)}
-.pbadge.moderate,.pbadge.monitor{color:var(--moderate-c);border-color:var(--moderate-c)}
-.pbadge.low{color:var(--low);border-color:var(--low)}
+.priority-badge{font-size:9px;font-weight:600;padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.4px;background:transparent;color:var(--muted);border:1px solid var(--border)}
+.priority-badge.critical{color:var(--critical);border-color:var(--critical)}
+.priority-badge.urgent{color:var(--urgent);border-color:var(--urgent)}
+.priority-badge.moderate,.priority-badge.monitor{color:var(--moderate-c);border-color:var(--moderate-c)}
+.priority-badge.low{color:var(--low);border-color:var(--low)}
 
 /* Track badge: solid color fill, the primary track signal */
-.tbadge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px;margin-left:auto;text-transform:uppercase;letter-spacing:.3px;transition:filter .12s}
-.tbadge.op{background:var(--op);color:#fff}
-.tbadge.bb{background:#f59e0b;color:#1e293b}
-.tbadge.general{background:#94a3b8;color:#fff}
-.card:hover .tbadge{filter:brightness(0.92)}
+.track-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px;margin-left:auto;text-transform:uppercase;letter-spacing:.3px;transition:filter .12s}
+.track-badge.op{background:var(--op);color:#fff}
+.track-badge.bb{background:#f59e0b;color:#1e293b}
+.track-badge.general{background:#94a3b8;color:#fff}
+.card:hover .track-badge{filter:brightness(0.92)}
 .card.aging{box-shadow:0 0 0 2px rgba(220,38,38,.35), 0 4px 12px rgba(220,38,38,.25);animation:agingPulse 2.5s ease-in-out infinite}
 @keyframes agingPulse{0%,100%{box-shadow:0 0 0 2px rgba(220,38,38,.35), 0 4px 12px rgba(220,38,38,.25)}50%{box-shadow:0 0 0 3px rgba(220,38,38,.5), 0 4px 18px rgba(220,38,38,.4)}}
 .card-top{display:flex;align-items:center;gap:5px;margin-bottom:5px}
 .card-title{font-size:13px;font-weight:600;line-height:1.4;margin-bottom:5px}
 .card-inst{font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:7px;letter-spacing:.3px}
 .card-bot{display:flex;align-items:center;gap:5px}
-.a-chip{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px}
-.a-dot{width:18px;height:18px;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.cc{margin-left:auto;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:3px}
-.cc svg{flex-shrink:0}
+.assignee-chip{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.assignee-dot{width:18px;height:18px;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.card-comment-count{margin-left:auto;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:3px}
+.card-comment-count svg{flex-shrink:0}
 
-/* ── OVERLAYS ── */
+/* ── OVERLAYS ──
+   The dimmed full-screen backdrop and centered modal container used by
+   every popup (new issue, detail, new board, reports, panels). */
 .overlay{position:fixed;inset:0;background:rgba(15,23,42,.25);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
 .overlay.hidden{display:none}
 .modal{background:var(--card-bg);border-radius:12px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;padding:22px}
 .modal-lg{max-width:740px}
-.mhdr{display:flex;align-items:flex-start;gap:10px;margin-bottom:18px}
-.mtitle{font-size:17px;font-weight:700;line-height:1.3;flex:1}
-.mclose{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);padding:0 5px;line-height:1;border-radius:4px}
-.mclose:hover{background:#f1f5f9}
+.modal-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:18px}
+.modal-title{font-size:17px;font-weight:700;line-height:1.3;flex:1}
+.modal-close-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);padding:0 5px;line-height:1;border-radius:4px}
+.modal-close-btn:hover{background:#f1f5f9}
 
-/* ── FORM ── */
-.fg{margin-bottom:14px}
-.flbl{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:5px}
+/* ── FORM ──
+   Shared input styling inside modals: field labels, text inputs,
+   selects, textareas, and their focus rings. */
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:5px}
 
 /* ── TOOLTIP SYSTEM ──
    A small "?" bubble that shows a plain-language explanation on hover
@@ -406,31 +395,33 @@ html.dark .card.s-resolved.p-low{border-left-color:#475569}
    trigger by default and flips below when there is not enough space.
    Kept intentionally simple: no animation, no portal rendering, no
    dependencies. */
-.tt-wrap{position:relative;display:inline-flex;align-items:center;gap:5px}
-.tt-btn{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;border:1.5px solid var(--muted);color:var(--muted);font-size:10px;font-weight:700;cursor:help;flex-shrink:0;line-height:1;background:transparent;padding:0;font-family:'Geist','Inter',sans-serif;user-select:none;transition:border-color .1s,color .1s}
-.tt-btn:hover,.tt-btn.open{border-color:var(--accent);color:var(--accent)}
-.tt-box{position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:var(--card-bg);border:1px solid var(--border);border-radius:7px;padding:9px 11px;font-size:12px;font-weight:400;color:var(--text);line-height:1.45;min-width:200px;max-width:280px;text-align:left;text-transform:none;letter-spacing:0;box-shadow:0 4px 16px rgba(0,0,0,.18);pointer-events:none;opacity:0;white-space:normal;z-index:300;transition:opacity .1s}
-.tt-btn:hover + .tt-box,.tt-btn.open + .tt-box{opacity:1;pointer-events:auto}
+.tooltip-wrap{position:relative;display:inline-flex;align-items:center;gap:5px}
+.tooltip-btn{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;border:1.5px solid var(--muted);color:var(--muted);font-size:10px;font-weight:700;cursor:help;flex-shrink:0;line-height:1;background:transparent;padding:0;font-family:'Geist','Inter',sans-serif;user-select:none;transition:border-color .1s,color .1s}
+.tooltip-btn:hover,.tooltip-btn.open{border-color:var(--accent);color:var(--accent)}
+.tooltip-box{position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:var(--card-bg);border:1px solid var(--border);border-radius:7px;padding:9px 11px;font-size:12px;font-weight:400;color:var(--text);line-height:1.45;min-width:200px;max-width:280px;text-align:left;text-transform:none;letter-spacing:0;box-shadow:0 4px 16px rgba(0,0,0,.18);pointer-events:none;opacity:0;white-space:normal;z-index:300;transition:opacity .1s}
+.tooltip-btn:hover + .tooltip-box,.tooltip-btn.open + .tooltip-box{opacity:1;pointer-events:auto}
 /* Flip below when near top of screen */
-.tt-flip .tt-box{bottom:auto;top:calc(100% + 7px)}
+.tooltip-flip .tooltip-box{bottom:auto;top:calc(100% + 7px)}
 /* Arrow */
-.tt-box::before{content:'';position:absolute;bottom:-5px;left:50%;transform:translateX(-50%) rotate(45deg);width:8px;height:8px;background:var(--card-bg);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
-.tt-flip .tt-box::before{bottom:auto;top:-5px;border-right:none;border-bottom:none;border-left:1px solid var(--border);border-top:1px solid var(--border)}
+.tooltip-box::before{content:'';position:absolute;bottom:-5px;left:50%;transform:translateX(-50%) rotate(45deg);width:8px;height:8px;background:var(--card-bg);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.tooltip-flip .tooltip-box::before{bottom:auto;top:-5px;border-right:none;border-bottom:none;border-left:1px solid var(--border);border-top:1px solid var(--border)}
 /* Form inputs: 1px borders with a subtle box-shadow ring on focus
    rather than a color change. Tighter vertical padding to match the
    denser overall feel of the redesign. */
-.fc{width:100%;padding:7px 11px;border:1px solid var(--border);border-radius:6px;font-size:14px;color:var(--text);outline:none;transition:border-color .12s,box-shadow .12s;font-family:inherit;background:var(--input-bg)}
-.fc:focus{border-color:var(--border);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
-select.fc{cursor:pointer}
-textarea.fc{resize:vertical;min-height:76px}
-.frow{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.filter-chip{width:100%;padding:7px 11px;border:1px solid var(--border);border-radius:6px;font-size:14px;color:var(--text);outline:none;transition:border-color .12s,box-shadow .12s;font-family:inherit;background:var(--input-bg)}
+.filter-chip:focus{border-color:var(--border);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+select.filter-chip{cursor:pointer}
+textarea.filter-chip{resize:vertical;min-height:76px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 .btn{padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .12s}
 .btn:hover{opacity:.85}
-.btn-p{background:#3b82f6;color:#fff}.btn-d{background:#dc2626;color:#fff}.btn-g{background:#f1f5f9;color:var(--text)}
-.brow{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+.btn-primary{background:#3b82f6;color:#fff}.btn-danger{background:#dc2626;color:#fff}.btn-ghost{background:#f1f5f9;color:var(--text)}
+.detail-button-row{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
 
-/* ── DETAIL ── */
-.dbody{display:grid;grid-template-columns:1fr 260px;gap:22px}
+/* ── DETAIL ──
+   The issue detail modal: sidebar fields, comment list and composer,
+   history log, and the fix description box. */
+.detail-body{display:grid;grid-template-columns:1fr 260px;gap:22px}
 .desc-box{font-size:14px;line-height:1.6;background:var(--panel-bg);padding:11px;border-radius:6px;margin-bottom:18px;min-height:56px;color:var(--text);white-space:pre-wrap}
 /* Fix description box: green tint to make it visually distinct from
    the issue description. Shown in both the live detail view and the
@@ -444,26 +435,28 @@ html.dark .fix-box-lbl{color:#4ade80}
 .fix-box-edit{font-size:11px;color:#3b82f6;cursor:pointer;margin-left:8px;font-weight:600}
 .fix-box-edit:hover{text-decoration:underline}
 .sec-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:9px}
-.clist{display:flex;flex-direction:column;gap:8px;margin-bottom:11px;max-height:210px;overflow-y:auto}
-.ci{background:var(--panel-bg);border-radius:6px;padding:9px 11px}
-.ci-author{font-size:12px;font-weight:700;margin-bottom:1px}
-.ci-text{font-size:13px;line-height:1.5}
-.ci-time{font-size:11px;color:var(--muted);margin-top:3px}
+.comment-list{display:flex;flex-direction:column;gap:8px;margin-bottom:11px;max-height:210px;overflow-y:auto}
+.comment-item{background:var(--panel-bg);border-radius:6px;padding:9px 11px}
+.comment-author{font-size:12px;font-weight:700;margin-bottom:1px}
+.comment-text{font-size:13px;line-height:1.5}
+.comment-time{font-size:11px;color:var(--muted);margin-top:3px}
 .cinput-row{display:flex;gap:7px;align-items:flex-start}
 .cinput-row textarea{flex:1;min-height:58px;font-size:13px}
 .cinput-meta{display:flex;justify-content:space-between;align-items:center;margin-top:5px}
-.ccount{font-size:11px;color:var(--muted)}
+.comment-count{font-size:11px;color:var(--muted)}
 .sidebar{display:flex;flex-direction:column;gap:16px}
-.sb-sec{}
-.sb-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:5px}
-.sb-val{font-size:14px;font-weight:500}
+.sidebar-section{}
+.sidebar-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:5px}
+.sidebar-value{font-size:14px;font-weight:500}
 .assign-row{display:flex;gap:6px}
 .assign-row input{flex:1}
-.btn-me{background:#eff6ff;color:#1d4ed8;border:none;padding:8px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
-.btn-me:hover{background:#dbeafe}
-.sb-del{margin-top:8px;padding-top:14px;border-top:1px solid var(--border)}
+.btn-mention-me{background:#eff6ff;color:#1d4ed8;border:none;padding:8px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-mention-me:hover{background:#dbeafe}
+.sidebar-delete{margin-top:8px;padding-top:14px;border-top:1px solid var(--border)}
 
-/* ── SETUP ── */
+/* ── SETUP ──
+   The first-launch identity screen: role picker cards, name entry, and
+   the take-a-tour link. */
 .setup-modal{max-width:400px;text-align:center}
 .setup-icon{font-size:46px;margin-bottom:14px;display:flex;align-items:center;justify-content:center;color:#3b82f6}
 .setup-icon svg{display:block}
@@ -480,7 +473,8 @@ html.dark .fix-box-lbl{color:#4ade80}
 .role-name{font-size:13px;font-weight:700}
 .role-sub{font-size:11px;color:var(--muted);margin-top:2px}
 
-/* ── TOAST ── */
+/* ── TOAST ──
+   Temporary notification strips that slide in at the top right. */
 /* Toast notifications: top-right, flat strip with 3px colored left accent.
    Smaller padding, smaller border-radius, faster slide-in. Replaces the
    bottom-right pill with a more restrained, peripheral-vision design. */
@@ -489,7 +483,9 @@ html.dark .fix-box-lbl{color:#4ade80}
 .loading{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted)}
 .credit{position:fixed;bottom:10px;right:14px;font-size:11px;color:#94a3b8;pointer-events:none;user-select:none;z-index:50}
 
-/* ── BUNCH 4: HAMBURGER MENU & MOBILE ── */
+/* ── HAMBURGER MENU & MOBILE ──
+   The mobile slide-down menu and the responsive overrides that collapse
+   the header and board layout on small screens. */
 .hamburger{display:none;background:transparent;border:1px solid rgba(255,255,255,.18);color:#fff;padding:6px 10px;border-radius:6px;cursor:pointer;line-height:0;align-items:center;justify-content:center}
 .hamburger svg{display:block}
 .ham-menu{position:absolute;top:54px;right:14px;background:var(--card-bg);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-md);min-width:180px;display:none;z-index:150;overflow:hidden}
@@ -497,7 +493,7 @@ html.dark .fix-box-lbl{color:#4ade80}
 .ham-item{padding:11px 16px;font-size:14px;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
 .ham-item:last-child{border-bottom:none}
 .ham-item:hover{background:var(--hover-bg)}
-/* Department-grouped items in the hamburger menu: a small uppercase
+/* Grouped items in the hamburger menu: a small uppercase
    header above a set of indented items. Mirrors the visual grouping
    of department dropdowns on desktop. */
 .ham-section{padding:10px 16px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);border-bottom:1px solid var(--border)}
@@ -507,21 +503,21 @@ html.dark .fix-box-lbl{color:#4ade80}
 .ham-item:hover .ham-ico{color:var(--text)}
 
 @media (max-width: 768px) {
-  /* Mobile: keep tier 1 (logo + board + hamburger) visible. Hide tier 2
-     entirely; its buttons are accessible through the hamburger. Tier 3
-     (filters) stays so the most-used board controls remain one tap away. */
+  /* Mobile: keep the header bar (logo + board + hamburger) visible. Hide
+     the secondary row entirely; its buttons are reachable through the
+     hamburger. The filter bar stays so the most-used board controls
+     remain one tap away. */
   .hdr-tier1{padding:0 12px;gap:8px;height:48px}
-  .hdr-tier2{display:none}
   .logo{font-size:15px}
   .board-context-lbl{display:none}
   .board-sel{min-width:100px;max-width:140px;font-size:12px}
-  .btn-nb,.btn-del-board{display:none}
+  .btn-new-board,.btn-del-board{display:none}
   .desktop-only{display:none !important}
   .hamburger{display:block}
   .hdr-right{gap:6px}
   .user-badge span{display:none}
-  .fbar{padding:8px 12px;gap:5px}
-  .flabel{display:none}
+  .filter-bar{padding:8px 12px;gap:5px}
+  .filter-bar-label{display:none}
   .search-wrap{margin-left:0;width:100%;margin-top:5px}
   .search-input{width:100%}
   .search-input:focus{width:100%}
@@ -530,7 +526,7 @@ html.dark .fix-box-lbl{color:#4ade80}
   .col-cards{max-height:none}
   .modal{max-height:96vh;border-radius:10px;padding:16px}
   .modal-lg{max-width:100%}
-  .dbody{grid-template-columns:1fr;gap:14px}
+  .detail-body{grid-template-columns:1fr;gap:14px}
   .panel{max-height:96vh}
   .panel-hdr{flex-wrap:wrap;padding:14px 16px;gap:8px}
   .panel-body{padding:14px 16px}
@@ -539,7 +535,9 @@ html.dark .fix-box-lbl{color:#4ade80}
   .panel-overlay{padding:8px}
 }
 
-/* ── BUNCH 3: ARCHIVE / STATS / PRINT ── */
+/* ── ARCHIVE / STATS / PRINT ──
+   The archive browser panel, the stats panel (charts, counts, CSV
+   export), shared panel chrome, and print-only layout rules. */
 .btn-tool{background:transparent;border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.75);padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;white-space:nowrap;transition:all .12s ease}
 .btn-tool:hover{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.32)}
 /* Primary tool button: visually distinguished for the most-used view.
@@ -553,7 +551,7 @@ html.dark .fix-box-lbl{color:#4ade80}
 .panel-overlay.open{display:flex;align-items:flex-start;justify-content:center}
 .panel{background:var(--card-bg);border-radius:10px;width:100%;max-width:1100px;max-height:calc(100vh - 48px);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.25)}
 
-/* Panel header (Discord-style chrome strip).
+/* Panel header (slate chrome strip).
    Distinct slate-tinted background, left-aligned title with tightened
    letter-spacing, tabs integrated inline rather than living in a separate
    row below. The bottom edge uses a soft shadow rather than a hard border
@@ -606,7 +604,7 @@ html.dark .fix-box-lbl{color:#4ade80}
   box-shadow:0 1px 2px rgba(0,0,0,.06);
 }
 /* Close button: smaller, less visually loud */
-.panel-hdr .mclose{
+.panel-hdr .modal-close-btn{
   background:transparent;
   border:none;
   color:var(--muted);
@@ -618,12 +616,11 @@ html.dark .fix-box-lbl{color:#4ade80}
   font-weight:400;
   transition:background .1s,color .1s;
 }
-.panel-hdr .mclose:hover{
+.panel-hdr .modal-close-btn:hover{
   background:var(--hover-bg);
   color:var(--text);
 }
 .panel-body{padding:20px 22px;flex:1;overflow-y:auto}
-.panel-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
 
 /* Archive specific */
 .week-pick{font-size:13px;padding:6px 11px;border:1.5px solid var(--border);border-radius:6px;background:var(--input-bg);color:var(--text);cursor:pointer;min-width:200px}
@@ -658,7 +655,7 @@ html.dark .fix-box-lbl{color:#4ade80}
 /* Print view */
 @media print {
   body{background:#fff !important}
-  header,.fbar,.credit,.toast,.btn-tool,.panel-overlay,.overlay{display:none !important}
+  header,.filter-bar,.credit,.toast,.btn-tool,.panel-overlay,.overlay{display:none !important}
   .board{padding:8px;display:block}
   .col{break-inside:avoid;width:100%;max-width:100%;margin-bottom:14px;page-break-inside:avoid;background:#fff}
   .col-cards{overflow:visible;display:block}
@@ -667,7 +664,10 @@ html.dark .fix-box-lbl{color:#4ade80}
 .print-hdr{display:none;text-align:center;padding:14px;border-bottom:2px solid #333}
 @media print {.print-hdr{display:block}}
 
-/* ── BUNCH 5: REPORTS / LINE STATUS ── */
+/* ── REPORTS / LINE STATUS ──
+   The Reports modal: tab strip, the Line Status form (CSV drop zone,
+   field grids, OOS tags, notes editors with highlight toolbar), the EOD
+   form, and the live preview pane. */
 .reports-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:14px}
 .reports-tab{padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .12s}
 .reports-tab:hover{color:var(--text)}
@@ -683,12 +683,11 @@ html.dark .fix-box-lbl{color:#4ade80}
 .ls-row + .ls-row{margin-top:7px}
 .ls-mini{font-size:12px;padding:4px 9px;border:1px solid var(--border);border-radius:5px;background:var(--input-bg);color:var(--text);outline:none;width:auto;transition:border-color .12s,box-shadow .12s}
 .ls-mini:focus{box-shadow:0 0 0 3px rgba(59,130,246,.15)}
-.ls-mini.w70{width:70px}
-.ls-mini.w90{width:90px}
+.ls-mini.col-width-70{width:70px}
+.ls-mini.col-width-90{width:90px}
 .ls-lbl{font-size:12px;font-weight:600;color:var(--muted);min-width:80px}
 .ls-grid{display:grid;gap:9px}
 .ls-grid-2{grid-template-columns:1fr 1fr}
-.ls-grid-2.titled{grid-template-columns:80px 1fr 1fr}
 .ls-cell{display:flex;flex-direction:column;gap:5px}
 .ls-cell-hdr{font-size:11px;font-weight:700;color:var(--text)}
 .ls-cell-hdr.bb{color:var(--bb)}
@@ -733,7 +732,6 @@ body.dark .ls-startup-tbl th,body.dark .ls-unpack-tbl th{background:var(--col-bg
 .ls-startup-tbl input{width:60px;font-size:12px;padding:3px 5px;border:1px solid var(--border);border-radius:3px;background:var(--input-bg);color:var(--text);text-align:center}
 .ls-startup-tbl input:focus{border-color:#3b82f6;outline:none}
 .ls-unpack-tbl input{width:90%;font-size:11px;padding:3px 4px;border:1px solid var(--border);border-radius:3px;background:var(--input-bg);color:var(--text);text-align:center}
-.ls-row-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .ls-actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end;flex-wrap:wrap}
 .btn-clear{background:transparent;border:1.5px solid var(--border);color:var(--text);padding:8px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
 .btn-clear:hover{border-color:var(--critical);color:var(--critical)}
@@ -752,9 +750,6 @@ body.dark .ls-startup-tbl th,body.dark .ls-unpack-tbl th{background:var(--col-bg
 .ls-csv-file.is-bb{color:var(--bb);font-weight:600}
 .ls-csv-file button{margin-left:auto;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px;line-height:1}
 .ls-csv-file button:hover{color:var(--critical)}
-.ls-process-btn{margin-top:8px;width:100%;padding:9px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
-.ls-process-btn:hover{background:#2563eb}
-.ls-process-btn:disabled{opacity:.5;cursor:not-allowed}
 
 /* Live preview rendering (must look like the email body) */
 .ls-render{font-family:'Calibri','Segoe UI',sans-serif;color:#000;background:#fff;padding:14px;border-radius:6px;font-size:13px;line-height:1.4}
@@ -771,7 +766,9 @@ body.dark .ls-render{background:#fff;color:#000}
 .snap-actions button:hover{border-color:#3b82f6;color:#3b82f6}
 .snap-actions button.del:hover{border-color:var(--critical);color:var(--critical)}
 
-/* ── TODAY PANEL (Bunch 6) ── */
+/* ── TODAY PANEL ──
+   The read-only Today view of published reports: meta row, action
+   buttons, and the revision history list. */
 /* Container for the read-only published-report view. The header strip
    sits above the rendered report body and shows publisher metadata
    and an "Edit & republish" affordance. */
@@ -799,10 +796,6 @@ body.dark .ls-render{background:#fff;color:#000}
 
 /* Published indicator badge shown in the Reports panel header. Subtle
    enough not to demand attention but visible when checked. */
-.pub-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);margin-left:10px;font-weight:500}
-.pub-badge .dot{width:7px;height:7px;border-radius:50%;background:#10b981}
-.pub-badge.stale .dot{background:#f59e0b}
-.pub-badge.never .dot{background:var(--border)}
 
 /* Publish button: green to distinguish from the blue copy-to-clipboard.
    Same shape and weight as the other action buttons for consistency. */
@@ -930,5 +923,5 @@ html.dark .ec-sol.siemens{background:#0f172a;color:#cbd5e1}
 .guide h3{font-size:14px;font-weight:700;margin:20px 0 8px;color:var(--accent-text)}
 .guide ul{margin:0 0 12px 20px}
 .guide li{font-size:13px;margin-bottom:5px;color:var(--text)}
-.guide .gweek{border-left:3px solid var(--col-inprog);padding-left:14px;margin-bottom:18px}
-.guide .gnote{background:var(--accent-soft);border:1px solid var(--border);border-radius:6px;padding:10px 13px;font-size:12px;color:var(--accent-text);margin-top:12px}
+.guide .guide-week{border-left:3px solid var(--col-inprog);padding-left:14px;margin-bottom:18px}
+.guide .guide-note{background:var(--accent-soft);border:1px solid var(--border);border-radius:6px;padding:10px 13px;font-size:12px;color:var(--accent-text);margin-top:12px}
