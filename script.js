@@ -2301,6 +2301,7 @@ let lsState = {
     {dept:'CHE Atellicas', bb:'', op:'', full:false, partial:false}
   ],
   unpacking: {ongoing:false, completed:false, lh_flx:false, lh_fedex:false, lh_ups:false, lh_wc:false},
+  genNotes: '',
   bbNotes: '',
   opNotes: '',
   isFinal: false,
@@ -2464,6 +2465,7 @@ function lsDefaultState(){
       {dept:'CHE Atellicas', bb:'', op:'', full:false, partial:false}
     ],
     unpacking: {ongoing:false, completed:false, lh_flx:false, lh_fedex:false, lh_ups:false, lh_wc:false},
+    genNotes: '',
     bbNotes: '',
     opNotes: '',
     isFinal: false,
@@ -2638,7 +2640,7 @@ function renderLineStatusInner(body){
 
         <div class="ls-section">
           <div class="ls-sec-title" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px">
-            <span>BB / OP Notes</span>
+            <span>Notes</span>
             <span class="tooltip-wrap">
               <button class="tooltip-btn" type="button" onclick="ttToggle(event)" aria-label="More information">?</button>
               <span class="tooltip-box">${tooltip('Pulls open issues from the selected board and fills in the BB and OP notes fields. Pick a board from the dropdown first if you want to pull from something other than the one you are currently viewing. You can edit the result after it populates.')}</span>
@@ -2648,6 +2650,17 @@ function renderLineStatusInner(body){
             </select>
             <button class="ls-add-btn" style="font-size:11px;padding:3px 9px" onclick="lsRefreshNotes()">Refresh from Board</button>
           </div>
+          <div class="ls-notes-toolbar">
+            <button type="button" class="ls-hl-btn" onclick="lsApplyHighlight('genNotesEdit','#fef08a')" title="Highlight yellow">&#9635; Yellow</button>
+            <button type="button" class="ls-hl-btn" onclick="lsApplyHighlight('genNotesEdit','#bfdbfe')" title="Highlight blue">&#9635; Blue</button>
+            <button type="button" class="ls-hl-btn" onclick="lsApplyHighlight('genNotesEdit','#bbf7d0')" title="Highlight green">&#9635; Green</button>
+            <button type="button" class="ls-hl-btn ls-hl-clear" onclick="lsApplyHighlight('genNotesEdit',null)" title="Remove highlight">Clear</button>
+          </div>
+          <div class="ls-textarea ls-notes-edit" id="genNotesEdit" contenteditable="true"
+            data-placeholder="General notes (not specific to BB or OP)..."
+            oninput="lsUpdate('genNotes',this.innerHTML)"
+          >${lsState.genNotes||''}</div>
+
           <label class="ls-lbl" style="display:block;margin-top:8px">BB</label>
           <div class="ls-notes-toolbar">
             <button type="button" class="ls-hl-btn" onclick="lsApplyHighlight('bbNotesEdit','#fef08a')" title="Highlight yellow">&#9635; Yellow</button>
@@ -3282,23 +3295,27 @@ function renderLsHTML(){
   const final = lsBuildFinalTable();
   const fmt = n => typeof n === 'number' ? n.toLocaleString() : (n || '');
 
-  const T_RESET = 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;';
-  const TD_BASE = 'border:1px solid #000;padding:2px 5px;font-size:11px;font-family:Calibri,Arial,sans-serif;text-align:center;vertical-align:middle;';
-  const TH_BASE = TD_BASE + 'font-weight:bold;';
+  // Formatting copied verbatim from the Word template (Line_Status_Template_2026).
+  // Font: Aptos (Microsoft's current default) with fallbacks for clients that
+  // lack it. Size: 10pt to match the template. All table cells are bold.
+  const FONT = "Aptos,'Segoe UI',Calibri,Arial,sans-serif";
+  const T_RESET = `border-collapse:collapse;font-family:${FONT};`;
+  const TD_BASE = `border:1px solid #000;padding:2px 5px;font-size:10pt;font-family:${FONT};text-align:center;vertical-align:middle;font-weight:bold;`;
+  const TH_BASE = TD_BASE;
   const TH_WHITE = TH_BASE + 'background:#FFFFFF;';
   const BLUE = 'background:#ADD8E6;';
   const YELLOW = 'background:#FFDE2A;';
   const RED = 'background:#FF5B5B;';
   const C_BB = 'color:#D9A300;mso-color-alt:#D9A300;';
   const C_OP = 'color:#C00000;mso-color-alt:#C00000;';
-  const C_SEC = 'color:#1F4E79;mso-color-alt:#1F4E79;';
+  const C_SEC = 'color:#000000;';
 
   const th = (w, style, content, extra) => `<th width="${w}"${extra||''} style="${style}width:${w}px;">${content}</th>`;
   const td = (w, style, content, extra) => `<td width="${w}"${extra||''} style="${style}width:${w}px;">${content}</td>`;
 
-  const SECH = (txt) => `<p style="${C_SEC}font-weight:bold;margin:8px 0 2px 0;font-family:Calibri,Arial,sans-serif;font-size:13px"><b>${txt}</b></p>`;
-  const BBH  = (txt) => `<p style="${C_BB}font-weight:bold;margin:4px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px"><b>${txt}</b></p>`;
-  const OPH  = (txt) => `<p style="${C_OP}font-weight:bold;margin:4px 0 0 0;font-family:Calibri,Arial,sans-serif;font-size:12px"><b>${txt}</b></p>`;
+  const SECH = (txt) => `<p style="${C_SEC}font-weight:bold;margin:8px 0 2px 0;font-family:${FONT};font-size:10pt"><b>${txt}</b></p>`;
+  const BBH  = (txt) => `<p style="${C_BB}font-weight:bold;margin:4px 0 0 0;font-family:${FONT};font-size:10pt"><b>${txt}</b></p>`;
+  const OPH  = (txt) => `<p style="${C_OP}font-weight:bold;margin:4px 0 0 0;font-family:${FONT};font-size:10pt"><b>${txt}</b></p>`;
   const SPACE = '<div style="height:8px;line-height:8px">&nbsp;</div>';
 
   let html = '';
@@ -3309,28 +3326,30 @@ function renderLsHTML(){
     const romNotes = lsState.romNotes || {};
     const visibleRows = final.filter(r => !deleted.has(r.time));
     const hasRom = visibleRows.some(r => romNotes[r.time]);
-    const totalW = hasRom ? 548 : 448;
+    // Column widths copied from the Word template (converted twips to px):
+    // Time 89, BB 66, OP 66, Hourly 56, Running 64, ProjRem 84, Projected 84 = 509
+    const totalW = hasRom ? 609 : 509;
     html += `<table width="${totalW}" cellpadding="0" cellspacing="0" style="${T_RESET}width:${totalW}px;">` +
       `<thead><tr>` +
-      th(85, TH_BASE+BLUE,   'Time') +
-      th(57, TH_BASE+YELLOW, 'BB Total') +
-      th(57, TH_BASE+RED,    'OP Total') +
-      th(60, TH_BASE+BLUE,   'Hourly Total') +
-      th(60, TH_BASE+BLUE,   'Running Total') +
-      th(72, TH_BASE+BLUE,   'Projected Remaining') +
-      th(57, TH_BASE+BLUE,   'Projected') +
+      th(89, TH_BASE+BLUE,   'Time') +
+      th(66, TH_BASE+YELLOW, 'BB Total') +
+      th(66, TH_BASE+RED,    'OP Total') +
+      th(56, TH_BASE+BLUE,   'Hourly Total') +
+      th(64, TH_BASE+BLUE,   'Running Total') +
+      th(84, TH_BASE+BLUE,   'Projected Remaining') +
+      th(84, TH_BASE+BLUE,   'Projected') +
       (hasRom ? th(100, TH_BASE+BLUE, 'ROM Samples') : '') +
       `</tr></thead><tbody>`;
     visibleRows.forEach(r=>{
       const rom = romNotes[r.time] || '';
       html += `<tr>` +
-        td(85, TD_BASE+BLUE+'font-weight:bold;white-space:nowrap;', `<b>${esc(r.time)}</b>`) +
-        td(57, TD_BASE, fmt(r.bb)) +
-        td(57, TD_BASE, fmt(r.op)) +
-        td(60, TD_BASE, fmt(r.hourly)) +
-        td(60, TD_BASE, fmt(r.running)) +
-        td(72, TD_BASE, fmt(r.remaining)) +
-        td(57, TD_BASE, fmt(r.projected)) +
+        td(89, TD_BASE+BLUE+'white-space:nowrap;', `<b>${esc(r.time)}</b>`) +
+        td(66, TD_BASE, fmt(r.bb)) +
+        td(66, TD_BASE, fmt(r.op)) +
+        td(56, TD_BASE, fmt(r.hourly)) +
+        td(64, TD_BASE, fmt(r.running)) +
+        td(84, TD_BASE, fmt(r.remaining)) +
+        td(84, TD_BASE, fmt(r.projected)) +
         (hasRom ? td(100, TD_BASE+'text-align:left;', esc(rom)) : '') +
       `</tr>`;
     });
@@ -3370,14 +3389,19 @@ function renderLsHTML(){
     html += SPACE;
   }
 
+  // General notes (unlabeled): notes that do not pertain to BB or OP
+  // specifically. Rendered above the BB and OP lists with no heading.
+  if(lsState.genNotes && lsState.genNotes.trim()){
+    html += `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Aptos,'Segoe UI',Calibri,Arial,sans-serif">${notesToEmailHtml(lsState.genNotes)}</ul>`;
+  }
   // BB / OP notes
   if(lsState.bbNotes && lsState.bbNotes.trim()){
-    html += BBH('BB:') + `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Calibri,Arial,sans-serif">${notesToEmailHtml(lsState.bbNotes)}</ul>`;
+    html += BBH('BB:') + `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Aptos,'Segoe UI',Calibri,Arial,sans-serif">${notesToEmailHtml(lsState.bbNotes)}</ul>`;
   }
   if(lsState.opNotes && lsState.opNotes.trim()){
-    html += OPH('OP:') + `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Calibri,Arial,sans-serif">${notesToEmailHtml(lsState.opNotes)}</ul>`;
+    html += OPH('OP:') + `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Aptos,'Segoe UI',Calibri,Arial,sans-serif">${notesToEmailHtml(lsState.opNotes)}</ul>`;
   }
-  if(lsState.bbNotes.trim() || lsState.opNotes.trim()) html += SPACE;
+  if((lsState.genNotes||'').trim() || (lsState.bbNotes||'').trim() || (lsState.opNotes||'').trim()) html += SPACE;
 
   // Startup Times: 5 columns, 375px total
   const anyStartup = lsState.startup.some(r=>r.bb||r.op||r.full||r.partial);
@@ -3562,7 +3586,9 @@ function lsApplyHighlight(elId, color){
   setTimeout(()=>{
     document.execCommand('backColor', false, color || 'transparent');
     // Persist the updated HTML
-    const field = elId === 'bbNotesEdit' ? 'bbNotes' : 'opNotes';
+    const field = elId === 'bbNotesEdit' ? 'bbNotes'
+                : elId === 'opNotesEdit' ? 'opNotes'
+                : 'genNotes';
     lsState[field] = el.innerHTML;
     lsSavePersist();
     refreshPreview();
@@ -3571,24 +3597,20 @@ function lsApplyHighlight(elId, color){
 
 // Converts note content to email-ready list items.
 // Handles both plain text (legacy) and HTML (contenteditable with highlights).
-// Highlighted spans are preserved with inline background-color so they
-// survive Outlook's paste sanitizer. Transparent/white highlights are
-// stripped since they add no value in the output.
+// Highlight handling: browsers' execCommand('backColor') emits the color as
+// rgb(...). Outlook's paste sanitizer frequently drops background-color when
+// it is an rgb() value, which is why highlights were not surviving the paste.
+// We convert every rgb()/rgba() background to a hex value, which Outlook keeps.
 function notesToEmailHtml(content){
   if(!content || !content.trim()) return '';
   const hasHtml = /<[a-z]/i.test(content);
   if(!hasHtml){
-    // Plain text path: split on newlines, wrap each line in a list item
     return content.split('\n').filter(l=>l.trim())
-      .map(l=>`<li style="font-family:Calibri,Arial,sans-serif;font-size:11px">${esc(l.trim())}</li>`).join('');
+      .map(l=>`<li style="font-family:${'Aptos,\'Segoe UI\',Calibri,Arial,sans-serif'};font-size:10pt">${esc(l.trim())}</li>`).join('');
   }
-  // HTML path: parse contenteditable output into lines then list items.
-  // contenteditable uses <div> or <br> for line breaks; we preserve any
-  // inline spans (highlights) inside each line.
   const temp = document.createElement('div');
-  temp.innerHTML = content;
+  temp.innerHTML = normalizeHighlightColors(content);
   const lines = [];
-  // Collect top-level text and element nodes as individual lines
   temp.childNodes.forEach(node => {
     if(node.nodeType === Node.TEXT_NODE){
       const t = node.textContent.trim();
@@ -3599,22 +3621,33 @@ function notesToEmailHtml(content){
     } else if(node.nodeName === 'BR'){
       // skip bare BRs
     } else {
-      // Inline element (span with highlight etc.) at root level
       const outer = node.outerHTML.trim();
       if(outer) lines.push(outer);
     }
   });
-  // If contenteditable put everything in a single root div, recurse into its children
   if(lines.length === 0 && temp.childNodes.length === 1){
     return notesToEmailHtml(temp.firstChild.innerHTML||'');
   }
   return lines
     .filter(l => l.trim() && l !== '<br>')
     .map(l => {
-      // Sanitize transparent highlights - they serve no purpose in email
-      const clean = l.replace(/background-color:\s*(transparent|rgba\(0,\s*0,\s*0,\s*0\)|white|#fff|#ffffff)/gi,'');
-      return `<li style="font-family:Calibri,Arial,sans-serif;font-size:11px">${clean}</li>`;
+      // Drop transparent/white highlights; they add nothing in the email
+      const clean = l.replace(/background-color:\s*(transparent|white|#fff|#ffffff)\s*;?/gi,'');
+      return `<li style="font-family:Aptos,'Segoe UI',Calibri,Arial,sans-serif;font-size:10pt">${clean}</li>`;
     }).join('');
+}
+
+// Converts any rgb()/rgba() background-color in a fragment of HTML to a hex
+// value. Outlook keeps hex background-color on inline spans but tends to
+// strip the rgb() form, so this is what makes highlights survive the paste.
+function normalizeHighlightColors(htmlStr){
+  return htmlStr.replace(/background-color:\s*rgba?\(([^)]+)\)/gi, (m, inner) => {
+    const parts = inner.split(',').map(s => parseFloat(s.trim()));
+    const [r, g, b] = parts;
+    if([r,g,b].some(v => Number.isNaN(v))) return m;
+    const hex = '#' + [r,g,b].map(v => Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+    return `background-color:${hex}`;
+  });
 }
 
 
