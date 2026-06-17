@@ -240,12 +240,17 @@ select.filter-chip option[value="general"]{color:#64748b}
 .mini-col-name{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
 .mini-col-ct{font-size:10px;color:var(--muted);margin-left:auto;background:var(--border);padding:0 6px;border-radius:8px;font-weight:600}
 .mini-col-body{padding:6px;display:flex;flex-direction:column;gap:5px;overflow-y:auto}
-.mini-card{background:var(--card-bg);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:5px;padding:7px 8px;cursor:pointer;transition:background .1s}
-.mini-card:hover{background:var(--hover-bg)}
-.mini-card.p-critical{border-left-color:var(--critical)}
-.mini-card.p-urgent{border-left-color:var(--urgent)}
-.mini-card.p-moderate,.mini-card.p-monitor{border-left-color:var(--moderate-c)}
-.mini-card.p-low{border-left-color:var(--low)}
+.mini-card{background:var(--card-bg);border:1px solid var(--border);border-radius:5px;padding:7px 8px;cursor:pointer;transition:filter .1s}
+.mini-card:hover{filter:brightness(0.96)}
+.mini-card.p-critical{background:var(--critical);border-color:var(--critical)}
+.mini-card.p-urgent{background:var(--urgent);border-color:var(--urgent)}
+.mini-card.p-moderate,.mini-card.p-monitor{background:var(--moderate-c);border-color:var(--moderate-c)}
+.mini-card.p-low{background:var(--low);border-color:var(--low)}
+/* Filled mini-cards: white text and a light ring on the track badge so it
+   stays distinct against a same-color card. */
+.mini-card.p-critical .mini-card-title, .mini-card.p-urgent .mini-card-title, .mini-card.p-moderate .mini-card-title, .mini-card.p-monitor .mini-card-title, .mini-card.p-low .mini-card-title{color:#fff}
+.mini-card.p-critical .mini-card-meta, .mini-card.p-urgent .mini-card-meta, .mini-card.p-moderate .mini-card-meta, .mini-card.p-monitor .mini-card-meta, .mini-card.p-low .mini-card-meta{color:rgba(255,255,255,.85)}
+.mini-card.p-critical .mini-track-badge, .mini-card.p-urgent .mini-track-badge, .mini-card.p-moderate .mini-track-badge, .mini-card.p-monitor .mini-track-badge, .mini-card.p-low .mini-track-badge{box-shadow:0 0 0 1px rgba(255,255,255,.7)}
 .mini-card-top{display:flex;align-items:center;gap:4px;margin-bottom:3px}
 .mini-track-badge{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:1px 5px;border-radius:2px}
 .mini-track-badge.op{background:var(--op);color:#fff}
@@ -312,49 +317,45 @@ html.dark .ico-sug{background:#7f1d1d;color:#fca5a5}
 .card{
   background:var(--card-bg);
   border:1px solid var(--border);
-  border-left:3px solid #94a3b8;
   border-radius:6px;
   padding:10px 12px 11px;
   cursor:pointer;
-  transition:background .12s,border-color .12s;
+  transition:filter .12s,box-shadow .12s;
 }
 .card:hover{
-  background:var(--hover-bg);
-  border-color:var(--border);
+  filter:brightness(0.96);
 }
-/* Priority drives the left edge color */
-.card.p-critical{border-left-color:var(--critical)}
-.card.p-urgent{border-left-color:var(--urgent)}
-.card.p-moderate,.card.p-monitor{border-left-color:var(--moderate-c)}
-.card.p-low{border-left-color:var(--low)}
-/* Resolved cards: keep the priority color but mute it so the column
-   reads as quieter. The signal is still there at a glance for anyone
-   scanning the resolved column without shouting from a finished issue. */
-.card.s-resolved{opacity:.85}
-.card.s-resolved{border-left-color:#cbd5e1}
-.card.s-resolved.p-critical{border-left-color:#fca5a5}
-.card.s-resolved.p-urgent{border-left-color:#fdba74}
-.card.s-resolved.p-moderate,.card.s-resolved.p-monitor{border-left-color:#7dd3fc}
-.card.s-resolved.p-low{border-left-color:#cbd5e1}
-html.dark .card.s-resolved.p-critical{border-left-color:#7f1d1d}
-html.dark .card.s-resolved.p-urgent{border-left-color:#7c2d12}
-html.dark .card.s-resolved.p-moderate,html.dark .card.s-resolved.p-monitor{border-left-color:#0c4a6e}
-html.dark .card.s-resolved.p-low{border-left-color:#475569}
-/* Track color removed from card border-left; lives on the track-badge only.
-   Keep the legacy selectors as no-ops so existing rendered HTML doesn't
-   regress (they will just be overridden by the priority rules above). */
+/* Priority fills the whole card. Text flips to white for contrast on the
+   solid color. Track badges keep their own colors and get a thin outline
+   below so they stay distinct against a same-color card. */
+.card.p-critical{background:var(--critical);border-color:var(--critical)}
+.card.p-urgent{background:var(--urgent);border-color:var(--urgent)}
+.card.p-moderate,.card.p-monitor{background:var(--moderate-c);border-color:var(--moderate-c)}
+.card.p-low{background:var(--low);border-color:var(--low)}
+/* On a filled card, all the text needs to read as white. */
+.card.p-critical, .card.p-urgent, .card.p-moderate, .card.p-monitor, .card.p-low{color:#fff}
+.card.p-critical .card-title, .card.p-urgent .card-title, .card.p-moderate .card-title, .card.p-monitor .card-title, .card.p-low .card-title{color:#fff}
+.card.p-critical .card-inst, .card.p-urgent .card-inst, .card.p-moderate .card-inst, .card.p-monitor .card-inst, .card.p-low .card-inst,
+.card.p-critical .card-time, .card.p-urgent .card-time, .card.p-moderate .card-time, .card.p-monitor .card-time, .card.p-low .card-time,
+.card.p-critical .card-comment-count, .card.p-urgent .card-comment-count, .card.p-moderate .card-comment-count, .card.p-monitor .card-comment-count, .card.p-low .card-comment-count,
+.card.p-critical .assignee-chip, .card.p-urgent .assignee-chip, .card.p-moderate .assignee-chip, .card.p-monitor .assignee-chip, .card.p-low .assignee-chip{color:rgba(255,255,255,.85)}
+/* aging warning text was red; on a filled card make it white so it stays legible */
+.card.p-critical .card-time.warn, .card.p-urgent .card-time.warn, .card.p-moderate .card-time.warn, .card.p-monitor .card-time.warn, .card.p-low .card-time.warn{color:#fff}
+/* Resolved cards: mute the fill so a finished issue reads as quieter
+   while still showing its priority at a glance. */
+.card.s-resolved{opacity:.7}
+/* Track color lives on the track-badge only. Keep the legacy selectors
+   as no-ops so existing rendered HTML does not regress. */
 .card.op,.card.bb,.card.general{}
 
-/* Priority badge: smaller and less visually loud. The left edge stripe
-   is now the primary signal; this stays as a redundant text label. */
-.priority-badge{font-size:9px;font-weight:600;padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.4px;background:transparent;color:var(--muted);border:1px solid var(--border)}
-.priority-badge.critical{color:var(--critical);border-color:var(--critical)}
-.priority-badge.urgent{color:var(--urgent);border-color:var(--urgent)}
-.priority-badge.moderate,.priority-badge.monitor{color:var(--moderate-c);border-color:var(--moderate-c)}
-.priority-badge.low{color:var(--low);border-color:var(--low)}
+/* Priority badge: redundant text label. On a filled card it reads as a
+   white outline chip so it does not clash with the background color. */
+.priority-badge{font-size:9px;font-weight:600;padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.4px;background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.55)}
 
-/* Track badge: solid color fill, the primary track signal */
-.track-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px;margin-left:auto;text-transform:uppercase;letter-spacing:.3px;transition:filter .12s}
+/* Track badge: solid color fill, the primary track signal. A thin light
+   ring keeps it distinct when it sits on a same-color priority card
+   (e.g. an OP red badge on a critical red card). */
+.track-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px;margin-left:auto;text-transform:uppercase;letter-spacing:.3px;transition:filter .12s;box-shadow:0 0 0 1px rgba(255,255,255,.7)}
 .track-badge.op{background:var(--op);color:#fff}
 .track-badge.bb{background:#f59e0b;color:#1e293b}
 .track-badge.general{background:#94a3b8;color:#fff}
