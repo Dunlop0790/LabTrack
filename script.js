@@ -1,70 +1,9 @@
 // ═════════════════════════════════════════════════════════════════════════
-// CLOUD PROVIDER CONFIGURATION
-// ─────────────────────────────────────────────────────────────────────────
-// LabTrack currently uses Google Firebase (Firestore) as its cloud database.
-// All connection credentials are in this block.
-//
-// TO TRANSFER TO A NEW FIREBASE PROJECT:
-//   1. Go to console.firebase.google.com
-//   2. Open the new project, register a web app
-//   3. Copy the firebaseConfig object shown and paste it below, replacing
-//      the existing one. No other changes needed.
-//
-// TO SWAP TO A DIFFERENT CLOUD PROVIDER (e.g. Azure Cosmos DB, AWS, etc.):
-//   This block initializes Firebase and creates `db`, the database handle.
-//   Every database operation in the app goes through `db` using the Firebase
-//   Firestore SDK. To swap providers:
-//     - Remove this block and the two Firebase <script> tags above
-//     - Initialize your provider's SDK instead
-//     - Replace the Database Layer functions (marked below in the script)
-//       with equivalent calls for your provider
-//     - The rest of the app (UI, state, logic) does not change
-//
-// SECURITY RULES:
-//   Rules are managed separately in the Firebase console under
-//   Firestore Database > Rules. A copy is maintained in the project README.
-//   Status: v1.0: validated collections, no authentication layer yet.
-//   Next step: add request.auth != null checks once auth is enabled.
+// All database access lives in dataService.js, which loads before this file.
+// This file never calls Firestore directly; it calls the named functions
+// from the service layer (addIssue, subscribeIssues, getBoards, etc.). To
+// migrate to a different backend, only dataService.js needs to change.
 // ═════════════════════════════════════════════════════════════════════════
-firebase.initializeApp({
-  apiKey:"AIzaSyCP9k-mZZGiRW94ZH9JopuURbVuw0MZro8",
-  authDomain:"lab-tracking-928ec.firebaseapp.com",
-  projectId:"lab-tracking-928ec",
-  storageBucket:"lab-tracking-928ec.firebasestorage.app",
-  messagingSenderId:"1076816645332",
-  appId:"1:1076816645332:web:43ed9d11de3f0e3c94ff41"
-});
-const db = firebase.firestore();
-// ─────────────────────────────────────────────────────────────────────────
-// DATABASE LAYER
-// All Firestore operations used by this app are listed below.
-// If migrating to another provider, these are the calls to replace.
-// Each is a thin wrapper around the Firestore SDK: no business logic here.
-//
-//   Collections used:
-//     boards         : board metadata (title, createdAt)
-//     issues         : issue cards with subcollections: comments, history
-//     archive        : resolved issues moved weekly, with subcollections
-//     roster         : team member names and roles
-//     meta           : internal maintenance timestamps
-//     lsSnapshots    : saved Line Status and EOD report drafts
-//     lsArchive      : permanent final Line Status records (one per day, keyed YYYY-MM-DD with 05:30 EST day rollover)
-//
-//   Operation types used:
-//     .collection(name).add(data)            : create document
-//     .collection(name).doc(id).update(data) : update document
-//     .collection(name).doc(id).delete()     : delete document
-//     .collection(name).doc(id).get()        : read single document
-//     .collection(name).get()                : read entire collection
-//     .collection(name).where(f,op,v).get()  : filtered read (one-time)
-//     .collection(name).where(f,op,v)
-//       .onSnapshot(callback)                : real-time subscription
-//     .collectionGroup(name).where(...)
-//       .onSnapshot(callback)                : cross-collection subscription
-//     FieldValue.serverTimestamp()           : server-generated timestamp
-//     FieldValue.increment(n)                : atomic counter increment
-//     batch.set() / batch.commit()           : batched multi-document write
-// ─────────────────────────────────────────────────────────────────────────
 
 // ── STATE ─────────────────────────────────────────────────────
 // Module-level state shared across the entire application. These are
@@ -506,11 +445,11 @@ function updateHeaderActiveStates(){
 // are immutable once written (enforced by security rules) and are
 // rendered in the issue detail view's history tab.
 async function logActivity(issueId, type, details){
-  await db.collection('issues').doc(issueId).collection('history').add({
+  await addHistory(issueId, {
     type, details,
     author: user.name,
     role: user.role,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    createdAt: serverTime()
   });
 }
 
@@ -660,8 +599,8 @@ let mentionInitTime = null;
 function watchForMyMentions(){
   mentionInitTime = Date.now();
   // Use a collectionGroup query to listen for ALL comments across all issues
-  db.collectionGroup('comments').where('mentions','array-contains',user.name)
-    .onSnapshot(snap=>{
+  subscribeMentions(user.name,
+    snap=>{
       snap.docChanges().forEach(change=>{
         if(change.type !== 'added') return;
         const c = change.doc.data();
@@ -689,14 +628,14 @@ function watchForMyMentions(){
 // users. Currently append-only; member rename/removal UI is on the
 // future enhancements list.
 async function loadRoster(){
-  const snap = await db.collection('roster').get();
+  const snap = await getRoster();
   roster = snap.docs.map(d=>({name:d.id, ...d.data()}));
   // Seed initial roster on first run
   if(!roster.length){
-    const batch = db.batch();
+    const batch = newBatch();
     Object.entries(SEED_ROSTER).forEach(([role, names])=>{
       names.forEach(name=>{
-        batch.set(db.collection('roster').doc(name), {role, addedAt:firebase.firestore.FieldValue.serverTimestamp()});
+        batch.set(rosterDocRef(name), {role, addedAt:serverTime()});
       });
     });
     await batch.commit();
@@ -706,7 +645,7 @@ async function loadRoster(){
     });
   }
   // Live updates so new users show up immediately
-  db.collection('roster').onSnapshot(snap=>{
+  subscribeRoster(snap=>{
     roster = snap.docs.map(d=>({name:d.id, ...d.data()}));
   }, err=>{ console.warn('[LabTrack] roster listener:', err.code); });
 }
@@ -744,10 +683,10 @@ function groupedRoster(filterTerm){
 // parent board via the boardId field. Switching boards rebinds the
 // realtime subscription to issues filtered by the new boardId.
 async function loadBoards(){
-  const snap = await db.collection('boards').get();
+  const snap = await getBoards();
   boards = snap.docs.map(d=>({id:d.id,...d.data()}));
   if(!boards.length){
-    const ref = await db.collection('boards').add({title:'Main Board',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    const ref = await addBoard({title:'Main Board',createdAt:serverTime()});
     boards=[{id:ref.id,title:'Main Board'}];
   }
   renderBoardSel();
@@ -775,7 +714,7 @@ function closeNewBoard(){document.getElementById('newBoardOverlay').classList.ad
 async function submitNewBoard(){
   const name=document.getElementById('newBoardName').value.trim();
   if(!name) return;
-  const ref=await db.collection('boards').add({title:name,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  const ref=await addBoard({title:name,createdAt:serverTime()});
   boards.push({id:ref.id,title:name});
   renderBoardSel();
   document.getElementById('boardSel').value=ref.id;
@@ -798,11 +737,11 @@ async function deleteBoard(){
   try {
     // Delete all issues on this board
     if(issues.length){
-      const deletes=issues.map(i=>db.collection('issues').doc(i.id).delete());
+      const deletes=issues.map(i=>deleteIssue(i.id));
       await Promise.all(deletes);
     }
     // Delete the board itself
-    await db.collection('boards').doc(boardId).delete();
+    await deleteBoard(boardId);
 
     // Stop listening, reload boards, switch to first remaining
     if(issueSub){issueSub();issueSub=null}
@@ -827,8 +766,8 @@ function subscribeIssues(bid){
   let prevIssueMap = {};
   issues.forEach(i=>{ prevIssueMap[i.id]=i });
 
-  issueSub = db.collection('issues').where('boardId','==',bid)
-    .onSnapshot(snap=>{
+  issueSub = subscribeIssues(bid,
+    snap=>{
       const newIssues = snap.docs.map(d=>{
         const data = d.data();
         // Normalize legacy 'monitor' priority to 'moderate'. Issues created
@@ -1180,7 +1119,7 @@ function closeNewIssue(){
 async function submitNewIssue(){
   const title=document.getElementById('issueTitle').value.trim();
   if(!title){alert('Title is required.');return}
-  const ref = await db.collection('issues').add({
+  const ref = await addIssue({
     boardId,title,
     description:document.getElementById('issueDesc').value.trim(),
     priority:document.getElementById('issuePriority').value,
@@ -1190,8 +1129,8 @@ async function submitNewIssue(){
     unitNumber:document.getElementById('issueUnit').value.trim(),
     assignee:document.getElementById('issueAssignee').value.trim(),
     createdBy:user.name,
-    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    createdAt:serverTime(),
+    updatedAt:serverTime(),
     commentCount:0
   });
   await logActivity(ref.id, 'created', {});
@@ -1213,9 +1152,8 @@ async function openDetail(issueId){
   document.getElementById('detailModal').innerHTML = buildDetailHTML(issue);
   document.getElementById('detailOverlay').classList.remove('hidden');
   if(detailSub) detailSub();
-  detailSub = db.collection('issues').doc(issueId).collection('comments')
-    .orderBy('createdAt')
-    .onSnapshot(snap=>{
+  detailSub = subscribeComments(issueId,
+    snap=>{
       const cs=snap.docs.map(d=>({id:d.id,...d.data()}));
       const el=document.getElementById('comment-list');
       if(!el) return;
@@ -1413,21 +1351,21 @@ function cancelFixInput(issueId){
 // Saves the fix description from the inline textarea to Firestore.
 async function saveFixDescription(issueId){
   const text = document.getElementById('fixText')?.value.trim();
-  const update = {updatedAt: firebase.firestore.FieldValue.serverTimestamp()};
+  const update = {updatedAt: serverTime()};
   if(text){
     update.fixDescription = text;
     update.fixedBy = user.name;
-    update.fixedAt = firebase.firestore.FieldValue.serverTimestamp();
+    update.fixedAt = serverTime();
   } else {
-    update.fixDescription = firebase.firestore.FieldValue.delete();
-    update.fixedBy = firebase.firestore.FieldValue.delete();
-    update.fixedAt = firebase.firestore.FieldValue.delete();
+    update.fixDescription = deleteField();
+    update.fixedBy = deleteField();
+    update.fixedAt = deleteField();
   }
-  await db.collection('issues').doc(issueId).update(update);
+  await updateIssue(issueId, update);
   if(text) await logActivity(issueId, 'fix', {text});
   showToast(text ? 'Fix description saved.' : 'Fix description removed.');
   // Refresh the fix box from the updated Firestore doc
-  const snap = await db.collection('issues').doc(issueId).get();
+  const snap = await getIssue(issueId);
   if(snap.exists){
     const issue = {id:snap.id, ...snap.data()};
     renderFixBox(issueId, issue);
@@ -1467,9 +1405,9 @@ function renderFixBox(issueId, issue){
 async function updateField(id, field, val){
   const issue = issues.find(i=>i.id===id);
   const prev = issue ? issue[field] : null;
-  const update = {[field]:val, updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+  const update = {[field]:val, updatedAt:serverTime()};
 
-  await db.collection('issues').doc(id).update(update);
+  await updateIssue(id, update);
   if(['status','priority'].includes(field) && prev !== val){
     await logActivity(id, field, {from:prev, to:val});
   }
@@ -1505,9 +1443,8 @@ function toggleHistory(issueId){
     arrow.textContent = '▾';
     lbl.textContent = 'Hide History';
     list.innerHTML = '<div style="color:#94a3b8;font-size:12px">Loading…</div>';
-    historySub = db.collection('issues').doc(issueId).collection('history')
-      .orderBy('createdAt','desc')
-      .onSnapshot(snap=>{
+    historySub = subscribeHistory(issueId,
+      snap=>{
         const items = snap.docs.map(d=>d.data());
         list.innerHTML = items.length
           ? items.map(h=>`<div class="history-entry">${describeActivity(h)} <span class="history-time">· ${fmtTime(h.createdAt)}</span></div>`).join('')
@@ -1521,15 +1458,15 @@ async function postComment(issueId){
   const text=document.getElementById('ctext')?.value.trim();
   if(!text) return;
   const mentions = extractMentions(text);
-  await db.collection('issues').doc(issueId).collection('comments').add({
+  await addComment(issueId, {
     text, author:user.name, role:user.role,
     mentions: mentions,
     reactions: {},
-    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    createdAt:serverTime()
   });
-  await db.collection('issues').doc(issueId).update({
-    commentCount:firebase.firestore.FieldValue.increment(1),
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  await updateIssue(issueId, {
+    commentCount:incrementBy(1),
+    updatedAt:serverTime()
   });
   const el=document.getElementById('ctext');
   if(el){el.value='';document.getElementById('ccnt').textContent='0'}
@@ -1540,7 +1477,7 @@ async function saveAssign(id){
   const val=document.getElementById('dAssign')?.value.trim()||'';
   const issue = issues.find(i=>i.id===id);
   const prev = issue ? (issue.assignee||'') : '';
-  await db.collection('issues').doc(id).update({assignee:val, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  await updateIssue(id, {assignee:val, updatedAt:serverTime()});
   if(prev !== val){
     await logActivity(id, 'assignee', {from:prev, to:val});
   }
@@ -1552,7 +1489,7 @@ async function claimIssue(id){
   if(el) el.value=user.name;
   const issue = issues.find(i=>i.id===id);
   const prev = issue ? (issue.assignee||'') : '';
-  await db.collection('issues').doc(id).update({assignee:user.name, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  await updateIssue(id, {assignee:user.name, updatedAt:serverTime()});
   if(prev !== user.name){
     await logActivity(id, 'claimed', {});
   }
@@ -1561,7 +1498,7 @@ async function claimIssue(id){
 
 async function deleteIssue(id){
   if(!confirm('Delete this issue? This cannot be undone.')) return;
-  await db.collection('issues').doc(id).delete();
+  await deleteIssue(id);
   closeDetail();
   showToast('Issue deleted.');
 }
@@ -1571,9 +1508,9 @@ async function moveIssueToBoard(issueId, targetBoardId){
   const target = boards.find(b=>b.id===targetBoardId);
   if(!target) return;
   if(!confirm(`Move this issue to "${target.title}"?`)) return;
-  await db.collection('issues').doc(issueId).update({
+  await updateIssue(issueId, {
     boardId: targetBoardId,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    updatedAt: serverTime()
   });
   await logActivity(issueId, 'moved', {to: target.title});
   closeDetail();
@@ -1755,7 +1692,7 @@ function extractMentions(text){
 // Reactions are stored as a map of emoji-to-username-array on the
 // comment document; toggling adds or removes the current user.
 async function toggleReaction(issueId, commentId, key){
-  const ref = db.collection('issues').doc(issueId).collection('comments').doc(commentId);
+  const ref = commentRef(issueId, commentId);
   const snap = await ref.get();
   const data = snap.data() || {};
   const reactions = data.reactions || {};
@@ -1819,33 +1756,33 @@ function fmtWeekRange(weekStartMs){
 async function runArchiveMaintenance(){
   try {
     const cutoff = lastSunday6amEST();
-    const metaRef = db.collection('meta').doc('archive');
+    const metaRef = metaRef('archive');
     const metaSnap = await metaRef.get();
     const lastRun = metaSnap.exists ? (metaSnap.data().lastRun?.toMillis?.() || 0) : 0;
 
     if(lastRun < cutoff){
       // Archive Resolved issues across all boards
-      const resolvedSnap = await db.collection('issues').where('status','==','resolved').get();
+      const resolvedSnap = await getIssuesByStatus('resolved');
       let archived = 0;
       for(const doc of resolvedSnap.docs){
         const data = doc.data();
-        const archivedAt = firebase.firestore.FieldValue.serverTimestamp();
+        const archivedAt = serverTime();
         const wk = weekKey(Date.now());
         // Copy to archive collection (preserve original ID for reference)
-        await db.collection('archive').doc(doc.id).set({
+        await archiveDocRef(doc.id).set({
           ...data,
           archivedAt,
           weekBucket: wk,
           originalId: doc.id
         });
         // Copy comments and history (best effort, keep small via batch where possible)
-        const commentsSnap = await doc.ref.collection('comments').get();
+        const commentsSnap = await getSubcollection(doc.ref,'comments');
         for(const c of commentsSnap.docs){
-          await db.collection('archive').doc(doc.id).collection('comments').doc(c.id).set(c.data());
+          await archiveDocRef(doc.id).collection('comments').doc(c.id).set(c.data());
         }
-        const historySnap = await doc.ref.collection('history').get();
+        const historySnap = await getSubcollection(doc.ref,'history');
         for(const h of historySnap.docs){
-          await db.collection('archive').doc(doc.id).collection('history').doc(h.id).set(h.data());
+          await archiveDocRef(doc.id).collection('history').doc(h.id).set(h.data());
         }
         // Delete original (and its subcollections)
         for(const c of commentsSnap.docs) await c.ref.delete();
@@ -1853,18 +1790,18 @@ async function runArchiveMaintenance(){
         await doc.ref.delete();
         archived++;
       }
-      await metaRef.set({lastRun: firebase.firestore.FieldValue.serverTimestamp()}, {merge:true});
+      await metaRef.set({lastRun: serverTime()}, {merge:true});
       if(archived) console.log(`Archived ${archived} resolved issue(s).`);
     }
 
     // Purge archives older than 90 days
     const purgeBefore = Date.now() - 90*24*60*60*1000;
-    const oldSnap = await db.collection('archive').where('archivedAt','<', new Date(purgeBefore)).get();
+    const oldSnap = await getArchiveOlderThan(purgeBefore);
     let purged = 0;
     for(const doc of oldSnap.docs){
-      const cs = await doc.ref.collection('comments').get();
+      const cs = await getSubcollection(doc.ref,'comments');
       for(const c of cs.docs) await c.ref.delete();
-      const hs = await doc.ref.collection('history').get();
+      const hs = await getSubcollection(doc.ref,'history');
       for(const h of hs.docs) await h.ref.delete();
       await doc.ref.delete();
       purged++;
@@ -1890,7 +1827,7 @@ async function openArchive(){
   const boardSel = document.getElementById('archBoard');
   boardSel.innerHTML = '<option value="">All boards</option>' + boards.map(b=>`<option value="${b.id}">${esc(b.title)}</option>`).join('');
   // Load archive data
-  const snap = await db.collection('archive').orderBy('archivedAt','desc').get();
+  const snap = await getArchive();
   archiveData = snap.docs.map(d=>({id:d.id, ...d.data()}));
   // Build week dropdown from unique weekBuckets
   const weeks = [...new Set(archiveData.map(a=>a.weekBucket).filter(Boolean))].sort((a,b)=>b-a);
@@ -1954,8 +1891,8 @@ async function openArchiveDetail(archId){
 
   // Pull comments and history for this archived issue
   const [csSnap, hsSnap] = await Promise.all([
-    db.collection('archive').doc(archId).collection('comments').orderBy('createdAt').get(),
-    db.collection('archive').doc(archId).collection('history').orderBy('createdAt','desc').get()
+    getArchiveSub(archId,'comments'),
+    getArchiveSub(archId,'history')
   ]);
   const comments = csSnap.docs.map(d=>d.data());
   const history = hsSnap.docs.map(d=>d.data());
@@ -2033,8 +1970,8 @@ async function openStats(){
   updateHeaderActiveStates();
   // Load both active and archived for stats
   const [activeSnap, archSnap] = await Promise.all([
-    db.collection('issues').get(),
-    db.collection('archive').get()
+    getAllIssues(),
+    getAllArchive()
   ]);
   statsCache.issues = activeSnap.docs.map(d=>({id:d.id, ...d.data()}));
   statsCache.archive = archSnap.docs.map(d=>({id:d.id, ...d.data()}));
@@ -3693,11 +3630,11 @@ async function lsSaveSnapshot(){
   // Don't store the actual CSV file objects, just remove them
   delete snapshot.csvOp;
   delete snapshot.csvBb;
-  await db.collection('lsSnapshots').add({
+  await addLsSnapshot({
     data: JSON.stringify(snapshot),
     submittedBy: user.name,
     role: user.role,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    createdAt: serverTime()
   });
   showToast('Snapshot saved.');
 }
@@ -3711,7 +3648,7 @@ async function lsSaveSnapshot(){
 async function renderSnapshots(){
   const body = document.getElementById('reportsBody');
   body.innerHTML = `<div style="font-size:13px;color:var(--muted);margin-bottom:6px">Snapshots auto-purge daily at 6:00 AM EST. CSV-derived tables are not saved.</div><div class="snap-list" id="snapList">Loading...</div>`;
-  const snap = await db.collection('lsSnapshots').orderBy('createdAt','desc').get();
+  const snap = await getLsSnapshots();
   const items = snap.docs.map(d=>({id:d.id, ...d.data()}));
   const list = document.getElementById('snapList');
   if(!items.length){
@@ -3738,7 +3675,7 @@ async function renderSnapshots(){
 }
 
 async function lsLoadSnapshot(id){
-  const doc = await db.collection('lsSnapshots').doc(id).get();
+  const doc = await getLsSnapshot(id);
   if(!doc.exists) return;
   const docData = doc.data();
   const data = JSON.parse(docData.data);
@@ -3759,7 +3696,7 @@ async function lsLoadSnapshot(id){
 
 async function lsDeleteSnapshot(id){
   if(!confirm('Delete this snapshot?')) return;
-  await db.collection('lsSnapshots').doc(id).delete();
+  await deleteLsSnapshot(id);
   renderSnapshots();
   showToast('Snapshot deleted.');
 }
@@ -3784,15 +3721,15 @@ async function purgeSnapshotsDaily(){
     }
     const cutoffMs = cutoff.getTime() + 5*60*60*1000;
 
-    const metaRef = db.collection('meta').doc('snapshots');
+    const metaRef = metaRef('snapshots');
     const metaSnap = await metaRef.get();
     const lastRun = metaSnap.exists ? (metaSnap.data().lastPurge?.toMillis?.() || 0) : 0;
     if(lastRun >= cutoffMs) return;
 
-    const old = await db.collection('lsSnapshots').where('createdAt','<', new Date(cutoffMs)).get();
+    const old = await getLsSnapshotsOlderThan(cutoffMs);
     let deleted = 0;
     for(const d of old.docs){ await d.ref.delete(); deleted++; }
-    await metaRef.set({lastPurge: firebase.firestore.FieldValue.serverTimestamp()}, {merge:true});
+    await metaRef.set({lastPurge: serverTime()}, {merge:true});
     if(deleted) console.log(`Purged ${deleted} old snapshot(s).`);
   } catch(e){ console.warn('Snapshot purge failed:',e); }
 }
@@ -4267,12 +4204,12 @@ async function eodCopy(){
 // Snapshot save reuses the same lsSnapshots collection but with type='eod'
 // so they show alongside Line Status snapshots and follow the same purge schedule.
 async function eodSaveSnapshot(){
-  await db.collection('lsSnapshots').add({
+  await addLsSnapshot({
     type: 'eod',
     data: JSON.stringify(eodState),
     submittedBy: user.name,
     role: user.role,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    createdAt: serverTime()
   });
   showToast('EOD snapshot saved.');
 }
@@ -4352,8 +4289,8 @@ function switchTodayTab(tab){
 function startTodaySubscriptions(){
   const key = todayKey();
   if(!todayLsSub){
-    todayLsSub = db.collection('publishedReports').doc(`ls_${key}`)
-      .onSnapshot(doc => {
+    todayLsSub = subscribePublishedReport(`ls_${key}`,
+      doc => {
         const prev = todayPublished.ls;
         todayPublished.ls = doc.exists ? doc.data() : null;
         // If a NEW publish happened (not just an edit by us), and the
@@ -4369,8 +4306,8 @@ function startTodaySubscriptions(){
       }, err=>{ console.warn('[LabTrack] today-ls listener:', err.code); });
   }
   if(!todayEodSub){
-    todayEodSub = db.collection('publishedReports').doc(`eod_${key}`)
-      .onSnapshot(doc => {
+    todayEodSub = subscribePublishedReport(`eod_${key}`,
+      doc => {
         todayPublished.eod = doc.exists ? doc.data() : null;
         if(currentTodayTab==='eod' && document.getElementById('todayPanel')?.classList.contains('open')){
           renderTodayEod();
@@ -4378,9 +4315,8 @@ function startTodaySubscriptions(){
       }, err=>{ console.warn('[LabTrack] today-eod listener:', err.code); });
   }
   if(!todayRevSub){
-    todayRevSub = db.collection('publishedReports').doc(`ls_${key}`)
-      .collection('revisions').orderBy('at','desc').limit(50)
-      .onSnapshot(snap => {
+    todayRevSub = subscribeRevisions(`ls_${key}`,
+      snap => {
         todayRevisions = snap.docs.map(d => ({id:d.id, kind:'ls', ...d.data()}));
         if(currentTodayTab==='hist' && document.getElementById('todayPanel')?.classList.contains('open')){
           renderTodayHistory();
@@ -4452,8 +4388,8 @@ async function renderTodayHistory(){
   const key = todayKey();
   // Pull both LS and EOD revisions in parallel
   const [lsSnap, eodSnap] = await Promise.all([
-    db.collection('publishedReports').doc(`ls_${key}`).collection('revisions').orderBy('at','desc').limit(50).get(),
-    db.collection('publishedReports').doc(`eod_${key}`).collection('revisions').orderBy('at','desc').limit(50).get()
+    getRevisions(`ls_${key}`),
+    getRevisions(`eod_${key}`)
   ]);
   const all = [
     ...lsSnap.docs.map(d => ({kind:'ls', ...d.data()})),
@@ -4541,7 +4477,7 @@ function lsArchiveDayKey(){
 
 async function lsPublish(){
   const key = todayKey();
-  const ref = db.collection('publishedReports').doc(`ls_${key}`);
+  const ref = publishedReportRef(`ls_${key}`);
   const existing = await ref.get();
   const isFinal = lsState.isFinal === true;
   const confirmMsg = existing.exists
@@ -4556,7 +4492,7 @@ async function lsPublish(){
   delete stateCopy.csvOp;
   delete stateCopy.csvBb;
   const data = JSON.stringify(stateCopy);
-  const now = firebase.firestore.FieldValue.serverTimestamp();
+  const now = serverTime();
 
   if(existing.exists){
     await ref.update({
@@ -4564,9 +4500,9 @@ async function lsPublish(){
       lastEditedBy: user.name,
       lastEditedAt: now,
       isFinal,
-      editCount: firebase.firestore.FieldValue.increment(1)
+      editCount: incrementBy(1)
     });
-    await ref.collection('revisions').add({by:user.name, action: isFinal ? 'edited (final)' : 'edited', at:now});
+    await addRevisionTo(ref, {by:user.name, action: isFinal ? 'edited (final)' : 'edited', at:now});
     showToast(isFinal ? 'Line Status updated and saved to archive.' : 'Line Status updated.');
   } else {
     await ref.set({
@@ -4575,7 +4511,7 @@ async function lsPublish(){
       lastEditedBy: user.name, lastEditedAt: now,
       isFinal, editCount: 1, dateKey: key
     });
-    await ref.collection('revisions').add({by:user.name, action: isFinal ? 'published (final)' : 'published', at:now});
+    await addRevisionTo(ref, {by:user.name, action: isFinal ? 'published (final)' : 'published', at:now});
     showToast(isFinal ? 'Line Status published and saved to archive.' : 'Line Status published. Visible to all under the Today tab.');
   }
 
@@ -4584,7 +4520,7 @@ async function lsPublish(){
   // attributed to the correct calendar day.
   if(isFinal){
     const archKey = lsArchiveDayKey();
-    await db.collection('lsArchive').doc(archKey).set({
+    await setLsArchive(archKey, {
       renderedHtml,
       data,
       date: archKey,
@@ -4607,7 +4543,7 @@ async function eodPublish(){
     return;
   }
   const key = todayKey();
-  const ref = db.collection('publishedReports').doc(`eod_${key}`);
+  const ref = publishedReportRef(`eod_${key}`);
   const existing = await ref.get();
   const confirmMsg = existing.exists
     ? 'Update the published EOD? Everyone on the team will see your edits immediately under the Today tab.'
@@ -4617,16 +4553,16 @@ async function eodPublish(){
   const renderedHtml = renderEl.innerHTML;
   const data = JSON.stringify(eodState);
 
-  const now = firebase.firestore.FieldValue.serverTimestamp();
+  const now = serverTime();
   if(existing.exists){
     await ref.update({
       data,
       renderedHtml,
       lastEditedBy: user.name,
       lastEditedAt: now,
-      editCount: firebase.firestore.FieldValue.increment(1)
+      editCount: incrementBy(1)
     });
-    await ref.collection('revisions').add({
+    await addRevisionTo(ref, {
       by: user.name,
       action: 'edited',
       at: now
@@ -4643,7 +4579,7 @@ async function eodPublish(){
       editCount: 1,
       dateKey: key
     });
-    await ref.collection('revisions').add({
+    await addRevisionTo(ref, {
       by: user.name,
       action: 'published',
       at: now
@@ -4674,11 +4610,11 @@ async function withdrawPublishedReport(kind){
     return;
   }
   const key = todayKey();
-  const ref = db.collection('publishedReports').doc(`${kind}_${key}`);
-  const now = firebase.firestore.FieldValue.serverTimestamp();
+  const ref = publishedReportRef(`${kind}_${key}`);
+  const now = serverTime();
   // Append the withdrawal entry FIRST so the audit log is preserved even
   // if the subsequent delete fails for any reason.
-  await ref.collection('revisions').add({
+  await addRevisionTo(ref, {
     by: user.name,
     action: `withdrawn: ${reason.trim()}`,
     at: now
@@ -4709,7 +4645,7 @@ async function purgePublishedReportsDaily(){
     const cutoffMs = cutoff.getTime() + 5*60*60*1000;
 
     // Skip if another client already ran today's purge.
-    const metaRef = db.collection('meta').doc('publishedReports');
+    const metaRef = metaRef('publishedReports');
     const metaSnap = await metaRef.get();
     const lastRun = metaSnap.exists ? (metaSnap.data().lastPurge?.toMillis?.() || 0) : 0;
     if(lastRun >= cutoffMs) return;
@@ -4722,17 +4658,16 @@ async function purgePublishedReportsDaily(){
     const td = String(threshold.getDate()).padStart(2,'0');
     const thresholdKey = `${ty}-${tm}-${td}`;
 
-    const old = await db.collection('publishedReports')
-      .where('dateKey', '<', thresholdKey).get();
+    const old = await getPublishedReportsBeforeKey(thresholdKey);
     let deleted = 0;
     for(const doc of old.docs){
       // Delete the revisions subcollection first to avoid orphans.
-      const revs = await doc.ref.collection('revisions').get();
+      const revs = await getRevisionsOf(doc.ref);
       for(const r of revs.docs) await r.ref.delete();
       await doc.ref.delete();
       deleted++;
     }
-    await metaRef.set({lastPurge: firebase.firestore.FieldValue.serverTimestamp()}, {merge:true});
+    await metaRef.set({lastPurge: serverTime()}, {merge:true});
     if(deleted) console.log(`Purged ${deleted} old published report(s).`);
   } catch(e){
     console.warn('Published report purge failed:', e);
@@ -5169,9 +5104,8 @@ function renderSuggestions(){
   // Real-time subscription so new suggestions and votes appear live.
   // Ordered by creation time descending so newest are at the top.
   if(suggestSub){ suggestSub(); suggestSub = null; }
-  suggestSub = db.collection('suggestions')
-    .orderBy('createdAt','desc')
-    .onSnapshot(snap => {
+  suggestSub = subscribeSuggestions(
+    snap => {
       const items = snap.docs.map(d => ({id:d.id, ...d.data()}));
       populateSuggestList(items);
     }, err=>{ console.warn('[LabTrack] suggestions listener:', err.code); });
@@ -5232,13 +5166,13 @@ async function submitSuggestion(){
   if(!text){ showToast('Type something first.'); return; }
   if(text.length > 600){ showToast('Keep it under 600 characters.'); return; }
 
-  await db.collection('suggestions').add({
+  await addSuggestion({
     text,
     author: user.name,
     role: user.role,
     status: 'open',
     thumbs: [],
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    createdAt: serverTime()
   });
   const ta = document.getElementById('sugText');
   if(ta) ta.value = '';
@@ -5250,14 +5184,14 @@ async function submitSuggestion(){
 // or removes it if they are (toggle behavior).
 async function toggleSuggestThumb(suggId, userName, currentlyVoted){
   if(!requireIdentity('vote on suggestions')) return;
-  const ref = db.collection('suggestions').doc(suggId);
+  const ref = suggestionRef(suggId);
   if(currentlyVoted){
     await ref.update({
-      thumbs: firebase.firestore.FieldValue.arrayRemove(userName)
+      thumbs: arrayRemove(userName)
     });
   } else {
     await ref.update({
-      thumbs: firebase.firestore.FieldValue.arrayUnion(userName)
+      thumbs: arrayAdd(userName)
     });
   }
 }
@@ -5267,9 +5201,9 @@ async function toggleSuggestThumb(suggId, userName, currentlyVoted){
 async function setSuggestClosed(suggId, close){
   if(!requireIdentity('close suggestions')) return;
   const update = close
-    ? { status:'closed', closedBy:user.name, closedAt:firebase.firestore.FieldValue.serverTimestamp() }
-    : { status:'open', closedBy:firebase.firestore.FieldValue.delete(), closedAt:firebase.firestore.FieldValue.delete() };
-  await db.collection('suggestions').doc(suggId).update(update);
+    ? { status:'closed', closedBy:user.name, closedAt:serverTime() }
+    : { status:'open', closedBy:deleteField(), closedAt:deleteField() };
+  await suggestionRef(suggId).update(update);
 }
 
 // ── LS ARCHIVE ───────────────────────────────────────────────
@@ -5286,7 +5220,7 @@ async function renderLsArchive(){
   const body = document.getElementById('reportsBody');
   body.innerHTML = '<div style="color:var(--muted);font-style:italic;padding:30px;text-align:center">Loading archive...</div>';
 
-  const snap = await db.collection('lsArchive').orderBy('date','desc').get();
+  const snap = await getLsArchive();
   const entries = snap.docs.map(d => ({id:d.id, ...d.data()}));
 
   if(!entries.length){
@@ -5382,7 +5316,7 @@ async function renderLsArchive(){
 // Opens a single archived final Line Status in a full-screen overlay.
 // Renders the stored HTML read-only, same as the Today panel viewer.
 async function openLsArchiveEntry(dateKey){
-  const doc = await db.collection('lsArchive').doc(dateKey).get();
+  const doc = await getLsArchiveDoc(dateKey);
   if(!doc.exists){ showToast('Entry not found.'); return; }
   const entry = doc.data();
 
