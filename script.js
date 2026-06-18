@@ -702,7 +702,7 @@ function switchBoard(id){
   boardId=id;
   if(issueSub) issueSub();
   isFirstLoad = true;
-  subscribeIssues(id);
+  watchIssues(id);
 }
 
 function openNewBoard(){
@@ -761,7 +761,7 @@ async function deleteBoard(){
 // issue) and re-renders the affected lanes. The subscription is
 // scoped to the active boardId; switching boards detaches the prior
 // listener via issueSub() before binding a new one.
-function subscribeIssues(bid){
+function watchIssues(bid){
   document.getElementById('boardArea').innerHTML='<div class="loading">Loading…</div>';
   let prevIssueMap = {};
   issues.forEach(i=>{ prevIssueMap[i.id]=i });
