@@ -1407,6 +1407,14 @@ async function updateField(id, field, val){
   const prev = issue ? issue[field] : null;
   const update = {[field]:val, updatedAt:serverTime()};
 
+  // Stamp resolvedAt when a card enters resolved, clear it when it leaves.
+  // This timestamp drives the 2-day auto-archive, so it must reflect the
+  // moment of resolution, not the fix-description save (which is optional).
+  if(field === 'status'){
+    if(val === 'resolved' && prev !== 'resolved') update.resolvedAt = serverTime();
+    else if(val !== 'resolved' && prev === 'resolved') update.resolvedAt = deleteField();
+  }
+
   await updateIssue(id, update);
   if(['status','priority'].includes(field) && prev !== val){
     await logActivity(id, field, {from:prev, to:val});
@@ -1711,29 +1719,6 @@ async function toggleReaction(issueId, commentId, key){
 // Subsystems for historical data: weekly archive of resolved issues,
 // stats dashboard with rollup metrics, and CSV export from both views.
 // Archive maintenance runs once per session if conditions are met
-// (Sunday 6am EST cutoff has passed since the last run).
-// Compute the most recent Sunday 6am EST as a UTC timestamp.
-// EST is UTC-5 (we ignore DST drift for simplicity, close enough for archival).
-function lastSunday6amEST(){
-  const now = new Date();
-  // Convert to a Date representing "now in EST"
-  const utcMs = now.getTime();
-  const estMs = utcMs - 5*60*60*1000;
-  const est = new Date(estMs);
-  // Find this past Sunday 6am in EST
-  const dow = est.getUTCDay(); // 0=Sun
-  const target = new Date(est);
-  target.setUTCHours(6,0,0,0);
-  if(dow===0 && est.getUTCHours() < 6){
-    // It's Sunday before 6am EST, use last Sunday
-    target.setUTCDate(target.getUTCDate() - 7);
-  } else {
-    target.setUTCDate(target.getUTCDate() - dow);
-  }
-  // Convert back to UTC ms
-  return target.getTime() + 5*60*60*1000;
-}
-
 // Returns Monday 00:00 UTC for the week containing the given timestamp (used as week bucket)
 function weekKey(ts){
   const d = new Date(ts);
@@ -1751,48 +1736,48 @@ function fmtWeekRange(weekStartMs){
   return `Week of ${start.toLocaleDateString(undefined,opt)} – ${end.toLocaleDateString(undefined,{...opt, year:'numeric'})}`;
 }
 
-// Run on every app load. Archives Resolved cards if the last archive run was before
-// the most recent Sunday 6am EST. Also purges archives older than 90 days.
+// Run on every app load. Archives any Resolved card whose resolvedAt is more
+// than 2 days old, one card at a time based on its own resolved timestamp
+// (not a weekly batch). Also purges archived issues older than 90 days.
 async function runArchiveMaintenance(){
   try {
-    const cutoff = lastSunday6amEST();
-    const metaRef = metaRef('archive');
-    const metaSnap = await metaRef.get();
-    const lastRun = metaSnap.exists ? (metaSnap.data().lastRun?.toMillis?.() || 0) : 0;
+    const TWO_DAYS_MS = 2*24*60*60*1000;
+    const archiveCutoff = Date.now() - TWO_DAYS_MS;
 
-    if(lastRun < cutoff){
-      // Archive Resolved issues across all boards
-      const resolvedSnap = await getIssuesByStatus('resolved');
-      let archived = 0;
-      for(const doc of resolvedSnap.docs){
-        const data = doc.data();
-        const archivedAt = serverTime();
-        const wk = weekKey(Date.now());
-        // Copy to archive collection (preserve original ID for reference)
-        await archiveDocRef(doc.id).set({
-          ...data,
-          archivedAt,
-          weekBucket: wk,
-          originalId: doc.id
-        });
-        // Copy comments and history (best effort, keep small via batch where possible)
-        const commentsSnap = await getSubcollection(doc.ref,'comments');
-        for(const c of commentsSnap.docs){
-          await archiveDocRef(doc.id).collection('comments').doc(c.id).set(c.data());
-        }
-        const historySnap = await getSubcollection(doc.ref,'history');
-        for(const h of historySnap.docs){
-          await archiveDocRef(doc.id).collection('history').doc(h.id).set(h.data());
-        }
-        // Delete original (and its subcollections)
-        for(const c of commentsSnap.docs) await c.ref.delete();
-        for(const h of historySnap.docs) await h.ref.delete();
-        await doc.ref.delete();
-        archived++;
+    const resolvedSnap = await getIssuesByStatus('resolved');
+    let archived = 0;
+    for(const doc of resolvedSnap.docs){
+      const data = doc.data();
+      // Resolution time. Fall back to updatedAt for any legacy resolved card
+      // that predates the resolvedAt field, so old cards still archive.
+      const resolvedMs = data.resolvedAt?.toMillis?.()
+        ?? data.updatedAt?.toMillis?.()
+        ?? 0;
+      // Not yet 2 days resolved: leave it in the Resolved column.
+      if(resolvedMs > archiveCutoff) continue;
+
+      const wk = weekKey(resolvedMs || Date.now());
+      await archiveDocRef(doc.id).set({
+        ...data,
+        archivedAt: serverTime(),
+        weekBucket: wk,
+        originalId: doc.id
+      });
+      // Copy comments and history, then delete the originals.
+      const commentsSnap = await getSubcollection(doc.ref,'comments');
+      for(const c of commentsSnap.docs){
+        await archiveDocRef(doc.id).collection('comments').doc(c.id).set(c.data());
       }
-      await metaRef.set({lastRun: serverTime()}, {merge:true});
-      if(archived) console.log(`Archived ${archived} resolved issue(s).`);
+      const historySnap = await getSubcollection(doc.ref,'history');
+      for(const h of historySnap.docs){
+        await archiveDocRef(doc.id).collection('history').doc(h.id).set(h.data());
+      }
+      for(const c of commentsSnap.docs) await c.ref.delete();
+      for(const h of historySnap.docs) await h.ref.delete();
+      await doc.ref.delete();
+      archived++;
     }
+    if(archived) console.log(`Archived ${archived} resolved issue(s) past the 2-day window.`);
 
     // Purge archives older than 90 days
     const purgeBefore = Date.now() - 90*24*60*60*1000;
@@ -1823,6 +1808,7 @@ let archiveData = [];
 async function openArchive(){
   document.getElementById('archivePanel').classList.add('open');
   updateHeaderActiveStates();
+  switchArchiveTab('issues');
   // Populate board filter
   const boardSel = document.getElementById('archBoard');
   boardSel.innerHTML = '<option value="">All boards</option>' + boards.map(b=>`<option value="${b.id}">${esc(b.title)}</option>`).join('');
@@ -1834,6 +1820,18 @@ async function openArchive(){
   const weekSel = document.getElementById('archWeek');
   weekSel.innerHTML = '<option value="">All weeks</option>' + weeks.map(w=>`<option value="${w}">${fmtWeekRange(w)}</option>`).join('');
   renderArchive();
+}
+
+// Switches the Archive panel between the resolved-issues archive and the
+// line-status archive. The LS archive is loaded lazily the first time its
+// tab is opened, since it is a separate Firestore read.
+function switchArchiveTab(tab){
+  const isIssues = tab === 'issues';
+  document.getElementById('archTabIssues').classList.toggle('active', isIssues);
+  document.getElementById('archTabLs').classList.toggle('active', !isIssues);
+  document.getElementById('archIssuesPane').style.display = isIssues ? '' : 'none';
+  document.getElementById('archLsPane').style.display = isIssues ? 'none' : '';
+  if(!isIssues) renderLsArchive();
 }
 
 function closeArchive(){
@@ -2335,11 +2333,9 @@ function switchReportTab(tab){
   document.getElementById('rTabLs').classList.toggle('active', tab==='ls');
   document.getElementById('rTabSnap').classList.toggle('active', tab==='snap');
   document.getElementById('rTabEod').classList.toggle('active', tab==='eod');
-  document.getElementById('rTabLsArch').classList.toggle('active', tab==='lsarch');
   if(tab==='ls') renderLineStatus();
   else if(tab==='snap') renderSnapshots();
   else if(tab==='eod') renderEOD();
-  else if(tab==='lsarch') renderLsArchive();
 }
 
 function formatTodayLong(){
@@ -5217,7 +5213,7 @@ async function setSuggestClosed(suggId, close){
 // matching week bucket.
 
 async function renderLsArchive(){
-  const body = document.getElementById('reportsBody');
+  const body = document.getElementById('archLsBody');
   body.innerHTML = '<div style="color:var(--muted);font-style:italic;padding:30px;text-align:center">Loading archive...</div>';
 
   const snap = await getLsArchive();

@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260104n">
+  <link rel="stylesheet" href="styles.css?v=20260104o">
 </head>
 <body>
 
@@ -295,15 +295,30 @@
   <div class="panel">
     <div class="panel-hdr">
       <div class="panel-title">Archive</div>
-      <select class="week-pick" id="archWeek" onchange="renderArchive()"></select>
-      <select class="week-pick" id="archBoard" onchange="renderArchive()" style="min-width:160px"></select>
-      <input class="search-input" id="archSearch" placeholder="Search archived…" oninput="renderArchive()" style="margin-left:0;width:200px;padding-left:11px" />
-      <button class="btn-tool" style="background:#3b82f6;color:#fff;border-color:#3b82f6;margin-left:auto" onclick="exportCSV('archive')">Export CSV</button>
-      <button class="modal-close-btn" onclick="closeArchive()">×</button>
+      <div class="arch-tabs">
+        <div class="arch-tab active" id="archTabIssues" onclick="switchArchiveTab('issues')">Resolved Issues</div>
+        <div class="arch-tab" id="archTabLs" onclick="switchArchiveTab('ls')">Line Statuses</div>
+      </div>
+      <button class="modal-close-btn" style="margin-left:auto" onclick="closeArchive()">×</button>
     </div>
+
     <div class="panel-body">
-      <div class="arch-list" id="archList"></div>
-      <div class="arch-purge-note">Items older than 90 days are permanently removed.</div>
+      <!-- Resolved issues archive -->
+      <div id="archIssuesPane">
+        <div class="arch-toolbar">
+          <select class="week-pick" id="archWeek" onchange="renderArchive()"></select>
+          <select class="week-pick" id="archBoard" onchange="renderArchive()" style="min-width:160px"></select>
+          <input class="search-input" id="archSearch" placeholder="Search archived…" oninput="renderArchive()" style="margin-left:0;width:200px;padding-left:11px" />
+          <button class="btn-tool" style="background:#3b82f6;color:#fff;border-color:#3b82f6;margin-left:auto" onclick="exportCSV('archive')">Export CSV</button>
+        </div>
+        <div class="arch-list" id="archList"></div>
+        <div class="arch-purge-note">Resolved cards move here 2 days after being resolved. Items older than 90 days are permanently removed.</div>
+      </div>
+
+      <!-- Line Status archive -->
+      <div id="archLsPane" style="display:none">
+        <div class="lsa-body" id="archLsBody"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -334,7 +349,6 @@
         <div class="reports-tab active" id="rTabLs" onclick="switchReportTab('ls')">Line Status</div>
         <div class="reports-tab" id="rTabSnap" onclick="switchReportTab('snap')">Saved Snapshots</div>
         <div class="reports-tab" id="rTabEod" onclick="switchReportTab('eod')">EOD</div>
-        <div class="reports-tab" id="rTabLsArch" onclick="switchReportTab('lsarch')">LS Archive</div>
       </div>
       <button class="modal-close-btn" style="margin-left:auto" onclick="closeReports()">×</button>
     </div>
@@ -408,7 +422,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-<script src="dataService.js?v=20260104n"></script>
-<script src="script.js?v=20260104n"></script>
+<script src="dataService.js?v=20260104o"></script>
+<script src="script.js?v=20260104o"></script>
 </body>
 </html>
