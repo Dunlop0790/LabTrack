@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260104p">
+  <link rel="stylesheet" href="styles.css?v=20260104q">
 </head>
 <body>
 
@@ -194,7 +194,7 @@
       <span class="board-context-lbl">Board</span>
       <select class="board-sel" id="boardSel" onchange="switchBoard(this.value)"></select>
       <button class="btn-new-board" onclick="openNewBoard()">+ New</button>
-      <button class="btn-del-board" onclick="deleteBoard()" title="Delete current board">×</button>
+      <button class="btn-del-board" onclick="confirmDeleteBoard()" title="Delete current board">×</button>
     </div>
     <div class="hdr-right">
       <button class="btn-tool primary desktop-only" id="hdrTodayBtn" onclick="openToday()" title="Today's published reports and live status">Today</button>
@@ -216,7 +216,7 @@
 <!-- Hamburger menu (mobile) -->
 <div class="ham-menu" id="hamMenu">
   <div class="ham-item" onclick="closeHam();openNewBoard()"><span class="ham-ico" data-icon="plus"></span>New Board</div>
-  <div class="ham-item" onclick="closeHam();deleteBoard()"><span class="ham-ico" data-icon="close"></span>Delete Board</div>
+  <div class="ham-item" onclick="closeHam();confirmDeleteBoard()"><span class="ham-ico" data-icon="close"></span>Delete Board</div>
   <div class="ham-item" onclick="closeHam();openToday()"><span class="ham-ico" data-icon="today"></span>Today</div>
   <!-- Grouped tools in the menu: a section header followed by indented
        items. External links use anchor tags so they work as native
@@ -422,7 +422,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-<script src="dataService.js?v=20260104p"></script>
-<script src="script.js?v=20260104p"></script>
+<script src="dataService.js?v=20260104q"></script>
+<script src="script.js?v=20260104q"></script>
 </body>
 </html>

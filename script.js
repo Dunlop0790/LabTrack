@@ -723,7 +723,7 @@ async function submitNewBoard(){
   document.getElementById('newBoardName').value='';
 }
 
-async function deleteBoard(){
+async function confirmDeleteBoard(){
   if(boards.length<=1){
     alert('Cannot delete the only remaining board. Create another board first.');
     return;
@@ -1306,7 +1306,7 @@ function buildDetailHTML(i){
         </select>
       </div>
       <div class="sidebar-delete">
-        <button class="btn btn-danger" style="width:100%;font-size:12px" onclick="deleteIssue('${i.id}')">Delete Issue</button>
+        <button class="btn btn-danger" style="width:100%;font-size:12px" onclick="confirmDeleteIssue('${i.id}')">Delete Issue</button>
       </div>
     </div>
   </div>`;
@@ -1504,7 +1504,7 @@ async function claimIssue(id){
   showToast('Assigned to you.');
 }
 
-async function deleteIssue(id){
+async function confirmDeleteIssue(id){
   if(!confirm('Delete this issue? This cannot be undone.')) return;
   await deleteIssue(id);
   closeDetail();
@@ -3717,15 +3717,15 @@ async function purgeSnapshotsDaily(){
     }
     const cutoffMs = cutoff.getTime() + 5*60*60*1000;
 
-    const metaRef = metaRef('snapshots');
-    const metaSnap = await metaRef.get();
+    const meta = metaRef('snapshots');
+    const metaSnap = await meta.get();
     const lastRun = metaSnap.exists ? (metaSnap.data().lastPurge?.toMillis?.() || 0) : 0;
     if(lastRun >= cutoffMs) return;
 
     const old = await getLsSnapshotsOlderThan(cutoffMs);
     let deleted = 0;
     for(const d of old.docs){ await d.ref.delete(); deleted++; }
-    await metaRef.set({lastPurge: serverTime()}, {merge:true});
+    await meta.set({lastPurge: serverTime()}, {merge:true});
     if(deleted) console.log(`Purged ${deleted} old snapshot(s).`);
   } catch(e){ console.warn('Snapshot purge failed:',e); }
 }
@@ -4641,8 +4641,8 @@ async function purgePublishedReportsDaily(){
     const cutoffMs = cutoff.getTime() + 5*60*60*1000;
 
     // Skip if another client already ran today's purge.
-    const metaRef = metaRef('publishedReports');
-    const metaSnap = await metaRef.get();
+    const meta = metaRef('publishedReports');
+    const metaSnap = await meta.get();
     const lastRun = metaSnap.exists ? (metaSnap.data().lastPurge?.toMillis?.() || 0) : 0;
     if(lastRun >= cutoffMs) return;
 
@@ -4663,7 +4663,7 @@ async function purgePublishedReportsDaily(){
       await doc.ref.delete();
       deleted++;
     }
-    await metaRef.set({lastPurge: serverTime()}, {merge:true});
+    await meta.set({lastPurge: serverTime()}, {merge:true});
     if(deleted) console.log(`Purged ${deleted} old published report(s).`);
   } catch(e){
     console.warn('Published report purge failed:', e);
