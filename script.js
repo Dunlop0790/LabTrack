@@ -2318,7 +2318,12 @@ function lsRestoreState(saved){
         });
       }
     } else {
-      lsState[key] = val;                  // primitives: take saved
+      // Primitives: take saved. Strip any pasted HTML comment markers
+      // (<!--StartFragment--> etc.) from strings so saved state poisoned by an
+      // earlier paste cannot crash the render on load.
+      lsState[key] = (typeof val === 'string' && val.includes('<!--'))
+        ? val.replace(/<!--[\s\S]*?-->/g, '')
+        : val;
     }
   });
 }
@@ -2811,6 +2816,12 @@ function lsSavePersist(){
   } catch(e){ console.warn('lsState persist failed:', e); }
 }
 function lsUpdate(field, value){
+  // Strip HTML comment markers (e.g. <!--StartFragment--> <!--EndFragment-->)
+  // that browsers and Office inject when pasting into a contenteditable. They
+  // are never meaningful here and would otherwise render literally.
+  if(typeof value === 'string' && value.includes('<!--')){
+    value = value.replace(/<!--[\s\S]*?-->/g, '');
+  }
   lsState[field] = value;
   if(field==='isFinal') renderLineStatus(); else refreshPreview();
   lsSavePersist();
@@ -3545,6 +3556,11 @@ function notesToEmailHtml(content){
   temp.innerHTML = normalizeHighlightColors(content);
   const lines = [];
   temp.childNodes.forEach(node => {
+    if(node.nodeType === Node.COMMENT_NODE){
+      // Office and browsers inject <!--StartFragment--> / <!--EndFragment-->
+      // comment markers on paste. They have no outerHTML and must be skipped.
+      return;
+    }
     if(node.nodeType === Node.TEXT_NODE){
       const t = node.textContent.trim();
       if(t) lines.push(t);
@@ -3554,7 +3570,7 @@ function notesToEmailHtml(content){
     } else if(node.nodeName === 'BR'){
       // skip bare BRs
     } else {
-      const outer = node.outerHTML.trim();
+      const outer = (node.outerHTML || '').trim();
       if(outer) lines.push(outer);
     }
   });
@@ -4747,131 +4763,6 @@ const IOM_ERROR_CODES = [
 
 let refActiveTab = 'errors';
 let ecActiveFilter = 'all';
-
-// ── GUIDED TOUR ───────────────────────────────────────────────
-// Optional walkthrough of the dashboard. Highlights one element at a
-// time with a spotlight and an explanatory popover. Launched from the
-// setup screen ("Take a quick tour") or could be wired to a help button.
-// Steps target elements by selector; missing targets are skipped so the
-// tour stays robust if the layout changes.
-
-const TOUR_STEPS = [
-  {
-    sel: '.logo',
-    title: 'Welcome to LabTrack',
-    body: 'This is your ALO dashboard. Every tool lives here as a tile. Clicking the LabTrack logo from anywhere brings you back to this home screen.'
-  },
-  {
-    sel: '.tile-board',
-    title: 'Issue Board',
-    body: 'A live snapshot of open issues across all four stages. Click any card to see details, or hit Expand to open the full board where you can create and manage issues.'
-  },
-  {
-    sel: '.tile-board .tile-action',
-    title: 'Expand the Board',
-    body: 'Opens the full issue board with filtering, search, and the ability to log new issues and move them between stages.'
-  },
-  {
-    sel: '#dashGrid .tile-tool',
-    title: 'Line Status',
-    body: 'Build and publish the Line Status report. The DAS link and the Line Status Guide are right here for quick access while you work.'
-  },
-  {
-    sel: '.tile-ico.ico-ref',
-    title: 'Reference & Job Aid',
-    body: 'Look up IOM error codes, read the Line Status Guide, or review the ALO training guide. Searchable and always one click away during a shift.'
-  },
-  {
-    sel: '#hdrTodayBtn',
-    title: 'Today',
-    body: 'See what has been published today and browse the archive of past final Line Statuses.'
-  },
-  {
-    sel: '.btn-new',
-    title: 'Log an Issue',
-    body: 'Quickly log a new issue from anywhere using this button. That is the end of the tour. You can revisit it anytime from the login screen.'
-  }
-];
-
-let tourIdx = 0;
-
-// Called from the setup screen. Dismisses the setup overlay into guest
-// mode so the dashboard is visible behind the tour, then starts it.
-function startTourFromSetup(){
-  // Enter as guest so the dashboard renders behind the tour without
-  // forcing a name/role choice first. The user can still sign in after.
-  if(typeof enterGuest === 'function') enterGuest();
-  setTimeout(()=> startTour(), 350);
-}
-
-function startTour(){
-  tourIdx = 0;
-  document.getElementById('tourOverlay').classList.add('active');
-  showTourStep();
-}
-
-function showTourStep(){
-  // Skip any steps whose target is not on the page right now
-  while(tourIdx < TOUR_STEPS.length && !document.querySelector(TOUR_STEPS[tourIdx].sel)){
-    tourIdx++;
-  }
-  if(tourIdx >= TOUR_STEPS.length){ endTour(); return; }
-
-  const step = TOUR_STEPS[tourIdx];
-  const target = document.querySelector(step.sel);
-  const rect = target.getBoundingClientRect();
-  const pad = 6;
-
-  // Position spotlight over the target
-  const spot = document.getElementById('tourSpotlight');
-  spot.style.left = (rect.left - pad) + 'px';
-  spot.style.top = (rect.top - pad) + 'px';
-  spot.style.width = (rect.width + pad*2) + 'px';
-  spot.style.height = (rect.height + pad*2) + 'px';
-
-  // Fill popover content
-  document.getElementById('tourStep').textContent = `Step ${tourIdx+1} of ${TOUR_STEPS.length}`;
-  document.getElementById('tourTitle').textContent = step.title;
-  document.getElementById('tourBody').textContent = step.body;
-  document.getElementById('tourBack').style.visibility = tourIdx === 0 ? 'hidden' : 'visible';
-  document.getElementById('tourNext').textContent = tourIdx === TOUR_STEPS.length-1 ? 'Done' : 'Next';
-
-  // Position popover: below the target if room, otherwise above
-  const pop = document.getElementById('tourPop');
-  const popW = 300, popH = pop.offsetHeight || 160;
-  let top = rect.bottom + 14;
-  if(top + popH > window.innerHeight - 12) top = Math.max(12, rect.top - popH - 14);
-  let left = rect.left;
-  if(left + popW > window.innerWidth - 12) left = window.innerWidth - popW - 12;
-  if(left < 12) left = 12;
-  pop.style.top = top + 'px';
-  pop.style.left = left + 'px';
-
-  // Scroll target into view if needed
-  if(rect.top < 60 || rect.bottom > window.innerHeight - 60){
-    target.scrollIntoView({behavior:'smooth', block:'center'});
-    setTimeout(showTourStep, 350); // reposition after scroll settles
-  }
-}
-
-function tourNext(){
-  if(tourIdx >= TOUR_STEPS.length-1){ endTour(); return; }
-  tourIdx++;
-  showTourStep();
-}
-function tourPrev(){
-  if(tourIdx === 0) return;
-  tourIdx--;
-  showTourStep();
-}
-function endTour(){
-  document.getElementById('tourOverlay').classList.remove('active');
-}
-
-// Reposition the spotlight if the window resizes mid-tour
-window.addEventListener('resize', () => {
-  if(document.getElementById('tourOverlay')?.classList.contains('active')) showTourStep();
-});
 
 function openReference(){
   document.getElementById('refPanel').classList.add('open');

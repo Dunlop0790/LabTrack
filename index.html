@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260104q">
+  <link rel="stylesheet" href="styles.css?v=20260104t">
 </head>
 <body>
 
@@ -51,27 +51,6 @@
     </div>
     <button class="btn btn-primary" style="width:100%;padding:11px;margin-bottom:8px" onclick="saveUser()">Get Started</button>
     <button class="btn btn-ghost" style="width:100%;padding:10px" onclick="enterGuest()">Browse as Guest</button>
-    <div class="setup-tour-link" onclick="startTourFromSetup()">New here? Take a quick tour</div>
-  </div>
-</div>
-
-<!-- ── GUIDED TOUR OVERLAY ──
-     Optional walkthrough of the dashboard. A spotlight highlights one
-     element at a time with a tooltip explaining it. Driven by the
-     TOUR_STEPS array in script.js. Fully skippable at any point. -->
-<div class="tour-overlay" id="tourOverlay">
-  <div class="tour-spotlight" id="tourSpotlight"></div>
-  <div class="tour-pop" id="tourPop">
-    <div class="tour-pop-step" id="tourStep"></div>
-    <div class="tour-pop-title" id="tourTitle"></div>
-    <div class="tour-pop-body" id="tourBody"></div>
-    <div class="tour-pop-actions">
-      <button class="tour-skip" onclick="endTour()">Skip</button>
-      <div class="tour-nav">
-        <button class="tour-back" id="tourBack" onclick="tourPrev()">Back</button>
-        <button class="tour-next" id="tourNext" onclick="tourNext()">Next</button>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -422,7 +401,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-<script src="dataService.js?v=20260104q"></script>
-<script src="script.js?v=20260104q"></script>
+<script src="dataService.js?v=20260104t"></script>
+<script src="script.js?v=20260104t"></script>
 </body>
 </html>
