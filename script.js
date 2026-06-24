@@ -3250,16 +3250,22 @@ function renderLsHTML(){
   const BLUE = 'background:#ADD8E6;';
   const YELLOW = 'background:#FFDE2A;';
   const RED = 'background:#FF5B5B;';
-  const C_BB = 'color:#D9A300;mso-color-alt:#D9A300;';
-  const C_OP = 'color:#C00000;mso-color-alt:#C00000;';
   const C_SEC = 'color:#000000;';
 
   const th = (w, style, content, extra) => `<th width="${w}"${extra||''} style="${style}width:${w}px;">${content}</th>`;
   const td = (w, style, content, extra) => `<td width="${w}"${extra||''} style="${style}width:${w}px;">${content}</td>`;
 
   const SECH = (txt) => `<p style="${C_SEC}font-weight:bold;margin:8px 0 2px 0;font-family:${FONT};font-size:10pt"><b>${txt}</b></p>`;
-  const BBH  = (txt) => `<p style="${C_BB}font-weight:bold;margin:4px 0 0 0;font-family:${FONT};font-size:10pt"><b>${txt}</b></p>`;
-  const OPH  = (txt) => `<p style="${C_OP}font-weight:bold;margin:4px 0 0 0;font-family:${FONT};font-size:10pt"><b>${txt}</b></p>`;
+  // BB and OP note headers render as small colored boxes matching the table
+  // header fills (yellow for BB, red for OP), since text color does not
+  // survive the paste to Outlook but a cell background does. Built as a
+  // one-cell table so the fill copies reliably.
+  const noteBox = (label, fill) => `<table cellpadding="0" cellspacing="0" style="${T_RESET}margin:6px 0 2px 0;"><tr><td style="border:1px solid #000;padding:2px 10px;font-size:10pt;font-family:${FONT};font-weight:bold;${fill}color:#000;"><b>${label}</b></td></tr></table>`;
+  const BBH  = (txt) => noteBox(txt, YELLOW);
+  const OPH  = (txt) => noteBox(txt, RED);
+  // Bullet list wrapper. Outlook needs an explicit list-style and a real
+  // padding-left to render the disc bullets; padding:0 makes it drop them.
+  const UL = (inner) => `<ul style="margin:4px 0 8px 0;padding-left:28px;list-style-type:disc;font-family:${FONT};font-size:10pt">${inner}</ul>`;
   const SPACE = '<div style="height:8px;line-height:8px">&nbsp;</div>';
 
   let html = '';
@@ -3336,14 +3342,14 @@ function renderLsHTML(){
   // General notes (unlabeled): notes that do not pertain to BB or OP
   // specifically. Rendered above the BB and OP lists with no heading.
   if(lsState.genNotes && lsState.genNotes.trim()){
-    html += `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Aptos,'Segoe UI',Calibri,Arial,sans-serif">${notesToEmailHtml(lsState.genNotes)}</ul>`;
+    html += UL(notesToEmailHtml(lsState.genNotes));
   }
   // BB / OP notes
   if(lsState.bbNotes && lsState.bbNotes.trim()){
-    html += BBH('BB:') + `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Aptos,'Segoe UI',Calibri,Arial,sans-serif">${notesToEmailHtml(lsState.bbNotes)}</ul>`;
+    html += BBH('BB') + UL(notesToEmailHtml(lsState.bbNotes));
   }
   if(lsState.opNotes && lsState.opNotes.trim()){
-    html += OPH('OP:') + `<ul style="margin:4px 0 8px 22px;padding:0;font-family:Aptos,'Segoe UI',Calibri,Arial,sans-serif">${notesToEmailHtml(lsState.opNotes)}</ul>`;
+    html += OPH('OP') + UL(notesToEmailHtml(lsState.opNotes));
   }
   if((lsState.genNotes||'').trim() || (lsState.bbNotes||'').trim() || (lsState.opNotes||'').trim()) html += SPACE;
 
@@ -3550,7 +3556,7 @@ function notesToEmailHtml(content){
   const hasHtml = /<[a-z]/i.test(content);
   if(!hasHtml){
     return content.split('\n').filter(l=>l.trim())
-      .map(l=>`<li style="font-family:${'Aptos,\'Segoe UI\',Calibri,Arial,sans-serif'};font-size:10pt">${esc(l.trim())}</li>`).join('');
+      .map(l=>`<li style="font-family:${'Aptos,\'Segoe UI\',Calibri,Arial,sans-serif'};font-size:10pt;display:list-item;list-style-type:disc">${esc(l.trim())}</li>`).join('');
   }
   const temp = document.createElement('div');
   temp.innerHTML = normalizeHighlightColors(content);
@@ -3582,7 +3588,7 @@ function notesToEmailHtml(content){
     .map(l => {
       // Drop transparent/white highlights; they add nothing in the email
       const clean = l.replace(/background-color:\s*(transparent|white|#fff|#ffffff)\s*;?/gi,'');
-      return `<li style="font-family:Aptos,'Segoe UI',Calibri,Arial,sans-serif;font-size:10pt">${clean}</li>`;
+      return `<li style="font-family:Aptos,'Segoe UI',Calibri,Arial,sans-serif;font-size:10pt;display:list-item;list-style-type:disc">${clean}</li>`;
     }).join('');
 }
 
