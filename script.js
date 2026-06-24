@@ -3060,8 +3060,15 @@ async function lsHandleCsvFiles(files){
     if(which === 'op') lsState.csvOp = {file: f, rows: processed};
     else lsState.csvBb = {file: f, rows: processed};
   }
+  // Row deletions and per-row ROM notes belong to a specific dataset. When
+  // new CSVs are loaded they must be cleared, or a slot deleted from a
+  // previous report stays filtered out of the new one. This persisted across
+  // sessions and was the cause of hours silently missing from the table.
+  lsState.deletedSlots = [];
+  lsState.romNotes = {};
   renderCsvFiles();
   refreshPreview();
+  lsSavePersist();
 }
 
 function lsProcessCsvRows(rows, filename){

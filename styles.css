@@ -168,31 +168,6 @@ select.filter-chip option[value="general"]{color:#64748b}
    Landing view. Tile grid where the issue board is one tool among many. */
 .hidden{display:none !important}
 
-/* Setup screen "take a tour" link */
-.setup-tour-link{margin-top:12px;font-size:12px;color:var(--accent-text);cursor:pointer;font-weight:600}
-.setup-tour-link:hover{text-decoration:underline}
-
-/* ── GUIDED TOUR ──
-   A dimmed overlay with a cut-out spotlight on the highlighted element
-   and a popover explaining it. The spotlight uses a huge box-shadow to
-   darken everything outside its rounded rectangle. */
-.tour-overlay{position:fixed;inset:0;z-index:600;display:none;pointer-events:none}
-.tour-overlay.active{display:block}
-.tour-spotlight{position:absolute;border-radius:10px;box-shadow:0 0 0 9999px rgba(15,23,42,.62);transition:all .25s ease;pointer-events:none}
-.tour-pop{position:absolute;width:300px;max-width:calc(100vw - 32px);background:var(--card-bg);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.3);padding:16px;pointer-events:auto;transition:all .25s ease;z-index:601}
-.tour-pop-step{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
-.tour-pop-title{font-size:15px;font-weight:700;letter-spacing:-.2px;margin-bottom:6px}
-.tour-pop-body{font-size:13px;line-height:1.5;color:var(--text);margin-bottom:14px}
-.tour-pop-actions{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.tour-skip{background:transparent;border:none;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;padding:6px 4px}
-.tour-skip:hover{color:var(--text)}
-.tour-nav{display:flex;gap:6px}
-.tour-back,.tour-next{font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;padding:6px 14px;border-radius:6px;border:1px solid var(--border);transition:all .12s}
-.tour-back{background:transparent;color:var(--text)}
-.tour-back:hover{background:var(--hover-bg)}
-.tour-next{background:var(--navy);color:#fff;border-color:var(--navy)}
-.tour-next:hover{background:var(--navy2)}
-
 .dash{max-width:1400px;margin:0 auto;padding:20px;width:100%}
 .dash-greet{margin-bottom:18px}
 .dash-greet h1{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:3px}
@@ -230,8 +205,8 @@ select.filter-chip option[value="general"]{color:#64748b}
 
 /* Board tile: mini board fills available height */
 .tile-board{flex:1}
-.mini-board{display:flex;gap:8px;padding:12px;flex:1;overflow:hidden;min-height:220px}
-.mini-col{flex:1;background:var(--col-bg);border-radius:8px;display:flex;flex-direction:column;min-width:0}
+.mini-board{display:flex;gap:8px;padding:12px;flex:1;overflow:hidden;height:340px}
+.mini-col{flex:1;background:var(--col-bg);border-radius:8px;display:flex;flex-direction:column;min-width:0;min-height:0}
 .mini-col-hdr{padding:8px 10px;display:flex;align-items:center;gap:6px;border-bottom:2px solid}
 .mini-col-hdr.open{border-color:var(--col-open)}
 .mini-col-hdr.inprogress{border-color:var(--col-inprog)}
@@ -450,7 +425,7 @@ html.dark .fix-box-lbl{color:#4ade80}
 
 /* ── SETUP ──
    The first-launch identity screen: role picker cards, name entry, and
-   the take-a-tour link. */
+   the Get Started / Browse as Guest buttons. */
 .setup-modal{max-width:400px;text-align:center}
 .setup-icon{font-size:46px;margin-bottom:14px;display:flex;align-items:center;justify-content:center;color:#3b82f6}
 .setup-icon svg{display:block}
