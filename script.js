@@ -2480,20 +2480,19 @@ function renderLineStatusInner(body){
   // form re-render (which would steal focus from the input the user is
   // currently typing in).
   const sumRow = (fields, idx, sumKey) => {
-    const vals = fields.map(f => parseFloat((rState[f]||[])[idx]) || 0);
-    const total = vals.reduce((a,b)=>a+b, 0);
-    return `<td data-roll-sum="${sumKey}-${idx}" style="${TD_BASE}background:#f0f4ff;font-weight:bold">${total || ''}</td>`;
+    const total = fields.reduce((a,f)=>a+rollNum((rState[f]||[])[idx]), 0);
+    return `<td data-roll-sum="${sumKey}-${idx}" style="${TD_BASE}background:#f0f4ff;font-weight:bold">${total ? total.toLocaleString() : ''}</td>`;
   };
 
   const rolloverSection = isFinal ? `
     <div class="ls-section">
       <div class="ls-sec-title">Rollover Template</div>
       <div style="overflow-x:auto">
-        <table cellpadding="0" cellspacing="0" style="${T_RESET}width:100%;min-width:500px">
+        <table cellpadding="0" cellspacing="0" style="${T_RESET}width:100%;min-width:660px">
           <thead>
             <tr>
-              <th style="${TH_BASE}${BLUE}text-align:left;min-width:200px">Item</th>
-              ${[0,1,2,3,4].map(i=>`<th style="${TH_BASE}${BLUE}min-width:90px"><input class="ls-mini" value="${esc(rDates[i])}" placeholder="Date..." style="width:100%;text-align:center;background:transparent;border:none;border-bottom:1px solid #999;border-radius:0;padding:2px 4px" oninput="lsUpdateRollover('dates',${i},this.value)"></th>`).join('')}
+              <th style="${TH_BASE}${BLUE}text-align:left;min-width:260px">Item</th>
+              ${[0,1,2,3,4].map(i=>`<th style="${TH_BASE}${BLUE}min-width:80px"><input class="ls-mini" value="${esc(rDates[i])}" placeholder="Date..." style="width:100%;text-align:center;background:transparent;border:none;border-bottom:1px solid #999;border-radius:0;padding:2px 4px" oninput="lsUpdateRollover('dates',${i},this.value)"></th>`).join('')}
             </tr>
             <tr>
               <th style="${TH_BASE}text-align:left">Projected Volume</th>
@@ -2506,7 +2505,7 @@ function renderLineStatusInner(body){
             <tr><td style="${TD_BASE}text-align:left">Total HVS Throughput</td>${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('hvs',i)}</td>`).join('')}</tr>
             <tr>
               <td style="${TH_BASE}${BLUE}text-align:left"><b>Actual Volume Complete</b></td>
-              ${[0,1,2,3,4].map(i=>sumRow(['rom','wbb','hvs'],i,'actual')).join('')}
+              ${[0,1,2,3,4].map(i=>sumRow(ROLL_ACTUAL_FIELDS,i,'actual')).join('')}
             </tr>
             <tr><td colspan="6" style="height:6px;border:none"></td></tr>
             <tr><td style="${TD_BASE}text-align:left"># of Samples in WBB to be Processed</td>${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('wbbProc',i)}</td>`).join('')}</tr>
@@ -2517,7 +2516,7 @@ function renderLineStatusInner(body){
             <tr><td style="${TD_BASE}text-align:left">BIMs</td>${[0,1,2,3,4].map(i=>`<td style="${TD_BASE}">${ri('bims',i)}</td>`).join('')}</tr>
             <tr>
               <td style="${TH_BASE}${BLUE}text-align:left"><b>Volume Left to Complete</b></td>
-              ${[0,1,2,3,4].map(i=>sumRow(['wbbProc','bb','op','relabel','load','bims'],i,'left')).join('')}
+              ${[0,1,2,3,4].map(i=>sumRow(ROLL_LEFT_FIELDS,i,'left')).join('')}
             </tr>
           </tbody>
         </table>
@@ -2789,6 +2788,22 @@ function renderOosTags(key){
 // Persists lsState to localStorage on every field change so the form
 // survives page reloads. The CSV file handles (csvOp, csvBb) are not
 // serialisable so we strip them before saving.
+// Parses a rollover cell into a number. Values are typed by hand and are
+// routinely entered with thousands separators (30,251). parseFloat stops at
+// the comma and would read that as 30, so separators and spaces are stripped
+// before parsing. Anything unparseable counts as zero.
+function rollNum(value){
+  if(value === null || value === undefined) return 0;
+  const n = parseFloat(String(value).replace(/[,\s]/g, ''));
+  return Number.isFinite(n) ? n : 0;
+}
+
+// The two computed rows, matching the Excel rollover template:
+//   Actual Volume Complete = ROM + completed in WBB + total HVS throughput
+//   Volume Left to Complete = WBB to process + BB + OP + relabel + load + BIMs
+const ROLL_ACTUAL_FIELDS = ['rom','wbb','hvs'];
+const ROLL_LEFT_FIELDS = ['wbbProc','bb','op','relabel','load','bims'];
+
 function lsUpdateRollover(field, idx, value){
   if(!lsState.rollover) lsState.rollover = {};
   if(!lsState.rollover[field]) lsState.rollover[field] = ['','','','',''];
@@ -2798,12 +2813,16 @@ function lsUpdateRollover(field, idx, value){
   // input the user is currently typing in and they would lose focus
   // after every single keystroke.
   const R = lsState.rollover;
-  const sumActual = ['rom','wbb','hvs'].reduce((a,f)=>a+(parseFloat((R[f]||[])[idx])||0),0);
-  const sumLeft = ['wbbProc','bb','op','relabel','load','bims'].reduce((a,f)=>a+(parseFloat((R[f]||[])[idx])||0),0);
+  const sumActual = ROLL_ACTUAL_FIELDS.reduce((a,f)=>a+rollNum((R[f]||[])[idx]),0);
+  const sumLeft = ROLL_LEFT_FIELDS.reduce((a,f)=>a+rollNum((R[f]||[])[idx]),0);
   const actualEl = document.querySelector(`[data-roll-sum="actual-${idx}"]`);
   const leftEl = document.querySelector(`[data-roll-sum="left-${idx}"]`);
-  if(actualEl) actualEl.textContent = sumActual || '';
-  if(leftEl) leftEl.textContent = sumLeft || '';
+  if(actualEl) actualEl.textContent = sumActual ? sumActual.toLocaleString() : '';
+  if(leftEl) leftEl.textContent = sumLeft ? sumLeft.toLocaleString() : '';
+  // The preview pane renders separately from the form, so it needs an
+  // explicit refresh. Without this the rollover values never reached the
+  // preview or the copied output until some other field was edited.
+  refreshPreview();
   lsSavePersist();
 }
 
@@ -3498,32 +3517,33 @@ function renderLsHTML(){
   // Rollover template: only included in copy/publish output when Final is checked
   if(lsState.isFinal && lsState.rollover){
     const R = lsState.rollover;
-    const sum = (fields, idx) => fields.reduce((a,f)=>a+(parseFloat((R[f]||[])[idx])||0),0);
+    const sum = (fields, idx) => fields.reduce((a,f)=>a+rollNum((R[f]||[])[idx]),0);
+    const sumFmt = (fields, idx) => { const t = sum(fields, idx); return t ? t.toLocaleString() : ''; };
     html += SPACE;
     html += SECH("Rollover Template:");
-    html += `<table width="550" cellpadding="0" cellspacing="0" style="${T_RESET}width:550px;">` +
+    html += `<table width="610" cellpadding="0" cellspacing="0" style="${T_RESET}width:610px;">` +
       `<thead>` +
       `<tr>` +
-      th(150, TH_BASE+BLUE+'text-align:left;', 'Item') +
-      [0,1,2,3,4].map(i=>th(80, TH_BASE+BLUE, esc((R.dates||[])[i]||''))).join('') +
+      th(310, TH_BASE+BLUE+'text-align:left;', 'Item') +
+      [0,1,2,3,4].map(i=>th(60, TH_BASE+BLUE, esc((R.dates||[])[i]||''))).join('') +
       `</tr>` +
       `<tr>` +
-      td(150, TD_BASE+'text-align:left;font-weight:bold;', '<b>Projected Volume</b>') +
-      [0,1,2,3,4].map(i=>td(80, TD_BASE, esc((R.proj||[])[i]||''))).join('') +
+      td(310, TD_BASE+'text-align:left;font-weight:bold;', '<b>Projected Volume</b>') +
+      [0,1,2,3,4].map(i=>td(60, TD_BASE, esc((R.proj||[])[i]||''))).join('') +
       `</tr>` +
       `</thead><tbody>` +
-      `<tr>${td(150,TD_BASE+'text-align:left;','# of ROM Samples Complete')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.rom||[])[i]||''))).join('')}</tr>` +
-      `<tr>${td(150,TD_BASE+'text-align:left;','# of Completed Samples in WBB')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.wbb||[])[i]||''))).join('')}</tr>` +
-      `<tr>${td(150,TD_BASE+'text-align:left;','Total HVS Throughput')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.hvs||[])[i]||''))).join('')}</tr>` +
-      `<tr>${td(150,TH_BASE+BLUE+'text-align:left;','<b>Actual Volume Complete</b>')}${[0,1,2,3,4].map(i=>td(80,TH_BASE+BLUE+'font-weight:bold;',sum(['rom','wbb','hvs'],i)||'')).join('')}</tr>` +
+      `<tr>${td(310,TD_BASE+'text-align:left;','# of ROM Samples Complete')}${[0,1,2,3,4].map(i=>td(60,TD_BASE,esc((R.rom||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(310,TD_BASE+'text-align:left;','# of Completed Samples in WBB')}${[0,1,2,3,4].map(i=>td(60,TD_BASE,esc((R.wbb||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(310,TD_BASE+'text-align:left;','Total HVS Throughput')}${[0,1,2,3,4].map(i=>td(60,TD_BASE,esc((R.hvs||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(310,TH_BASE+BLUE+'text-align:left;','<b>Actual Volume Complete</b>')}${[0,1,2,3,4].map(i=>td(60,TH_BASE+BLUE+'font-weight:bold;',sumFmt(ROLL_ACTUAL_FIELDS,i))).join('')}</tr>` +
       `<tr><td colspan="6" style="height:5px;border:none"></td></tr>` +
-      `<tr>${td(150,TD_BASE+'text-align:left;','# of Samples in WBB to be Processed')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.wbbProc||[])[i]||''))).join('')}</tr>` +
-      `<tr>${td(150,TD_BASE+YELLOW+'color:#000;text-align:left;','BB')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.bb||[])[i]||''))).join('')}</tr>` +
-      `<tr>${td(150,TD_BASE+RED+'color:#000;text-align:left;','OP')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.op||[])[i]||''))).join('')}</tr>` +
-      `<tr>${td(150,TD_BASE+'text-align:left;','# of Samples Left to Relabel (1 bucket = 400)')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.relabel||[])[i]||''))).join('')}</tr>` +
-      `<tr>${td(150,TD_BASE+'text-align:left;','# of Samples Left to Load (1 bucket = 400)')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.load||[])[i]||''))).join('')}</tr>` +
-      `<tr>${td(150,TD_BASE+'text-align:left;','BIMs')}${[0,1,2,3,4].map(i=>td(80,TD_BASE,esc((R.bims||[])[i]||''))).join('')}</tr>` +
-      `<tr>${td(150,TH_BASE+BLUE+'text-align:left;','<b>Volume Left to Complete</b>')}${[0,1,2,3,4].map(i=>td(80,TH_BASE+BLUE+'font-weight:bold;',sum(['wbbProc','bb','op','relabel','load','bims'],i)||'')).join('')}</tr>` +
+      `<tr>${td(310,TD_BASE+'text-align:left;','# of Samples in WBB to be Processed')}${[0,1,2,3,4].map(i=>td(60,TD_BASE,esc((R.wbbProc||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(310,TD_BASE+YELLOW+'color:#000;text-align:left;','BB')}${[0,1,2,3,4].map(i=>td(60,TD_BASE,esc((R.bb||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(310,TD_BASE+RED+'color:#000;text-align:left;','OP')}${[0,1,2,3,4].map(i=>td(60,TD_BASE,esc((R.op||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(310,TD_BASE+'text-align:left;','# of Samples Left to Relabel (1 bucket = 400)')}${[0,1,2,3,4].map(i=>td(60,TD_BASE,esc((R.relabel||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(310,TD_BASE+'text-align:left;','# of Samples Left to Load (1 bucket = 400)')}${[0,1,2,3,4].map(i=>td(60,TD_BASE,esc((R.load||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(310,TD_BASE+'text-align:left;','BIMs')}${[0,1,2,3,4].map(i=>td(60,TD_BASE,esc((R.bims||[])[i]||''))).join('')}</tr>` +
+      `<tr>${td(310,TH_BASE+BLUE+'text-align:left;','<b>Volume Left to Complete</b>')}${[0,1,2,3,4].map(i=>td(60,TH_BASE+BLUE+'font-weight:bold;',sumFmt(ROLL_LEFT_FIELDS,i))).join('')}</tr>` +
       `</tbody></table>`;
   }
 
@@ -4090,78 +4110,98 @@ function eodClear(){
 
 // Build the EOD report HTML in the same email-friendly format as Line Status.
 function renderEodHTML(){
-  const T  = 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;width:100%;';
-  const TD = 'border:1px solid #000;padding:5px 8px;font-size:12px;font-family:Calibri,Arial,sans-serif;vertical-align:top;';
-  const TH_TOP  = TD + 'font-weight:bold;background:#FCE4D6;';
-  // White background on all non-header left cells
+  // Formatting copied from the Word template (EOD_Blank_Template_New_Updated).
+  // The template is a fixed-width table, not a full-width one. Letting it
+  // stretch to the email body width was what left large empty gaps in every
+  // cell. Column widths come from the template's own grid, converted from
+  // twips: 3308/2583/844/1739/2584 becomes 221/172/56/116/172 px.
+  const FONT = "Aptos,'Segoe UI',Calibri,Arial,sans-serif";
+  const TOTAL_W = 737;
+  // The template table is autofit in Word, so columns flex slightly to fit
+  // content while the total width stays fixed. Forcing table-layout:fixed
+  // instead breaks long labels mid-word.
+  const T  = `border-collapse:collapse;font-family:${FONT};width:${TOTAL_W}px;`;
+  const TD = `border:1px solid #000;padding:3px 6px;font-size:9pt;font-family:${FONT};vertical-align:top;`;
+  const TH_TOP  = TD + 'font-weight:bold;background:#FFF2CC;';
   const TH_L = TD + 'font-weight:bold;';
   const x = b => b ? '&#9746;' : '&#9744;';
 
-  let html = '<h1 style="font-family:Calibri,Arial,sans-serif;font-size:18px;font-weight:bold;text-align:center;margin:0 0 12px 0">Automated Line EOD Report</h1>';
+  // Column spans used by the template, in pixels.
+  const W_LABEL = 221;  // column 1, every row's label
+  const W_REST  = 516;  // columns 2-5 merged, the common full-width content cell
+  const W_HALF1 = 228;  // columns 2-3 merged
+  const W_HALF2 = 288;  // columns 4-5 merged
+  const W_THIRD = 172;  // columns 2, 3-4 merged, and 5 are each this wide
 
-  // Single outer table, 4 columns: [label | col2 | col3 | col4]
-  // colgroup pins widths so nothing bleeds out
-  html += '<table cellpadding="0" cellspacing="0" style="' + T + '">' +
-    '<colgroup><col width="28%"><col width="24%"><col width="24%"><col width="24%"></colgroup>' +
+  // Cell helper: sets both the width attribute and the CSS width, which is
+  // what makes Outlook honor a fixed column instead of resizing to content.
+  const c = (w, style, content, span) =>
+    `<td width="${w}"${span ? ` colspan="${span}"` : ''} style="${style}width:${w}px;">${content}</td>`;
+
+  let html = `<div style="width:${TOTAL_W}px;font-family:${FONT};font-size:11pt;font-weight:bold;text-align:center;margin:0 0 8px 0">Automated Line EOD Report</div>`;
+
+  // Five-column grid matching the template, with most rows merging 2-5.
+  // No colgroup: on merged cells the renderer applies the first spanned
+  // col's width instead of the merged total, which squeezed columns and
+  // broke labels mid-word. Per-cell widths are also what Outlook honors.
+  html += `<table width="${TOTAL_W}" cellpadding="0" cellspacing="0" style="${T}">` +
     '<tbody>';
 
-  // Row 1: orange header
+  // Header row
   html += '<tr>' +
-    '<td style="' + TH_TOP + '"><b>DATE: ' + esc(eodState.date) + '</b></td>' +
-    '<td style="' + TH_TOP + '" colspan="3"><b>Report on: ' + esc(eodState.reportOn) + '</b></td>' +
+    c(W_LABEL, TH_TOP, '<b>DATE: ' + esc(eodState.date) + '</b>') +
+    c(W_REST, TH_TOP, '<b>Report on: ' + esc(eodState.reportOn) + '</b>', 4) +
   '</tr>';
 
-  // Row 2: Staffing
+  // Staffing
   html += '<tr>' +
-    '<td style="' + TH_L + '"><b>STAFFING:</b><br>' + esc(eodState.staffingPct) + '</td>' +
-    '<td style="' + TD + '" colspan="3">' +
+    c(W_LABEL, TH_L, '<b>STAFFING:</b><br>' + esc(eodState.staffingPct)) +
+    c(W_REST, TD,
       '<b>Please indicate number of TMs if checked</b><br>' +
       x(eodState.callOutChecked) + ' Call out/sick call: ' + esc(eodState.callOutCount) + '<br>' +
-      x(eodState.scheduledPtoChecked) + ' Scheduled PTO: ' + esc(eodState.scheduledPtoCount) +
-    '</td>' +
+      x(eodState.scheduledPtoChecked) + ' Scheduled PTO: ' + esc(eodState.scheduledPtoCount), 4) +
   '</tr>';
 
-  // Row 3: Remaining stored samples YES/NO
+  // Remaining stored samples YES/NO
   html += '<tr>' +
-    '<td style="' + TH_L + '"><b>Remaining samples (in freezer)</b></td>' +
-    '<td style="' + TD + '" colspan="2">' + x(eodState.remainingFreezerYes) + ' <b>YES</b></td>' +
-    '<td style="' + TD + '">' + x(eodState.remainingFreezerNo) + ' <b>NO</b></td>' +
+    c(W_LABEL, TH_L, '<b>Remaining samples (in freezer)</b>') +
+    c(W_HALF1, TD, x(eodState.remainingFreezerYes) + ' <b>YES</b>', 2) +
+    c(W_HALF2, TD, x(eodState.remainingFreezerNo) + ' <b>NO</b>', 2) +
   '</tr>';
 
-  // Row 4: If yes... left label + 3 sub-columns
+  // If yes: three sub-columns
   const fReason =
     x(eodState.freezerReasonTrack) + ' Track/Automation<br>' +
     x(eodState.freezerReasonStaffing) + ' Staffing<br>' +
     x(eodState.freezerReasonHighVol) + ' High Volume<br>' +
     x(eodState.freezerReasonOther) + ' Other: ' + esc(eodState.freezerReasonOtherText);
   html += '<tr>' +
-    '<td style="' + TH_L + '"><b>If yes, how many, what kind, and why were there samples left over?</b></td>' +
-    '<td style="' + TD + '"><b>No. of Samples:</b><br>' + esc(eodState.freezerSamplesNum) + '</td>' +
-    '<td style="' + TD + '"><b>Sample Type(s)</b><br>' + esc(eodState.freezerSamplesType) + '</td>' +
-    '<td style="' + TD + '"><b>Reason:</b><br>' + fReason + '</td>' +
+    c(W_LABEL, TH_L, '<b>If yes, how many, what kind, and why were there samples left over?</b>') +
+    c(W_THIRD, TD, '<b>No. of Samples:</b><br>' + esc(eodState.freezerSamplesNum)) +
+    c(W_THIRD, TD, '<b>Sample Type(s)</b><br>' + esc(eodState.freezerSamplesType), 2) +
+    c(W_THIRD, TD, '<b>Reason:</b><br>' + fReason) +
   '</tr>';
 
-  // Row 5: Remaining on line, left label + 3 sub-columns
+  // Remaining on line: three sub-columns
   const lReason =
     x(eodState.lineSamplesReasonTrack) + ' Track/Automation<br>' +
     x(eodState.lineSamplesReasonStaffing) + ' Staffing<br>' +
     x(eodState.lineSamplesReasonHighVol) + ' High Volume';
   html += '<tr>' +
-    '<td style="' + TH_L + '"><b>Remaining samples on line.</b></td>' +
-    '<td style="' + TD + '"><b>No. of samples</b><br>' +
+    c(W_LABEL, TH_L, '<b>Remaining samples on line.</b>') +
+    c(W_THIRD, TD, '<b>No. of samples</b><br>' +
       'BB Complete: ' + esc(eodState.lineSamplesBbComplete) + '<br>' +
       'BB Incomplete: ' + esc(eodState.lineSamplesBbIncomplete) + '<br>' +
       'OP Complete: ' + esc(eodState.lineSamplesOpComplete) + '<br>' +
-      'OP Incomplete: ' + esc(eodState.lineSamplesOpIncomplete) +
-    '</td>' +
-    '<td style="' + TD + '"><b>Departments on Line:</b><br>' + esc(eodState.lineSamplesDept) + '</td>' +
-    '<td style="' + TD + '"><b>Reason:</b><br>' + lReason + '</td>' +
+      'OP Incomplete: ' + esc(eodState.lineSamplesOpIncomplete)) +
+    c(W_THIRD, TD, '<b>Departments on Line:</b><br>' + esc(eodState.lineSamplesDept), 2) +
+    c(W_THIRD, TD, '<b>Reason:</b><br>' + lReason) +
   '</tr>';
 
-  // Issue rows: left label bold, content spans 3
+  // Issue rows: label plus a content cell spanning columns 2-5
   const iRow = (lbl, val) => '<tr>' +
-    '<td style="' + TH_L + '"><b>' + lbl + '</b></td>' +
-    '<td style="' + TD + '" colspan="3">' + esc(val||'N/A').replace(/\n/g,'<br>') + '</td>' +
+    c(W_LABEL, TH_L, '<b>' + lbl + '</b>') +
+    c(W_REST, TD, esc(val||'N/A').replace(/\n/g,'<br>'), 4) +
   '</tr>';
 
   html += iRow('BB - BIM Issues', eodState.bbBimIssues);
@@ -4171,22 +4211,26 @@ function renderEodHTML(){
   html += iRow('BB - HVS Issues', eodState.bbHvsIssues);
   html += iRow('OP - HVS Issues', eodState.opHvsIssues);
 
-  // Maintenance: right side split into OP and BB
+  // Maintenance: split like the freezer YES/NO row
   html += '<tr>' +
-    '<td style="' + TH_L + '"><b>Maintenance Tasks Completed</b></td>' +
-    '<td style="' + TD + '" colspan="2">Optimus Prime &nbsp; ' + x(eodState.maintOpYes) + ' YES &nbsp; ' + x(eodState.maintOpNo) + ' NO</td>' +
-    '<td style="' + TD + '">Bumblebee &nbsp; ' + x(eodState.maintBbYes) + ' YES &nbsp; ' + x(eodState.maintBbNo) + ' NO</td>' +
+    c(W_LABEL, TH_L, '<b>Maintenance Tasks Completed</b>') +
+    c(W_HALF1, TD, 'Optimus Prime &nbsp; ' + x(eodState.maintOpYes) + ' YES &nbsp; ' + x(eodState.maintOpNo) + ' NO', 2) +
+    c(W_HALF2, TD, 'Bumblebee &nbsp; ' + x(eodState.maintBbYes) + ' YES &nbsp; ' + x(eodState.maintBbNo) + ' NO', 2) +
   '</tr>';
 
   html += iRow('If no, what tasks are remaining?', eodState.maintRemaining);
   html += iRow('Instrument/Module Issues:', eodState.instrumentIssues);
 
   if(eodState.eodNotes && eodState.eodNotes.trim()){
+    // Bullets need an explicit padding-left and list-style on both the list
+    // and each item. With padding:0 Outlook drops the indent and renders the
+    // markers outside the cell, which made them look like they belonged to
+    // the label column instead of the notes column.
     const bullets = eodState.eodNotes.split('\n').filter(l=>l.trim())
-      .map(l=>'<li style="font-size:12px;font-family:Calibri,Arial,sans-serif">' + esc(l.trim()) + '</li>').join('');
+      .map(l=>`<li style="font-family:${FONT};font-size:9pt;display:list-item;list-style-type:disc">` + esc(l.trim()) + '</li>').join('');
     html += '<tr>' +
-      '<td style="' + TH_L + '"><b>Notes</b></td>' +
-      '<td style="' + TD + '" colspan="3"><ul style="margin:2px 0 0 18px;padding:0">' + bullets + '</ul></td>' +
+      c(W_LABEL, TH_L, '<b>Notes</b>') +
+      c(W_REST, TD, `<ul style="margin:0;padding-left:22px;list-style-type:disc;font-family:${FONT};font-size:9pt">` + bullets + '</ul>', 4) +
     '</tr>';
   }
 
@@ -4302,9 +4346,11 @@ function switchTodayTab(tab){
   currentTodayTab = tab;
   document.getElementById('tTabLs').classList.toggle('active', tab==='ls');
   document.getElementById('tTabEod').classList.toggle('active', tab==='eod');
+  document.getElementById('tTabHandoff').classList.toggle('active', tab==='handoff');
   document.getElementById('tTabHist').classList.toggle('active', tab==='hist');
   if(tab==='ls') renderTodayLs();
   else if(tab==='eod') renderTodayEod();
+  else if(tab==='handoff') renderShiftHandoff();
   else if(tab==='hist') renderTodayHistory();
 }
 
@@ -4435,6 +4481,217 @@ async function renderTodayHistory(){
       </div>
     </div>
   `).join('')}</div>`;
+}
+
+// ── SHIFT HANDOFF ──────────────────────────────────────────────
+// Generates a shift handoff summary in the format of the paper tracking
+// sheet dayshift reads off at the daily huddle: department startup times
+// and a problem log (problem / start time / fix time). The problem log
+// auto-fills from this shift's issue board activity; startup times pre-fill
+// from the current Line Status form if one exists. Everything is editable,
+// manual problem rows can be added for items not tracked on the board, and
+// the whole thing exports to PDF for the huddle.
+
+// Manual additions and edits the user makes, kept in memory for the session.
+let handoffState = {
+  side: '',          // 'OP', 'BB', or '' for both
+  startup: { hemo:'', a1c:'', im:'', che:'' },
+  manualRows: [],    // [{problem, start, fix}]
+  startupTouched: false  // once the user edits startup, stop auto-prefilling
+};
+
+// Returns the start of the current shift day as a Date. Uses the same
+// 05:30 EST rollover the Line Status archive uses, so "this shift" means
+// everything since 05:30 EST today.
+function shiftDayStart(){
+  const now = new Date();
+  const est = new Date(now.getTime() - 5*60*60*1000);
+  const h = est.getUTCHours(), m = est.getUTCMinutes();
+  // If before 05:30 EST, the shift started 05:30 the previous calendar day
+  if(h < 5 || (h === 5 && m < 30)) est.setUTCDate(est.getUTCDate() - 1);
+  est.setUTCHours(5, 30, 0, 0);
+  // Convert the EST wall-clock 05:30 back to a real UTC timestamp
+  return new Date(est.getTime() + 5*60*60*1000);
+}
+
+// Formats a Firestore timestamp (or millis) as a short clock time like
+// "7:42 AM" in the user's local zone. Blank for missing values.
+function handoffClock(ts){
+  const ms = ts?.toMillis?.() ?? (typeof ts === 'number' ? ts : null);
+  if(!ms) return '';
+  return new Date(ms).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+}
+
+// Pulls this shift's issues from the board: anything created or resolved
+// since the shift start. Each becomes a problem-log row. Still-open issues
+// get a blank fix time so the huddle can see what is ongoing.
+function gatherShiftProblems(){
+  const start = shiftDayStart().getTime();
+  return issues
+    .filter(i => {
+      const created = i.createdAt?.toMillis?.() ?? 0;
+      const resolved = i.resolvedAt?.toMillis?.() ?? 0;
+      return created >= start || resolved >= start;
+    })
+    .sort((a,b) => (a.createdAt?.toMillis?.()||0) - (b.createdAt?.toMillis?.()||0))
+    .map(i => ({
+      problem: i.title || '',
+      start: handoffClock(i.createdAt),
+      fix: i.status === 'resolved' ? handoffClock(i.resolvedAt) : '',
+      track: i.track || '',
+      open: i.status !== 'resolved'
+    }));
+}
+
+// Pre-fills startup times from the current Line Status form state, if the
+// user has not already edited the handoff startup fields by hand.
+function prefillHandoffStartup(){
+  if(handoffState.startupTouched) return;
+  const s = lsState.startup || [];
+  // Line Status startup rows are [Hematology, A1Cs Atellica, IM Atellicas, CHE Atellicas]
+  const pick = (row) => {
+    if(!row) return '';
+    // Use whichever side has a value; the handoff is side-agnostic by default
+    return row.bb || row.op || '';
+  };
+  handoffState.startup = {
+    hemo: pick(s[0]),
+    a1c:  pick(s[1]),
+    im:   pick(s[2]),
+    che:  pick(s[3])
+  };
+}
+
+function handoffSetSide(side){
+  handoffState.side = side;
+  renderShiftHandoff();
+}
+function handoffSetStartup(key, val){
+  handoffState.startup[key] = val;
+  handoffState.startupTouched = true;
+}
+function handoffAddRow(){
+  handoffState.manualRows.push({problem:'', start:'', fix:''});
+  renderShiftHandoff();
+}
+function handoffRemoveRow(idx){
+  handoffState.manualRows.splice(idx, 1);
+  renderShiftHandoff();
+}
+function handoffEditRow(idx, field, val){
+  if(handoffState.manualRows[idx]) handoffState.manualRows[idx][field] = val;
+}
+
+function renderShiftHandoff(){
+  const body = document.getElementById('todayBody');
+  prefillHandoffStartup();
+  const auto = gatherShiftProblems();
+  const su = handoffState.startup;
+  const dateStr = formatTodayLong();
+
+  const sideBtn = (val, label) => `<button class="handoff-side-btn${handoffState.side===val?' active':''}" onclick="handoffSetSide('${val}')">${label}</button>`;
+
+  const autoRows = auto.length ? auto.map(r => `
+    <tr>
+      <td>${esc(r.problem)}${r.open?' <span class="handoff-open">ongoing</span>':''}${r.track?` <span class="handoff-track ${r.track}">${r.track.toUpperCase()}</span>`:''}</td>
+      <td>${esc(r.start)}</td>
+      <td>${esc(r.fix)}</td>
+    </tr>`).join('') : '';
+
+  const manualRows = handoffState.manualRows.map((r,i) => `
+    <tr>
+      <td><input class="handoff-input" value="${esc(r.problem)}" oninput="handoffEditRow(${i},'problem',this.value)" placeholder="Problem..."></td>
+      <td><input class="handoff-input handoff-time" value="${esc(r.start)}" oninput="handoffEditRow(${i},'start',this.value)" placeholder="Start"></td>
+      <td><input class="handoff-input handoff-time" value="${esc(r.fix)}" oninput="handoffEditRow(${i},'fix',this.value)" placeholder="Fix"></td>
+      <td><button class="handoff-del" onclick="handoffRemoveRow(${i})">×</button></td>
+    </tr>`).join('');
+
+  const noProblems = !auto.length && !handoffState.manualRows.length;
+
+  body.innerHTML = `
+    <div class="handoff-wrap">
+      <div class="handoff-toolbar">
+        <button class="btn-tool" style="background:#3b82f6;color:#fff;border-color:#3b82f6" onclick="exportHandoffPdf()">Export PDF</button>
+        <button class="btn-tool" onclick="handoffAddRow()">Add Problem</button>
+      </div>
+
+      <div class="handoff-sheet" id="handoffSheet">
+        <div class="handoff-head">
+          <div class="handoff-title">TRACKING LIST</div>
+          <div class="handoff-meta">
+            <span>Date: <b>${esc(dateStr)}</b></span>
+            <span class="handoff-side">Side: ${sideBtn('OP','OP')} ${sideBtn('BB','BB')} ${sideBtn('','Both')}</span>
+          </div>
+        </div>
+
+        <div class="handoff-section-lbl">Department Startup Times</div>
+        <div class="handoff-startup">
+          <label>Hemo up: <input class="handoff-input" value="${esc(su.hemo)}" oninput="handoffSetStartup('hemo',this.value)"></label>
+          <label>IM Atellicas up: <input class="handoff-input" value="${esc(su.im)}" oninput="handoffSetStartup('im',this.value)"></label>
+          <label>A1C's Atellica up: <input class="handoff-input" value="${esc(su.a1c)}" oninput="handoffSetStartup('a1c',this.value)"></label>
+          <label>CHE Atellicas up: <input class="handoff-input" value="${esc(su.che)}" oninput="handoffSetStartup('che',this.value)"></label>
+        </div>
+
+        <div class="handoff-section-lbl">Problems</div>
+        <table class="handoff-tbl">
+          <thead><tr><th>Problem</th><th>Start Time</th><th>Fix Time</th>${handoffState.manualRows.length?'<th></th>':''}</tr></thead>
+          <tbody>
+            ${autoRows}
+            ${manualRows}
+            ${noProblems?'<tr><td colspan="3" class="handoff-empty">No problems logged this shift yet. Issues from the board appear here automatically, or use Add Problem.</td></tr>':''}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// Exports the handoff sheet to a print-friendly PDF via the browser's
+// print dialog. Opens a clean standalone document containing just the
+// sheet, formatted to read off at the huddle.
+function exportHandoffPdf(){
+  prefillHandoffStartup();
+  const auto = gatherShiftProblems();
+  const su = handoffState.startup;
+  const dateStr = formatTodayLong();
+  const sideLabel = handoffState.side || 'OP / BB';
+
+  const allRows = [
+    ...auto.map(r => ({problem: r.problem + (r.open?' (ongoing)':''), start:r.start, fix:r.fix})),
+    ...handoffState.manualRows.filter(r => r.problem.trim())
+  ];
+  const rowsHtml = allRows.length
+    ? allRows.map(r => `<tr><td>${esc(r.problem)}</td><td>${esc(r.start)}</td><td>${esc(r.fix)}</td></tr>`).join('')
+    : '<tr><td colspan="3" style="text-align:center;color:#888;padding:14px">No problems logged this shift.</td></tr>';
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Tracking List ${esc(dateStr)}</title>
+    <style>
+      body{font-family:Arial,sans-serif;color:#000;padding:30px;max-width:800px;margin:0 auto}
+      h1{font-size:20px;text-align:center;letter-spacing:1px;margin:0 0 4px}
+      .meta{display:flex;justify-content:space-between;font-size:13px;margin-bottom:18px;border-bottom:2px solid #000;padding-bottom:8px}
+      .lbl{font-size:13px;font-weight:bold;text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px}
+      .startup{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:13px;margin-bottom:8px}
+      table{width:100%;border-collapse:collapse;font-size:13px}
+      th,td{border:1px solid #000;padding:6px 9px;text-align:left}
+      th{background:#eee;font-weight:bold}
+      td:nth-child(2),td:nth-child(3),th:nth-child(2),th:nth-child(3){width:110px;text-align:center}
+    </style></head><body>
+    <h1>TRACKING LIST</h1>
+    <div class="meta"><span>Date: <b>${esc(dateStr)}</b></span><span>Side: <b>${esc(sideLabel)}</b></span></div>
+    <div class="lbl">Department Startup Times</div>
+    <div class="startup">
+      <span>Hemo up: <b>${esc(su.hemo)}</b></span>
+      <span>IM Atellicas up: <b>${esc(su.im)}</b></span>
+      <span>A1C's Atellica up: <b>${esc(su.a1c)}</b></span>
+      <span>CHE Atellicas up: <b>${esc(su.che)}</b></span>
+    </div>
+    <div class="lbl">Problems</div>
+    <table><thead><tr><th>Problem</th><th>Start Time</th><th>Fix Time</th></tr></thead>
+    <tbody>${rowsHtml}</tbody></table>
+    </body></html>`);
+  win.document.close();
+  // Give the new window a moment to render before invoking print
+  setTimeout(() => win.print(), 300);
 }
 
 // Empty-state placeholder shown when no published record exists yet.
